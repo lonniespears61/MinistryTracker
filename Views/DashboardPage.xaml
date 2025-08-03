@@ -1,0 +1,57 @@
+<ContentPage 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
+    x:Class="MinistryTracker.Views.DashboardPage"
+    x:DataType="viewmodels:DashboardViewModel">
+
+    <!-- Scrollable content for smaller screens -->
+    <ScrollView>
+        <VerticalStackLayout 
+            Padding="24"
+            Spacing="16">
+
+            <!-- Page Header -->
+            <Label Text="Welcome to MinistryTracker!"
+                   TextColor="DarkBlue"
+                   FontSize="24"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center" />
+
+            <!-- Active Students Card (Tappable) -->
+            <Border BackgroundColor="PaleTurquoise"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 10"
+                    Padding="12">
+                <Border.GestureRecognizers>
+                    <TapGestureRecognizer Tapped="OnActiveStudentsTapped" />
+                </Border.GestureRecognizers>
+
+                <Border.Shadow>
+                    <Shadow Brush="Gray" Offset="2,2" Radius="4" />
+                </Border.Shadow>
+                <VerticalStackLayout>
+                    <Label Text="Active Calls" FontAttributes="Bold" FontSize="18" />
+                    <Label Text="{Binding ActiveStudentCount}" FontSize="24" TextColor="DarkGreen" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Card: Calls This Week -->
+            <Border BackgroundColor="PowderBlue"
+                    StrokeThickness="1"
+                    StrokeShape="RoundRectangle 10"
+                    Padding="12">
+                <Border.Shadow>
+                    <Shadow Brush="Gray" Offset="2,2" Radius="4" />
+                </Border.Shadow>
+                <VerticalStackLayout>
+                    <Label Text="Calls This Week" FontAttributes="Bold" FontSize="18" />
+                    <Label Text="2" FontSize="24" TextColor="Blue" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Add more dashboard cards here if needed -->
+           
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -1,0 +1,63 @@
+<ContentPage 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewModels="clr-namespace:MinistryTracker.ViewModels"
+    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    xmlns:enums="clr-namespace:MinistryTracker.Models.Enums"
+    x:Class="MinistryTracker.Views.AddStudentPage"
+    x:DataType="viewModels:AddStudentViewModel"
+    Title="Add Student">
+
+    <ContentPage.BindingContext>
+        <viewModels:AddStudentViewModel />
+    </ContentPage.BindingContext>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="15">
+
+            <!-- Required Fields -->
+            <Entry Placeholder="Name" Text="{Binding Name}" />
+
+            <Picker ItemsSource="{x:Static enums:InitialCallTypeValues.All}" />
+
+
+            <DatePicker Date="{Binding FirstContactDate}" />
+
+            <!-- Expander for Optional Fields -->
+            <toolkit:Expander>
+                <toolkit:Expander.Header>
+                    <Label Text="Show More" FontAttributes="Bold" />
+                </toolkit:Expander.Header>
+                <VerticalStackLayout Padding="10" Spacing="10">
+
+                    <Picker Title="Gender"
+                            ItemsSource="{Binding GenderValues}"
+                            SelectedItem="{Binding SelectedGender}" />
+
+                    <Entry Placeholder="Preferred Language"
+                           Text="{Binding PreferredLanguage}" />
+
+                    <Entry Placeholder="Age"
+                           Keyboard="Numeric"
+                           Text="{Binding Age}" />
+
+                    <Picker Title="Contact Method"
+                            ItemsSource="{Binding ContactMethodValues}"
+                            SelectedItem="{Binding SelectedContactMethod}" />
+
+                    <Picker Title="Interest Level"
+                            ItemsSource="{Binding InterestLevelValues}"
+                            SelectedItem="{Binding SelectedInterestLevel}" />
+
+                    <Picker Title="Study Location"
+                            ItemsSource="{Binding StudyLocationTypeValues}"
+                            SelectedItem="{Binding SelectedStudyLocationType}" />
+
+                </VerticalStackLayout>
+            </toolkit:Expander>
+
+            <Button Text="Save" Command="{Binding SaveCommand}" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

@@ -1,0 +1,72 @@
+﻿<ContentPage 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewModels="clr-namespace:MinistryTracker.ViewModels"
+    x:Class="MinistryTracker.Views.StudentsListPage"
+    Title="Students">
+
+    <ContentPage.BindingContext>
+        <viewModels:StudentsListViewModel />
+    </ContentPage.BindingContext>
+
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Padding="20" Spacing="12">
+
+                <!-- 🔍 Search Bar -->
+                <SearchBar 
+                    Placeholder="Search students..."
+                    TextChanged="OnSearchTextChanged"
+                    Margin="0,0,0,10" />
+
+                <!-- 📋 Student Cards List -->
+                <CollectionView 
+                    ItemsSource="{Binding Students}"
+                    VerticalOptions="FillAndExpand">
+                    <CollectionView.ItemTemplate>
+                        <DataTemplate>
+                            <Border 
+                                Stroke="LightGray" 
+                                StrokeThickness="1"
+                                BackgroundColor="WhiteSmoke"
+                                Padding="12"
+                                Margin="0,0,0,10"
+                                StrokeShape="RoundRectangle 12">
+                                <VerticalStackLayout Spacing="6">
+                                    <Label 
+                                        Text="{Binding Name}" 
+                                        FontSize="18" 
+                                        FontAttributes="Bold" />
+
+                                    <Label 
+                                        Text="{Binding InitialContactDateFormatted}" 
+                                        FontSize="14" 
+                                        TextColor="DimGray" />
+
+                                    <Label 
+                                        Text="{Binding Model.StudyLocationType}" 
+                                        FontSize="14" 
+                                        TextColor="DarkGreen" />
+                                </VerticalStackLayout>
+                            </Border>
+                        </DataTemplate>
+                    </CollectionView.ItemTemplate>
+                </CollectionView>
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- ➕ Floating Add Button -->
+        <Button 
+            Text="+"
+            FontSize="24"
+            WidthRequest="60"
+            HeightRequest="60"
+            CornerRadius="30"
+            HorizontalOptions="End"
+            VerticalOptions="End"
+            Margin="20"
+            BackgroundColor="ForestGreen"
+            TextColor="White"
+            Clicked="OnAddStudentClicked" />
+    </Grid>
+</ContentPage>
