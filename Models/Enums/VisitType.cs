@@ -1,13 +1,28 @@
-namespace MinistryTracker.Models
+using System.ComponentModel.DataAnnotations;
+
+namespace MinistryTracker.Models.Enums
 {
     public enum VisitType
     {
-        Home,
-        Business,
-        Public,
-        Phone,
-        Video,
-        Letter,
-        Other
+        [Display(Name = "Initial Call")]
+        InitialCall,
+
+        [Display(Name = "Return Visit")]
+        ReturnVisit,
+
+        [Display(Name = "Bible Study")]
+        BibleStudy,
+
+        [Display(Name = "Letter Writing")]
+        LetterWriting,
+
+        [Display(Name = "Informal Witnessing")]
+        InformalWitnessing,
+
+        [Display(Name = "Phone Call")]
+        PhoneCall,
+
+        [Display(Name = "Video Call")]
+        VideoCall
     }
 }

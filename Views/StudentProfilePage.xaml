@@ -1,0 +1,80 @@
+<ContentPage 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewModels="clr-namespace:MinistryTracker.ViewModels"
+    x:Class="MinistryTracker.Views.StudentProfilePage"
+    Title="Student Profile"
+    BackgroundColor="White">
+
+    <Grid RowDefinitions="*,Auto">
+        <!-- Better layout control -->
+
+        <!-- 🧾 Scrollable Student Info (Main content row) -->
+        <ScrollView Grid.Row="0">
+            <VerticalStackLayout Padding="20" Spacing="16">
+
+                <Label Text="Name" FontSize="16" FontAttributes="Bold" />
+                <Label Text="{Binding StudentModel.Name}" FontSize="20" />
+
+                <Label Text="Initial Call Type" />
+                <Label Text="{Binding StudentModel.CallType}" />
+
+                <Label Text="First Contact" />
+                <Label Text="{Binding StudentModel.FirstContactFormatted}" />
+
+                <Label Text="Status" />
+                <Label Text="{Binding StudentModel.Status}" />
+
+                <Label Text="Study Address" />
+                <Label Text="{Binding StudentModel.StudyAddress}" />
+
+                <Label Text="Region" />
+                <Label Text="{Binding StudentModel.Region}" />
+
+                <Label Text="Preferred Language" />
+                <Label Text="{Binding StudentModel.PreferredLanguage}" />
+
+                <Label Text="Interest Level" />
+                <Label Text="{Binding StudentModel.InterestLevel}" />
+
+                <Label Text="Study Location" />
+                <Label Text="{Binding StudentModel.StudyLocationType}" />
+
+                <Label Text="Notes" />
+                <Label Text="{Binding StudentModel.Notes}" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <!-- 🎯 Icon + Label Action Buttons (Bottom row) -->
+        <HorizontalStackLayout Grid.Row="1"
+                               HorizontalOptions="Center"
+                               VerticalOptions="End"
+                               Spacing="40"
+                               Padding="0,12"
+                               Margin="0,0,0,20">
+
+            <!-- ✏️ Edit Student -->
+            <VerticalStackLayout>
+                <ImageButton Source="edit_icon.png"
+                             WidthRequest="40"
+                             HeightRequest="40"
+                             BackgroundColor="Transparent"
+                             Clicked="OnEditStudentClicked" />
+                <Label Text="Edit" FontSize="12" HorizontalOptions="Center"/>
+            </VerticalStackLayout>
+
+            <!-- ➕ Add Visit -->
+            <VerticalStackLayout>
+                <ImageButton Source="add_icon.png"
+                             WidthRequest="40"
+                             HeightRequest="40"
+                             BackgroundColor="Transparent"
+                             Clicked="OnAddVisitClicked" />
+                <Label Text="Add Visit" FontSize="12" HorizontalOptions="Center"/>
+            </VerticalStackLayout>
+
+        </HorizontalStackLayout>
+
+    </Grid>
+</ContentPage>

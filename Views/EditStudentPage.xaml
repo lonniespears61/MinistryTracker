@@ -1,0 +1,36 @@
+﻿<ContentPage 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewModels="clr-namespace:MinistryTracker.ViewModels"
+    xmlns:enums="clr-namespace:MinistryTracker.Models.Enums"
+    x:Class="MinistryTracker.Views.EditStudentPage"
+    Title="Edit Student">
+
+    <ContentPage.Content>
+        <ScrollView>
+            <VerticalStackLayout Padding="20" Spacing="16">
+
+                <!-- 🧾 Name -->
+                <Label Text="Name" />
+                <Entry Text="{Binding Name}" Placeholder="Enter name" />
+
+                <!-- 📞 Call Type -->
+                <Label Text="Initial Call Type" />
+                <Picker 
+                      Title="Select Initial Call Type"
+                      ItemsSource="{x:Static enums:InitialCallTypeValues.All}" 
+                      SelectedItem="{Binding CallType}" />
+
+                <!-- 📅 First Contact Date -->
+                <Label Text="First Contact Date" />
+                <DatePicker Date="{Binding FirstContactDate}" />
+
+                <!-- 💾 Save Button -->
+                <Button Text="Save"
+                        Command="{Binding SaveCommand}"
+                        BackgroundColor="ForestGreen"
+                        TextColor="White" />
+            </VerticalStackLayout>
+        </ScrollView>
+    </ContentPage.Content>
+</ContentPage>

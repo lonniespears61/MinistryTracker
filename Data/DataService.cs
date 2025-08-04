@@ -1,12 +1,12 @@
+using System.Diagnostics;
 using MinistryTracker.Models;
 using SQLite;
-using System.Diagnostics;
 
 namespace MinistryTracker.Data
 {
     /// <summary>
     /// Central data access service for managing the SQLite database.
-    /// Handles operations for Student and Household models.
+    /// Handles operations for Student, Household, and Visit models.
     /// Uses asynchronous SQLite API to avoid blocking UI threads.
     /// </summary>
     public class DataService
@@ -37,49 +37,27 @@ namespace MinistryTracker.Data
             // Create tables if they do not exist
             await _database.CreateTableAsync<Household>();
             await _database.CreateTableAsync<Student>();
+            await _database.CreateTableAsync<Visit>();
         }
 
         // ---------------- STUDENT CRUD ----------------
 
-        /// <summary>
-        /// Adds a new student to the database.
-        /// </summary>
-        public async Task<int> AddStudentAsync(Student student)
-        {
-            return await _database.InsertAsync(student);
-        }
+        public async Task<int> AddStudentAsync(Student student) =>
+            await _database.InsertAsync(student);
 
-        /// <summary>
-        /// Retrieves a list of all non-deleted students.
-        /// </summary>
-        public async Task<List<Student>> GetStudentsAsync()
-        {
-            return await _database.Table<Student>()
-                                  .Where(s => !s.IsDeleted)
-                                  .ToListAsync();
-        }
+        public async Task<List<Student>> GetStudentsAsync() =>
+            await _database.Table<Student>()
+                           .Where(s => !s.IsDeleted)
+                           .ToListAsync();
 
-        /// <summary>
-        /// Retrieves a single student by ID, if not marked as deleted.
-        /// </summary>
-        public async Task<Student?> GetStudentByIdAsync(int id)
-        {
-            return await _database.Table<Student>()
-                                  .Where(s => s.StudentId == id && !s.IsDeleted)
-                                  .FirstOrDefaultAsync();
-        }
+        public async Task<Student?> GetStudentByIdAsync(int id) =>
+            await _database.Table<Student>()
+                           .Where(s => s.StudentId == id && !s.IsDeleted)
+                           .FirstOrDefaultAsync();
 
-        /// <summary>
-        /// Updates an existing student.
-        /// </summary>
-        public async Task<int> UpdateStudentAsync(Student student)
-        {
-            return await _database.UpdateAsync(student);
-        }
+        public async Task<int> UpdateStudentAsync(Student student) =>
+            await _database.UpdateAsync(student);
 
-        /// <summary>
-        /// Marks a student as deleted instead of physically removing them from the database.
-        /// </summary>
         public async Task<int> SoftDeleteStudentAsync(int id)
         {
             var student = await GetStudentByIdAsync(id);
@@ -88,19 +66,14 @@ namespace MinistryTracker.Data
                 student.IsDeleted = true;
                 return await _database.UpdateAsync(student);
             }
-
-            return 0; // Student not found
+            return 0;
         }
 
-        /// <summary>
-        /// Permanently removes all students who are marked as deleted.
-        /// </summary>
         public async Task<int> PurgeDeletedStudentsAsync()
         {
             var deletedStudents = await _database.Table<Student>()
                                                  .Where(s => s.IsDeleted)
                                                  .ToListAsync();
-
             int deletedCount = 0;
             foreach (var student in deletedStudents)
             {
@@ -111,45 +84,54 @@ namespace MinistryTracker.Data
 
         // ---------------- HOUSEHOLD CRUD ----------------
 
-        /// <summary>
-        /// Adds a new household.
-        /// </summary>
-        public async Task<int> AddHouseholdAsync(Household household)
-        {
-            return await _database.InsertAsync(household);
-        }
+        public async Task<int> AddHouseholdAsync(Household household) =>
+            await _database.InsertAsync(household);
 
-        /// <summary>
-        /// Retrieves all households.
-        /// </summary>
-        public async Task<List<Household>> GetHouseholdsAsync()
-        {
-            return await _database.Table<Household>().ToListAsync();
-        }
+        public async Task<List<Household>> GetHouseholdsAsync() =>
+            await _database.Table<Household>().ToListAsync();
 
-        /// <summary>
-        /// Retrieves a household by ID.
-        /// </summary>
-        public async Task<Household?> GetHouseholdByIdAsync(int id)
-        {
-            return await _database.FindAsync<Household>(id);
-        }
+        public async Task<Household?> GetHouseholdByIdAsync(int id) =>
+            await _database.FindAsync<Household>(id);
 
-        /// <summary>
-        /// Updates a household record.
-        /// </summary>
-        public async Task<int> UpdateHouseholdAsync(Household household)
-        {
-            return await _database.UpdateAsync(household);
-        }
+        public async Task<int> UpdateHouseholdAsync(Household household) =>
+            await _database.UpdateAsync(household);
 
-        /// <summary>
-        /// Deletes a household by ID.
-        /// </summary>
         public async Task<int> DeleteHouseholdAsync(int id)
         {
             var household = await GetHouseholdByIdAsync(id);
             return household != null ? await _database.DeleteAsync(household) : 0;
+        }
+
+        // ---------------- VISIT CRUD ----------------
+
+        /// <summary>
+        /// Adds a new visit.
+        /// </summary>
+        public async Task<int> AddVisitAsync(Visit visit) =>
+            await _database.InsertAsync(visit);
+
+        /// <summary>
+        /// Gets all visits for a specific student, ordered by scheduled date (most recent first).
+        /// </summary>
+        public async Task<List<Visit>> GetVisitsForStudentAsync(int studentId) =>
+            await _database.Table<Visit>()
+                           .Where(v => v.StudentId == studentId)
+                           .OrderByDescending(v => v.ScheduledDateTime)
+                           .ToListAsync();
+
+        /// <summary>
+        /// Updates a visit.
+        /// </summary>
+        public async Task<int> UpdateVisitAsync(Visit visit) =>
+            await _database.UpdateAsync(visit);
+
+        /// <summary>
+        /// Deletes a visit by ID.
+        /// </summary>
+        public async Task<int> DeleteVisitAsync(int id)
+        {
+            var visit = await _database.FindAsync<Visit>(id);
+            return visit != null ? await _database.DeleteAsync(visit) : 0;
         }
     }
 }

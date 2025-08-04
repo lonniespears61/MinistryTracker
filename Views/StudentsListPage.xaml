@@ -26,12 +26,19 @@
                     <CollectionView.ItemTemplate>
                         <DataTemplate>
                             <Border 
+                                BindingContext="{Binding}"  
                                 Stroke="LightGray" 
                                 StrokeThickness="1"
                                 BackgroundColor="WhiteSmoke"
                                 Padding="12"
                                 Margin="0,0,0,10"
                                 StrokeShape="RoundRectangle 12">
+
+                                <!-- 👇 ADD Tap Gesture -->
+                                <Border.GestureRecognizers>
+                                    <TapGestureRecognizer Tapped="OnStudentTapped" />
+                                </Border.GestureRecognizers>
+
                                 <VerticalStackLayout Spacing="6">
                                     <Label 
                                         Text="{Binding Name}" 

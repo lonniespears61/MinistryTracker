@@ -1,0 +1,34 @@
+<ContentPage 
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
+    xmlns:utilities="clr-namespace:MinistryTracker.Utilities"
+    x:Class="MinistryTracker.Views.AddVisitPage"
+    x:DataType="viewmodels:AddVisitViewModel"
+    Title="Schedule Visit">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="24" Spacing="16">
+
+            <Label Text="Schedule a Visit"
+                   FontSize="24"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center" />
+
+            <Picker Title="Visit Type"
+                 ItemsSource="{x:Static utilities:VisitTypeValues.All}" 
+                    SelectedItem="{Binding SelectedVisitType}" />
+
+            <DatePicker Date="{Binding ScheduledDateTime}" />
+            <TimePicker Time="{Binding ScheduledDateTime, Mode=TwoWay}" />
+
+            <Editor Placeholder="Visit notes..."
+                    AutoSize="TextChanges"
+                    Text="{Binding Note}" />
+
+            <Button Text="Save"
+                    Command="{Binding SaveVisitCommand}" />
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>
