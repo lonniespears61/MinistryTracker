@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using MinistryTracker.Models;
+using MinistryTracker.Models.Enums;
 
 namespace MinistryTracker.ViewModels
 {
@@ -21,5 +22,11 @@ namespace MinistryTracker.ViewModels
             // ✅ Must assign to the backing field (_studentModel), not the property StudentModel
             _studentModel = student;
         }
+        public Color StatusColor => _studentModel.Status switch
+        {
+            StudentStatus.Active => Colors.Green,
+            StudentStatus.Discontinued => Colors.Red,
+            _ => Colors.Gray
+        };
     }
 }

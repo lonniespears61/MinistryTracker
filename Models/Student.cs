@@ -1,4 +1,5 @@
 using SQLite;
+using MinistryTracker.Models.Enums;
 
 namespace MinistryTracker.Models
 {

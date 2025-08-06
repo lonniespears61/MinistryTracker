@@ -1,9 +1,10 @@
-namespace MinistryTracker.Models
+namespace MinistryTracker.Models.Enums
 {
     public enum StudentStatus
     {
         Active,
         Paused,
-        NotInterested
+        NotInterested,
+        Discontinued
     }
 }
