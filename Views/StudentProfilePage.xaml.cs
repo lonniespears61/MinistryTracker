@@ -2,6 +2,7 @@
 using MinistryTracker.ViewModels; // For StudentProfileViewModel
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
+using System.Diagnostics;
 namespace MinistryTracker.Views
 {
     /// <summary>
@@ -23,16 +24,16 @@ namespace MinistryTracker.Views
         }
         private async void OnEditStudentClicked(object sender, EventArgs e)
         {
-          //  await Shell.Current.DisplayToastAsync("Edit feature is a coming attraction!", 3000);
-            var toast = Toast.Make("Edit feature is a coming attraction!", ToastDuration.Short, 14);
-            await toast.Show();
+            //  await Shell.Current.DisplayToastAsync("Edit feature is a coming attraction!", 3000);
+            await Toast.Make("Edit Student feature coming soon!").Show();
+            Debug.WriteLine("Not OnAddVisitClicked");
         }
 
         private async void OnAddVisitClicked(object sender, EventArgs e)
         {
-          //  await Shell.Current.DisplayToastAsync("Add Visit feature coming soon!", 3000);
-            var toast = Toast.Make("Add Visit feature coming soon!", ToastDuration.Short, 14);
-            await toast.Show();
+            //  await Shell.Current.DisplayToastAsync("Add Visit feature coming soon!", 3000);
+            await Toast.Make("Schedule Visit feature coming soon!").Show();
+            Debug.WriteLine("OnAddVisitClicked");
         }
 
 
