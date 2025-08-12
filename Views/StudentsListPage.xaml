@@ -1,55 +1,76 @@
-﻿<ContentPage 
-    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:viewModels="clr-namespace:MinistryTracker.ViewModels"
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
     x:Class="MinistryTracker.Views.StudentsListPage"
-    Title="Students">
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
 
-    <ContentPage.BindingContext>
-        <viewModels:StudentsListViewModel />
-    </ContentPage.BindingContext>
-
+    <!-- Root layout for the page -->
     <Grid>
+
+        <!-- Scrollable content area (search + list) -->
         <ScrollView>
             <VerticalStackLayout Padding="20" Spacing="12">
 
-                <!-- 🔍 Search Bar -->
+                <!-- Search bar for filtering students 
+                     (event handler implemented in code-behind) -->
                 <SearchBar 
                     Placeholder="Search students..."
                     TextChanged="OnSearchTextChanged"
                     Margin="0,0,0,10" />
 
-                <!-- 📋 Student Cards List -->
-                <CollectionView 
+                <!-- Students list. We name the CollectionView so code-behind can clear selection. -->
+                <CollectionView
+                    x:Name="StudentsCollection"
                     ItemsSource="{Binding Students}"
+                    SelectionMode="Single"
+                    SelectionChanged="OnStudentSelectionChanged"
                     VerticalOptions="FillAndExpand">
+
+                    <!-- Shown when there are no students -->
+                    <CollectionView.EmptyView>
+                        <Grid Padding="24" RowDefinitions="Auto,Auto">
+                            <Label 
+                                Text="No students yet"
+                                FontSize="18"
+                                FontAttributes="Bold"
+                                HorizontalOptions="Center" />
+                            <Label 
+                                Grid.Row="1"
+                                Text="Tap + to add your first student."
+                                TextColor="Gray"
+                                HorizontalOptions="Center" />
+                        </Grid>
+                    </CollectionView.EmptyView>
+
+                    <!-- Template for each student item.
+                         IMPORTANT: we intentionally omit x:DataType here until we confirm the exact
+                         namespace of StudentViewModel. Bindings still work at runtime. -->
                     <CollectionView.ItemTemplate>
                         <DataTemplate>
                             <Border 
-                                BindingContext="{Binding}"  
                                 Stroke="LightGray" 
                                 StrokeThickness="1"
                                 BackgroundColor="WhiteSmoke"
                                 Padding="12"
-                                Margin="0,0,0,10"
-                                StrokeShape="RoundRectangle 12">
-
-                                <!-- 👇 ADD Tap Gesture -->
-                                <Border.GestureRecognizers>
-                                    <TapGestureRecognizer Tapped="OnStudentTapped" />
-                                </Border.GestureRecognizers>
+                                Margin="0,0,0,10">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="12" />
+                                </Border.StrokeShape>
 
                                 <VerticalStackLayout Spacing="6">
+                                    <!-- Student name -->
                                     <Label 
                                         Text="{Binding Name}" 
                                         FontSize="18" 
                                         FontAttributes="Bold" />
 
+                                    <!-- First contact date (pre-formatted on the VM) -->
                                     <Label 
                                         Text="{Binding InitialContactDateFormatted}" 
                                         FontSize="14" 
                                         TextColor="DimGray" />
 
+                                    <!-- Study location from underlying model -->
                                     <Label 
                                         Text="{Binding Model.StudyLocationType}" 
                                         FontSize="14" 
@@ -62,7 +83,7 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <!-- ➕ Floating Add Button -->
+        <!-- Floating Add (+) Button in the bottom-right corner -->
         <Button 
             Text="+"
             FontSize="24"

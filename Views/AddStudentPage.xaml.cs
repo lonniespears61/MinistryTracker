@@ -2,14 +2,15 @@ using MinistryTracker.ViewModels;
 
 namespace MinistryTracker.Views
 {
+    /// <summary>
+    /// Add Student page. BindingContext is injected via DI; the VM is not created in XAML.
+    /// </summary>
     public partial class AddStudentPage : ContentPage
     {
-        public AddStudentPage()
+        public AddStudentPage(AddStudentViewModel vm)
         {
             InitializeComponent();
-
-            // Assign the ViewModel to the BindingContext of the page
-            BindingContext = new AddStudentViewModel();
+            BindingContext = vm;
         }
     }
 }

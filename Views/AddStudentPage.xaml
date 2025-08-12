@@ -1,63 +1,28 @@
-<ContentPage 
+<?xml version="1.0" encoding="utf-8"?>
+<ContentPage
+    x:Class="MinistryTracker.Views.AddStudentPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:viewModels="clr-namespace:MinistryTracker.ViewModels"
-    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
-    xmlns:enums="clr-namespace:MinistryTracker.Models.Enums"
-    x:Class="MinistryTracker.Views.AddStudentPage"
-    x:DataType="viewModels:AddStudentViewModel"
-    Title="Add Student">
-
-    <ContentPage.BindingContext>
-        <viewModels:AddStudentViewModel />
-    </ContentPage.BindingContext>
+    xmlns:vm="clr-namespace:MinistryTracker.ViewModels;assembly=MinistryTracker"
+    x:DataType="vm:AddStudentViewModel">
 
     <ScrollView>
-        <VerticalStackLayout Padding="20" Spacing="15">
+        <VerticalStackLayout Padding="20" Spacing="14">
+            <Label Text="Name" />
+            <Entry Text="{Binding Name}" Placeholder="Enter name" />
 
-            <!-- Required Fields -->
-            <Entry Placeholder="Name" Text="{Binding Name}" />
+            <Label Text="Initial Call Type" Margin="0,10,0,0" />
+            <Picker Title="Select call type"
+                    ItemsSource="{Binding CallTypeValues}"
+                    SelectedItem="{Binding CallType}" />
 
-            <Picker ItemsSource="{x:Static enums:InitialCallTypeValues.All}" />
-
-
+            <Label Text="First Contact Date" Margin="0,10,0,0" />
             <DatePicker Date="{Binding FirstContactDate}" />
 
-            <!-- Expander for Optional Fields -->
-            <toolkit:Expander>
-                <toolkit:Expander.Header>
-                    <Label Text="Show More" FontAttributes="Bold" />
-                </toolkit:Expander.Header>
-                <VerticalStackLayout Padding="10" Spacing="10">
+            <Label Text="Preferred Language" Margin="0,10,0,0" />
+            <Entry Text="{Binding PreferredLanguage}" Placeholder="e.g., English" />
 
-                    <Picker Title="Gender"
-                            ItemsSource="{Binding GenderValues}"
-                            SelectedItem="{Binding SelectedGender}" />
-
-                    <Entry Placeholder="Preferred Language"
-                           Text="{Binding PreferredLanguage}" />
-
-                    <Entry Placeholder="Age"
-                           Keyboard="Numeric"
-                           Text="{Binding Age}" />
-
-                    <Picker Title="Contact Method"
-                            ItemsSource="{Binding ContactMethodValues}"
-                            SelectedItem="{Binding SelectedContactMethod}" />
-
-                    <Picker Title="Interest Level"
-                            ItemsSource="{Binding InterestLevelValues}"
-                            SelectedItem="{Binding SelectedInterestLevel}" />
-
-                    <Picker Title="Study Location"
-                            ItemsSource="{Binding StudyLocationTypeValues}"
-                            SelectedItem="{Binding SelectedStudyLocationType}" />
-
-                </VerticalStackLayout>
-            </toolkit:Expander>
-
-            <Button Text="Save" Command="{Binding SaveCommand}" />
-
+            <Button Text="Save" Margin="0,20,0,0" Command="{Binding SaveCommand}" />
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

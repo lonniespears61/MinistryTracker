@@ -1,75 +1,110 @@
-﻿using Microsoft.Maui.Controls; // Core Maui UI types
-using MinistryTracker.Models;  // For Student model
-using MinistryTracker.ViewModels; // For StudentViewModel
-using System;
-using System.Diagnostics;
+﻿using Microsoft.Extensions.DependencyInjection;
+using MinistryTracker.Models;
+using MinistryTracker.ViewModels;
 
 namespace MinistryTracker.Views
 {
     /// <summary>
-    /// Code-behind for the StudentsListPage.xaml.
-    /// Handles user interaction events like tapping and navigation.
+    /// Code-behind for StudentsListPage.xaml.
+    /// Handles UI events and page lifecycle.
+    /// This page uses constructor injection for:
+    ///     - StudentsListViewModel (_vm): The page's BindingContext.
+    ///     - IServiceProvider (_services): For resolving navigation targets.
     /// </summary>
     public partial class StudentsListPage : ContentPage
     {
-        // Local reference to the ViewModel
-        private readonly StudentsListViewModel viewModel;
+        // Backing field for the page's ViewModel (injected)
+        private readonly StudentsListViewModel _vm;
 
-        public StudentsListPage()
+        // Service provider for resolving other pages (AddStudentPage, EditStudentPage)
+        private readonly IServiceProvider _services;
+
+        /// <summary>
+        /// Constructor is called by the DI container when navigating to this page.
+        /// </summary>
+        /// <param name="vm">The injected StudentsListViewModel instance.</param>
+        /// <param name="services">The application's service provider (DI container).</param>
+        public StudentsListPage(StudentsListViewModel vm, IServiceProvider services)
         {
             InitializeComponent();
 
-            // Create an instance of the ViewModel
-            viewModel = new StudentsListViewModel();
+            // Assign the injected ViewModel to the page's BindingContext
+            BindingContext = _vm = vm;
 
-            // Set the ViewModel as the data context for data binding
-            BindingContext = viewModel;
+            // Keep a reference to the DI service provider for resolving other pages
+            _services = services;
         }
 
         /// <summary>
-        /// Triggered when the search bar text is changed.
-        /// Currently a stub for filtering logic.
+        /// OnAppearing is called every time the page becomes visible.
+        /// We use it to load or refresh the Students list.
         /// </summary>
-        private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
+        protected override async void OnAppearing()
         {
-            // Eventually this should call a ViewModel filter method
-            Console.WriteLine($"Search query: {e.NewTextValue}");
+            base.OnAppearing();
+
+            // Load student data from the database (async)
+            await _vm.LoadAsync();
+
+            // Ensure any previous selection is cleared
+            StudentsCollection.SelectedItem = null;
         }
 
         /// <summary>
-        /// Triggered when the "+" button is tapped.
-        /// Navigates to the AddStudentPage to create a new record.
+        /// Event handler for the floating Add button.
+        /// Navigates to AddStudentPage via DI container.
         /// </summary>
         private async void OnAddStudentClicked(object sender, EventArgs e)
         {
-            await Navigation.PushAsync(new AddStudentPage());
+            // Resolve AddStudentPage instance from DI container
+            var addPage = _services.GetRequiredService<AddStudentPage>();
+
+            // Navigate to AddStudentPage
+            await Navigation.PushAsync(addPage);
         }
 
         /// <summary>
-        /// Triggered when a student card (Border) is tapped.
-        /// Safely extracts the Student model and navigates to the profile page.
+        /// Event handler when a student is selected from the list.
+        /// Navigates to EditStudentPage with the selected student's data.
         /// </summary>
-        private async void OnStudentTapped(object sender, EventArgs e)
+        private async void OnStudentSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // Log what was tapped
-            Debug.WriteLine($"Tapped on: {sender}");
-
-            // Ensure the sender is a Border and has a StudentViewModel bound to it
-            if (sender is Border border && border.BindingContext is StudentViewModel studentVM)
+            // Extract the first selected item (if any)
+            if (e.CurrentSelection?.FirstOrDefault() is StudentViewModel svm)
             {
-                // Extract the underlying Student model
-                var tappedStudent = studentVM.Model;
+                // Resolve EditStudentPage instance from DI
+                var editPage = _services.GetRequiredService<EditStudentPage>();
 
-                Debug.WriteLine($"Navigating to profile for student: {tappedStudent.Name}");
+                // Pass the selected student's model to the Edit page's ViewModel
+                editPage.Init(svm.Model);
 
-                // ✅ Pass the Student directly to the StudentProfilePage
-                await Navigation.PushAsync(new StudentProfilePage(tappedStudent));
+                // Navigate to EditStudentPage
+                await Navigation.PushAsync(editPage);
+
+                // Clear selection so the same student can be selected again later
+                StudentsCollection.SelectedItem = null;
             }
-            else
-            {
-                // Fallback debug message for unexpected binding
-                Debug.WriteLine("Tapped item was not a StudentViewModel.");
-            }
+        }
+
+        /// <summary>
+        /// Event handler for the SearchBar's TextChanged event.
+        /// Optional: you can move filtering logic into the ViewModel
+        /// for a cleaner MVVM approach.
+        /// </summary>
+        private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
+        {
+            // Get trimmed search query
+            var query = e.NewTextValue?.Trim() ?? string.Empty;
+
+            // TODO: Option 1 - Bind SearchBar.Text to a ViewModel property
+            // and filter Students inside the VM.
+            //
+            // Option 2 - Filter here in code-behind:
+            // var filtered = _vm.Students
+            //     .Where(s => s.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
+            //     .ToList();
+            //
+            // Then assign filtered list to a display collection.
         }
     }
 }

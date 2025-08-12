@@ -2,45 +2,41 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MinistryTracker.Data;
 using MinistryTracker.Models;
-using MinistryTracker.Models.Enums;
-using System;
-using System.Threading.Tasks;
 
 namespace MinistryTracker.ViewModels
 {
     public partial class EditStudentViewModel : ObservableObject
     {
-        private readonly DataService _dataService;
+        private readonly DataService _data;
+        private int _id;
 
-        public EditStudentViewModel(Student student, DataService dataService)
+        [ObservableProperty] private string name = string.Empty;
+        [ObservableProperty] private DateTime firstContactDate = DateTime.Today;
+        // TODO: add other bound fields as needed (Gender, Status pill, etc.)
+
+        public EditStudentViewModel(DataService data) => _data = data;
+
+        public void Load(Student s)
         {
-            _dataService = dataService;
-
-            StudentId = student.StudentId;
-            Name = student.Name;
-            CallType = student.CallType;
-            FirstContactDate = student.FirstContactDate;
+            _id = s.StudentId;
+            Name = s.Name;
+            FirstContactDate = s.FirstContactDate;
+            // map rest of fields here
         }
 
-        // DO NOT manually declare these properties elsewhere!
-        [ObservableProperty] private int studentId;
-        [ObservableProperty] private string name = string.Empty;
-        [ObservableProperty] private InitialCallType callType;
-        [ObservableProperty] private DateTime firstContactDate;
-
         [RelayCommand]
-        private async Task SaveAsync()
+        public async Task SaveAsync()
         {
-            var updatedStudent = new Student
+            var s = new Student
             {
-                StudentId = StudentId,
+                StudentId = _id,
                 Name = Name,
-                CallType = CallType,
-                FirstContactDate = FirstContactDate
+                FirstContactDate = FirstContactDate,
+                // map rest of fields here
             };
 
-            await _dataService.UpdateStudentAsync(updatedStudent);
-            await Shell.Current.GoToAsync("..");
+            await _data.UpdateStudentAsync(s);
+            await Application.Current.MainPage.Navigation.PopAsync();
         }
     }
 }
