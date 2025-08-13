@@ -1,110 +1,117 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using MinistryTracker.Models;
-using MinistryTracker.ViewModels;
+﻿// StudentsListPage.xaml.cs
+// Purpose: Hosts the searchable list of students.
+// Notes:
+// - ViewModel and IServiceProvider are injected via DI.
+// - OnAppearing loads/refeshes the list (guarded to avoid overlapping calls).
+// - SelectionChanged navigates to Edit; FAB navigates to Add.
+// - Includes defensive null checks and simple error surfacing.
+
+using System;
+using System.Linq;                          // For FirstOrDefault()
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui.Controls;              // ContentPage, SelectionChangedEventArgs
+using MinistryTracker.Models;               // Student (model bound in the list)
+using MinistryTracker.ViewModels;           // StudentsListViewModel
 
 namespace MinistryTracker.Views
 {
-    /// <summary>
-    /// Code-behind for StudentsListPage.xaml.
-    /// Handles UI events and page lifecycle.
-    /// This page uses constructor injection for:
-    ///     - StudentsListViewModel (_vm): The page's BindingContext.
-    ///     - IServiceProvider (_services): For resolving navigation targets.
-    /// </summary>
     public partial class StudentsListPage : ContentPage
     {
-        // Backing field for the page's ViewModel (injected)
+        // Injected ViewModel (BindingContext)
         private readonly StudentsListViewModel _vm;
 
-        // Service provider for resolving other pages (AddStudentPage, EditStudentPage)
+        // DI container for resolving other pages
         private readonly IServiceProvider _services;
 
-        /// <summary>
-        /// Constructor is called by the DI container when navigating to this page.
-        /// </summary>
-        /// <param name="vm">The injected StudentsListViewModel instance.</param>
-        /// <param name="services">The application's service provider (DI container).</param>
+        // Prevent overlapping loads when OnAppearing fires multiple times quickly (Android)
+        private bool _isLoading;
+
         public StudentsListPage(StudentsListViewModel vm, IServiceProvider services)
         {
             InitializeComponent();
 
-            // Assign the injected ViewModel to the page's BindingContext
             BindingContext = _vm = vm;
-
-            // Keep a reference to the DI service provider for resolving other pages
             _services = services;
         }
 
         /// <summary>
-        /// OnAppearing is called every time the page becomes visible.
-        /// We use it to load or refresh the Students list.
+        /// Refresh data each time the page appears.
+        /// Guarded so we don't run multiple loads concurrently.
         /// </summary>
         protected override async void OnAppearing()
         {
             base.OnAppearing();
 
-            // Load student data from the database (async)
-            await _vm.LoadAsync();
+            if (_isLoading) return;
+            _isLoading = true;
 
-            // Ensure any previous selection is cleared
-            StudentsCollection.SelectedItem = null;
-        }
-
-        /// <summary>
-        /// Event handler for the floating Add button.
-        /// Navigates to AddStudentPage via DI container.
-        /// </summary>
-        private async void OnAddStudentClicked(object sender, EventArgs e)
-        {
-            // Resolve AddStudentPage instance from DI container
-            var addPage = _services.GetRequiredService<AddStudentPage>();
-
-            // Navigate to AddStudentPage
-            await Navigation.PushAsync(addPage);
-        }
-
-        /// <summary>
-        /// Event handler when a student is selected from the list.
-        /// Navigates to EditStudentPage with the selected student's data.
-        /// </summary>
-        private async void OnStudentSelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            // Extract the first selected item (if any)
-            if (e.CurrentSelection?.FirstOrDefault() is StudentViewModel svm)
+            try
             {
-                // Resolve EditStudentPage instance from DI
-                var editPage = _services.GetRequiredService<EditStudentPage>();
+                await _vm.LoadAsync();
 
-                // Pass the selected student's model to the Edit page's ViewModel
-                editPage.Init(svm.Model);
-
-                // Navigate to EditStudentPage
-                await Navigation.PushAsync(editPage);
-
-                // Clear selection so the same student can be selected again later
-                StudentsCollection.SelectedItem = null;
+                // Clear selection (so the same row can be tapped again later)
+                if (StudentsCollection != null)
+                    StudentsCollection.SelectedItem = null;
+            }
+            catch (Exception ex)
+            {
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"[StudentsListPage] Load failed: {ex}");
+#endif
+                await DisplayAlert("Error", "Couldn't load students. Please try again.", "OK");
+            }
+            finally
+            {
+                _isLoading = false;
             }
         }
 
         /// <summary>
-        /// Event handler for the SearchBar's TextChanged event.
-        /// Optional: you can move filtering logic into the ViewModel
-        /// for a cleaner MVVM approach.
+        /// Floating action button → navigate to Add Student.
         /// </summary>
-        private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
+        private async void OnAddStudentClicked(object sender, EventArgs e)
         {
-            // Get trimmed search query
-            var query = e.NewTextValue?.Trim() ?? string.Empty;
+            try
+            {
+                var addPage = _services.GetRequiredService<AddStudentPage>();
+                await Navigation.PushAsync(addPage);
+            }
+            catch (Exception ex)
+            {
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"[StudentsListPage] Navigate to Add failed: {ex}");
+#endif
+                await DisplayAlert("Error", "Couldn't open Add Student.", "OK");
+            }
+        }
 
-            // TODO: Option 1 - Bind SearchBar.Text to a ViewModel property
-            // and filter Students inside the VM.
-            //
-            // Option 2 - Filter here in code-behind:
-            // var filtered = _vm.Students
-            //     .Where(s => s.Name.Contains(query, StringComparison.OrdinalIgnoreCase))
-            //     .ToList();
-            //
-            // Then assign filtered list to a display collection.
+        /// <summary>
+        /// When a student is selected, navigate to Edit page.
+        /// </summary>
+        private async void OnStudentSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            try
+            {
+                // Ignore deselection or empty selection events
+                var selected = e.CurrentSelection?.FirstOrDefault();
+                if (selected is not Student student) return;
+
+                var editPage = _services.GetRequiredService<EditStudentPage>();
+                editPage.Init(student); // Pass the selected Student model
+                await Navigation.PushAsync(editPage);
+            }
+            catch (Exception ex)
+            {
+#if DEBUG
+                System.Diagnostics.Debug.WriteLine($"[StudentsListPage] Navigate to Edit failed: {ex}");
+#endif
+                await DisplayAlert("Error", "Couldn't open Student details.", "OK");
+            }
+            finally
+            {
+                if (StudentsCollection != null)
+                    StudentsCollection.SelectedItem = null;
+            }
         }
     }
 }

@@ -1,90 +1,98 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8"?>
+<!-- StudentsListPage.xaml
+     Notes:
+     - Let CollectionView do the scrolling (no outer ScrollView).
+     - ItemsSource binds to FilteredStudents (type: Student).
+     - The item template is strongly typed to models:Student for compile-time checks.
+-->
+
 <ContentPage
     x:Class="MinistryTracker.Views.StudentsListPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:MinistryTracker.ViewModels;assembly=MinistryTracker"
+    xmlns:models="clr-namespace:MinistryTracker.Models;assembly=MinistryTracker"
+    x:DataType="vm:StudentsListViewModel">
 
-    <!-- Root layout for the page -->
-    <Grid>
+    <!-- Two rows: search (Auto) + list (*) -->
+    <Grid RowDefinitions="Auto,*">
 
-        <!-- Scrollable content area (search + list) -->
-        <ScrollView>
-            <VerticalStackLayout Padding="20" Spacing="12">
+        <!-- Search (row 0) -->
+        <SearchBar
+            Grid.Row="0"
+            Placeholder="Search students..."
+            Text="{Binding SearchText}"
+            Margin="20,20,20,10" />
 
-                <!-- Search bar for filtering students 
-                     (event handler implemented in code-behind) -->
-                <SearchBar 
-                    Placeholder="Search students..."
-                    TextChanged="OnSearchTextChanged"
-                    Margin="0,0,0,10" />
+        <!-- Students list (row 1) — CollectionView provides its own scrolling -->
+        <CollectionView
+            Grid.Row="1"
+            x:Name="StudentsCollection"
+            ItemsSource="{Binding FilteredStudents}"
+            SelectionMode="Single"
+            SelectionChanged="OnStudentSelectionChanged"
+            ItemSizingStrategy="MeasureAllItems"
+            VerticalOptions="FillAndExpand"
+            Margin="20,0,20,20">
 
-                <!-- Students list. We name the CollectionView so code-behind can clear selection. -->
-                <CollectionView
-                    x:Name="StudentsCollection"
-                    ItemsSource="{Binding Students}"
-                    SelectionMode="Single"
-                    SelectionChanged="OnStudentSelectionChanged"
-                    VerticalOptions="FillAndExpand">
+            <!-- Empty state -->
+            <CollectionView.EmptyView>
+                <Grid Padding="24" RowDefinitions="Auto,Auto">
+                    <Label Text="No students yet"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center" />
+                    <Label Grid.Row="1"
+                           Text="Tap + to add your first student."
+                           TextColor="Gray"
+                           HorizontalOptions="Center" />
+                </Grid>
+            </CollectionView.EmptyView>
 
-                    <!-- Shown when there are no students -->
-                    <CollectionView.EmptyView>
-                        <Grid Padding="24" RowDefinitions="Auto,Auto">
-                            <Label 
-                                Text="No students yet"
-                                FontSize="18"
-                                FontAttributes="Bold"
-                                HorizontalOptions="Center" />
-                            <Label 
-                                Grid.Row="1"
-                                Text="Tap + to add your first student."
-                                TextColor="Gray"
-                                HorizontalOptions="Center" />
-                        </Grid>
-                    </CollectionView.EmptyView>
+            <!-- Item template: strongly typed to Student -->
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:Student">
+                    <Border Stroke="LightGray"
+                            StrokeThickness="1"
+                            BackgroundColor="WhiteSmoke"
+                            Padding="12"
+                            Margin="0,0,0,10">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="12" />
+                        </Border.StrokeShape>
 
-                    <!-- Template for each student item.
-                         IMPORTANT: we intentionally omit x:DataType here until we confirm the exact
-                         namespace of StudentViewModel. Bindings still work at runtime. -->
-                    <CollectionView.ItemTemplate>
-                        <DataTemplate>
-                            <Border 
-                                Stroke="LightGray" 
-                                StrokeThickness="1"
-                                BackgroundColor="WhiteSmoke"
-                                Padding="12"
-                                Margin="0,0,0,10">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="12" />
-                                </Border.StrokeShape>
+                        <VerticalStackLayout Spacing="6">
 
-                                <VerticalStackLayout Spacing="6">
-                                    <!-- Student name -->
-                                    <Label 
-                                        Text="{Binding Name}" 
-                                        FontSize="18" 
-                                        FontAttributes="Bold" />
+                            <!-- Name (bind directly to Student.Name) -->
+                            <Label Text="{Binding Name,
+                                                  FallbackValue='(no Name property)',
+                                                  TargetNullValue='(name is null)'}"
+                                   FontSize="18"
+                                   FontAttributes="Bold"
+                                   LineBreakMode="TailTruncation"
+                                   TextColor="{AppThemeBinding Light=Black, Dark=White}" />
 
-                                    <!-- First contact date (pre-formatted on the VM) -->
-                                    <Label 
-                                        Text="{Binding InitialContactDateFormatted}" 
-                                        FontSize="14" 
-                                        TextColor="DimGray" />
+                            <!-- First contact date -->
+                            <Label Text="{Binding FirstContactDate,
+                                                  StringFormat='First contact: {0:d}',
+                                                  FallbackValue='(no FirstContactDate property)'}"
+                                   FontSize="14"
+                                   TextColor="{AppThemeBinding Light=#555555, Dark=#CCCCCC}" />
 
-                                    <!-- Study location from underlying model -->
-                                    <Label 
-                                        Text="{Binding Model.StudyLocationType}" 
-                                        FontSize="14" 
-                                        TextColor="DarkGreen" />
-                                </VerticalStackLayout>
-                            </Border>
-                        </DataTemplate>
-                    </CollectionView.ItemTemplate>
-                </CollectionView>
-            </VerticalStackLayout>
-        </ScrollView>
+                            <!-- Study location type -->
+                            <Label Text="{Binding StudyLocationType,
+                                                  FallbackValue='(no StudyLocationType property)',
+                                                  TargetNullValue='(not set)'}"
+                                   FontSize="14"
+                                   TextColor="{AppThemeBinding Light=DarkGreen, Dark=LightGreen}" />
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
 
-        <!-- Floating Add (+) Button in the bottom-right corner -->
-        <Button 
+        <!-- Floating + button (overlaid) -->
+        <Button
             Text="+"
             FontSize="24"
             WidthRequest="60"
@@ -95,6 +103,7 @@
             Margin="20"
             BackgroundColor="ForestGreen"
             TextColor="White"
-            Clicked="OnAddStudentClicked" />
+            Clicked="OnAddStudentClicked"
+            ZIndex="10" />
     </Grid>
 </ContentPage>
