@@ -1,30 +1,23 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<!-- StudentsListPage.xaml
-     Notes:
-     - Let CollectionView do the scrolling (no outer ScrollView).
-     - ItemsSource binds to FilteredStudents (type: Student).
-     - The item template is strongly typed to models:Student for compile-time checks.
--->
-
 <ContentPage
     x:Class="MinistryTracker.Views.StudentsListPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:vm="clr-namespace:MinistryTracker.ViewModels;assembly=MinistryTracker"
-    xmlns:models="clr-namespace:MinistryTracker.Models;assembly=MinistryTracker"
+    xmlns:vm="clr-namespace:MinistryTracker.ViewModels"
+    xmlns:models="clr-namespace:MinistryTracker.Models"
     x:DataType="vm:StudentsListViewModel">
 
     <!-- Two rows: search (Auto) + list (*) -->
     <Grid RowDefinitions="Auto,*">
 
-        <!-- Search (row 0) -->
+        <!-- 🔎 Search -->
         <SearchBar
             Grid.Row="0"
             Placeholder="Search students..."
             Text="{Binding SearchText}"
             Margin="20,20,20,10" />
 
-        <!-- Students list (row 1) — CollectionView provides its own scrolling -->
+        <!-- 📋 Students list (CollectionView scrolls itself) -->
         <CollectionView
             Grid.Row="1"
             x:Name="StudentsCollection"
@@ -52,47 +45,75 @@
             <!-- Item template: strongly typed to Student -->
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:Student">
-                    <Border Stroke="LightGray"
-                            StrokeThickness="1"
-                            BackgroundColor="WhiteSmoke"
-                            Padding="12"
-                            Margin="0,0,0,10">
-                        <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="12" />
-                        </Border.StrokeShape>
 
-                        <VerticalStackLayout Spacing="6">
+                    <SwipeView>
+                        <SwipeView.RightItems>
+                            <SwipeItems Mode="Reveal">
 
-                            <!-- Name (bind directly to Student.Name) -->
-                            <Label Text="{Binding Name,
-                                                  FallbackValue='(no Name property)',
-                                                  TargetNullValue='(name is null)'}"
-                                   FontSize="18"
-                                   FontAttributes="Bold"
-                                   LineBreakMode="TailTruncation"
-                                   TextColor="{AppThemeBinding Light=Black, Dark=White}" />
+                                <!-- ✏️ Edit (1 touch) -->
+                                <SwipeItem 
+                                    Text="Edit"
+                                    BackgroundColor="#FF8C00"
+                                    IconImageSource="edit_profile_icon.png"
+                                    Invoked="OnEditSwipeInvoked"
+                                    CommandParameter="{Binding .}" />
 
-                            <!-- First contact date -->
-                            <Label Text="{Binding FirstContactDate,
-                                                  StringFormat='First contact: {0:d}',
-                                                  FallbackValue='(no FirstContactDate property)'}"
-                                   FontSize="14"
-                                   TextColor="{AppThemeBinding Light=#555555, Dark=#CCCCCC}" />
+                                <!-- ➕ Add Visit (1 touch) -->
+                                <SwipeItem 
+                                    Text="Add Visit"
+                                    BackgroundColor="#228B22"
+                                    IconImageSource="add_visit_icon.png"
+                                    Invoked="OnAddVisitSwipeInvoked"
+                                    CommandParameter="{Binding .}" />
 
-                            <!-- Study location type -->
-                            <Label Text="{Binding StudyLocationType,
-                                                  FallbackValue='(no StudyLocationType property)',
-                                                  TargetNullValue='(not set)'}"
-                                   FontSize="14"
-                                   TextColor="{AppThemeBinding Light=DarkGreen, Dark=LightGreen}" />
-                        </VerticalStackLayout>
-                    </Border>
+                            </SwipeItems>
+                        </SwipeView.RightItems>
+
+                        <!-- Your card -->
+                        <Border Stroke="LightGray"
+                                StrokeThickness="1"
+                                BackgroundColor="WhiteSmoke"
+                                Padding="12"
+                                Margin="0,0,0,10">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
+
+                            <VerticalStackLayout Spacing="6">
+
+                                <!-- Name -->
+                                <Label Text="{Binding Name,
+                                                      FallbackValue='(no Name property)',
+                                                      TargetNullValue='(name is null)'}"
+                                       FontSize="18"
+                                       FontAttributes="Bold"
+                                       LineBreakMode="TailTruncation"
+                                       TextColor="{AppThemeBinding Light=Black, Dark=White}" />
+
+                                <!-- First contact date -->
+                                <Label Text="{Binding FirstContactDate,
+                                                      StringFormat='First contact: {0:d}',
+                                                      FallbackValue='(no FirstContactDate property)'}"
+                                       FontSize="14"
+                                       TextColor="{AppThemeBinding Light=#555555, Dark=#CCCCCC}" />
+
+                                <!-- Study location -->
+                                <Label Text="{Binding StudyLocationType,
+                                                      FallbackValue='(no StudyLocationType property)',
+                                                      TargetNullValue='(not set)'}"
+                                       FontSize="14"
+                                       TextColor="{AppThemeBinding Light=DarkGreen, Dark=LightGreen}" />
+                            </VerticalStackLayout>
+                        </Border>
+
+                    </SwipeView>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
 
-        <!-- Floating + button (overlaid) -->
+        <!-- ➕ Floating Add button (overlay across both rows) -->
         <Button
+            Grid.RowSpan="2"
             Text="+"
             FontSize="24"
             WidthRequest="60"
