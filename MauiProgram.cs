@@ -9,6 +9,9 @@ namespace MinistryTracker;
 
 public static class MauiProgram
 {
+    // ✅ Make DI container accessible app-wide
+    public static IServiceProvider Services { get; private set; } = default!;
+
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
@@ -30,15 +33,24 @@ public static class MauiProgram
         builder.Services.AddTransient<AddStudentViewModel>();
         builder.Services.AddTransient<EditStudentViewModel>();
 
+
         // Pages
         builder.Services.AddTransient<DashboardPage>();
         builder.Services.AddTransient<StudentsListPage>();
         builder.Services.AddTransient<AddStudentPage>();
         builder.Services.AddTransient<EditStudentPage>();
 
+        var app = builder.Build();
+
 #if DEBUG
         builder.Logging.AddDebug();
 #endif
-        return builder.Build();
+
+        // Initialize the database
+        var dataService = app.Services.GetRequiredService<DataService>();
+        dataService.InitializeAsync().GetAwaiter().GetResult();
+
+
+        return app; 
     }
 }

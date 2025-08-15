@@ -1,13 +1,19 @@
+using Microsoft.Maui.Controls;
+using MinistryTracker.Models;
 using MinistryTracker.ViewModels;
 
 namespace MinistryTracker.Views
 {
     public partial class AddVisitPage : ContentPage
     {
-        public AddVisitPage(AddVisitViewModel viewModel)
+        private readonly AddVisitViewModel _vm;
+
+        public AddVisitPage(AddVisitViewModel vm, Student student)
         {
             InitializeComponent();
-            BindingContext = viewModel;
+            _vm = vm;
+            _vm.Load(student);
+            BindingContext = _vm;
         }
     }
 }

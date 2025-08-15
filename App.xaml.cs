@@ -1,17 +1,20 @@
-﻿using MinistryTracker.Data;
+﻿using Microsoft.Extensions.DependencyInjection; 
+using MinistryTracker.Data;
 using MinistryTracker.Views;
 
 namespace MinistryTracker;
 
 public partial class App : Application
 {
-    public App(DashboardPage root, DataService data)
+    public App()
     {
         InitializeComponent();
 
-        // Kick off DB init (non-blocking; service itself is concurrency-safe)
-        _ = data.InitializeAsync();
-
-        MainPage = new NavigationPage(root);
+    }
+    protected override Window CreateWindow(IActivationState? activationState)
+    {
+       
+        var dashboardPage = MauiProgram.Services.GetRequiredService<DashboardPage>();
+        return new Window(new NavigationPage(dashboardPage));
     }
 }

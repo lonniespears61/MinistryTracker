@@ -1,3 +1,4 @@
+using Microsoft.Maui.Controls;
 using MinistryTracker.Models;
 using MinistryTracker.ViewModels;
 
@@ -7,13 +8,12 @@ namespace MinistryTracker.Views
     {
         private readonly EditStudentViewModel _vm;
 
-        public EditStudentPage(EditStudentViewModel vm)
+        public EditStudentPage(EditStudentViewModel vm, Student student)
         {
             InitializeComponent();
-            BindingContext = _vm = vm;
+            _vm = vm;
+            _vm.Load(student);   // your VM should expose Load(Student)
+            BindingContext = _vm;
         }
-
-        // Call this right after resolving the page from DI
-        public void Init(Student student) => _vm.Load(student);
     }
 }

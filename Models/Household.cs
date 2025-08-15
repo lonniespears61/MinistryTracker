@@ -24,5 +24,5 @@ namespace MinistryTracker.Models
         public double? Latitude { get; set; }    // Geolocation for "Near Me"
         public double? Longitude { get; set; }
 
-            }
+    }
 }
