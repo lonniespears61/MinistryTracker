@@ -1,4 +1,5 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
+using Microsoft.Maui.Graphics;               // For Color / Colors
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
 
@@ -10,23 +11,41 @@ namespace MinistryTracker.ViewModels
     /// </summary>
     public partial class StudentProfileViewModel : ObservableObject
     {
-        // ⚠️ DO NOT call this "Student" to avoid ambiguity with the Student class
+        // This generates a public property: StudentModel (with change notifications)
         [ObservableProperty]
-        private Student _studentModel;
+        private Student _studentModel = new();
+
+        public StudentProfileViewModel() { }
 
         /// <summary>
-        /// Constructor that receives a Student model and sets the property.
+        /// Load a student into the VM.
+        /// IMPORTANT: assign to the PROPERTY (StudentModel), not the field,
+        /// so bindings are notified.
         /// </summary>
-        public StudentProfileViewModel(Student student)
-        {
-            // ✅ Must assign to the backing field (_studentModel), not the property StudentModel
-            _studentModel = student;
-        }
-        public Color StatusColor => _studentModel.Status switch
+        public void Load(Student student) => StudentModel = student;
+
+        /// <summary>
+        /// Computed color for the status "pill".
+        /// </summary>
+        public Color StatusColor => StudentModel.Status switch
         {
             StudentStatus.Active => Colors.Green,
             StudentStatus.Discontinued => Colors.Red,
+            StudentStatus.Paused => Colors.Orange,
+            StudentStatus.NotInterested => Colors.Gray,
             _ => Colors.Gray
         };
+
+        /// <summary>
+        /// Text to display inside the status pill (keeps XAML simple).
+        /// </summary>
+        public string StatusText => StudentModel.Status.ToString();
+
+        // When StudentModel changes, also notify that StatusColor/StatusText changed.
+        partial void OnStudentModelChanged(Student value)
+        {
+            OnPropertyChanged(nameof(StatusColor));
+            OnPropertyChanged(nameof(StatusText));
+        }
     }
 }

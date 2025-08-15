@@ -1,20 +1,21 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Linq;                                // ✅ Needed for FirstOrDefault
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.Controls;
 using MinistryTracker.Models;
+using MinistryTracker.ViewModels;
 
+// Note: Ensure you have the correct namespaces for your project.
 namespace MinistryTracker.Views
 {
     public partial class StudentsListPage : ContentPage
     {
-        // If you already have a DI-injected VM ctor, keep it.
-        // Otherwise you can also have a parameterless ctor that resolves the VM.
-        public StudentsListPage()
+        public StudentsListPage(StudentsListViewModel vm)
+
         {
             InitializeComponent();
-            // If you’re not using DI yet, set the BindingContext in XAML or here.
-            // BindingContext = new StudentsListViewModel(App.Database); // pre-DI style
+            BindingContext = vm;
         }
 
         // ✅ Matches XAML: SelectionChanged="OnStudentSelectionChanged"
@@ -30,9 +31,9 @@ namespace MinistryTracker.Views
                 if (sender is CollectionView cv)
                     cv.SelectedItem = null;
 
-                // 👉 Navigate to the profile page by passing the Student.
-                //    The page will create its own ViewModel using this Student.
-                await Navigation.PushAsync(new StudentProfilePage(selected));
+                var page = MauiProgram.Services.GetRequiredService<StudentProfilePage>();
+                (page.BindingContext as StudentProfileViewModel)?.Load(selected);
+                await Navigation.PushAsync(page);
             }
             catch (Exception ex)
             {
@@ -48,8 +49,9 @@ namespace MinistryTracker.Views
                 if (sender is SwipeItem swipe &&
                     swipe.CommandParameter is Student student)
                 {
-                    // 👉 Keep it simple: pass the Student to the page.
-                    await Navigation.PushAsync(new EditStudentPage(student));
+                    var page = MauiProgram.Services.GetRequiredService<EditStudentPage>();
+                    (page.BindingContext as EditStudentViewModel)?.Load(student);
+                    await Navigation.PushAsync(page);
                 }
             }
             catch (Exception ex)
@@ -66,7 +68,9 @@ namespace MinistryTracker.Views
                 if (sender is SwipeItem swipe &&
                     swipe.CommandParameter is Student student)
                 {
-                    await Navigation.PushAsync(new AddVisitPage(student));
+                    var page = MauiProgram.Services.GetRequiredService<AddVisitPage>();
+                    (page.BindingContext as AddVisitViewModel)?.Load(student);
+                    await Navigation.PushAsync(page);
                 }
             }
             catch (Exception ex)
@@ -78,7 +82,8 @@ namespace MinistryTracker.Views
         // Optional: floating "+" button handler (if you have it wired in XAML)
         private async void OnAddStudentClicked(object sender, EventArgs e)
         {
-            await Navigation.PushAsync(new AddStudentPage());
+            var page = MauiProgram.Services.GetRequiredService<AddStudentPage>();
+            await Navigation.PushAsync(page);
         }
     }
 }

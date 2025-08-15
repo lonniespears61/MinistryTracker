@@ -8,12 +8,13 @@ namespace MinistryTracker.Views
     {
         private readonly EditStudentViewModel _vm;
 
-        public EditStudentPage(EditStudentViewModel vm, Student student)
+        public EditStudentPage(EditStudentViewModel vm)
         {
             InitializeComponent();
             _vm = vm;
-            _vm.Load(student);   // your VM should expose Load(Student)
+           
             BindingContext = _vm;
         }
+        public void Load(Student student) => _vm.Load(student);
     }
 }

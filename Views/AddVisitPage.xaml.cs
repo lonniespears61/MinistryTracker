@@ -8,12 +8,13 @@ namespace MinistryTracker.Views
     {
         private readonly AddVisitViewModel _vm;
 
-        public AddVisitPage(AddVisitViewModel vm, Student student)
+        public AddVisitPage(AddVisitViewModel vm)
         {
             InitializeComponent();
             _vm = vm;
-            _vm.Load(student);
             BindingContext = _vm;
         }
+
+        public void Load(Student student) => _vm.Load(student);
     }
 }

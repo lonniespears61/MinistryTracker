@@ -1,16 +1,16 @@
-﻿using MinistryTracker.Models;
-using MinistryTracker.ViewModels;
-using CommunityToolkit.Maui.Alerts;
+﻿using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
+using MinistryTracker.ViewModels;
+
 
 namespace MinistryTracker.Views
 {
     public partial class StudentProfilePage : ContentPage
     {
-        public StudentProfilePage(Student student)
+        public StudentProfilePage(StudentProfileViewModel vm)
         {
             InitializeComponent();
-            BindingContext = new StudentProfileViewModel(student);
+            BindingContext = vm;
         }
 
         private async void OnEditStudentClicked(object sender, EventArgs e)
