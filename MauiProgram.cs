@@ -45,14 +45,14 @@ public static class MauiProgram
         builder.Services.AddTransient<AddVisitPage>();
         builder.Services.AddTransient<StudentProfilePage>();
 
-        // -------- FACTORIES (each path returns the concrete Page type) --------
+        // -------- FACTORIES (each returns the concrete Page type) --------
         builder.Services.AddTransient<Func<Student, EditStudentPage>>(sp => student =>
         {
             var page = sp.GetRequiredService<EditStudentPage>();
             var vm = sp.GetRequiredService<EditStudentViewModel>();
-            vm.Load(student);                 // your VM’s Load(Student)
-            page.BindingContext = vm;         // wire VM to page
-            return page;                      // <== ALWAYS return EditStudentPage
+            vm.Load(student);
+            page.BindingContext = vm;
+            return page; // ✅ return EditStudentPage
         });
 
         builder.Services.AddTransient<Func<Student, AddVisitPage>>(sp => student =>
@@ -61,7 +61,7 @@ public static class MauiProgram
             var vm = sp.GetRequiredService<AddVisitViewModel>();
             vm.Load(student);
             page.BindingContext = vm;
-            return page;                      // <== ALWAYS return AddVisitPage
+            return page; // ✅ return AddVisitPage
         });
 
         builder.Services.AddTransient<Func<Student, StudentProfilePage>>(sp => student =>
@@ -70,17 +70,24 @@ public static class MauiProgram
             var vm = sp.GetRequiredService<StudentProfileViewModel>();
             vm.Load(student);
             page.BindingContext = vm;
-            return page;                      // <== ALWAYS return StudentProfilePage
+            return page; // ✅ return StudentProfilePage
         });
 
 #if DEBUG
         builder.Logging.AddDebug();
 #endif
 
-        // Initialize the database
-        var dataService = app.Services.GetRequiredService<DataService>();
+        // ✅ BUILD FIRST
+        var app = builder.Build();
+
+        // ✅ expose DI container globally
+        Services = app.Services;
+
+        // ✅ initialize DB once at startup (sync wait is fine here)
+        var dataService = Services.GetRequiredService<DataService>();
         dataService.InitializeAsync().GetAwaiter().GetResult();
 
-        return app; 
+        // ✅ return the built app
+        return app;
     }
 }
