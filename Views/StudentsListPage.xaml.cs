@@ -1,24 +1,42 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Linq;                                // ✅ Needed for FirstOrDefault
-using Microsoft.Extensions.DependencyInjection;
+using System.Linq; // FirstOrDefault
 using Microsoft.Maui.Controls;
 using MinistryTracker.Models;
 using MinistryTracker.ViewModels;
 
-// Note: Ensure you have the correct namespaces for your project.
 namespace MinistryTracker.Views
 {
     public partial class StudentsListPage : ContentPage
     {
-        public StudentsListPage(StudentsListViewModel vm)
+        // ✅ Keep a handle to the VM you bound
+        private readonly StudentsListViewModel _vm;
 
+        public StudentsListPage(StudentsListViewModel vm)
         {
             InitializeComponent();
-            BindingContext = vm;
+            _vm = vm;
+            BindingContext = _vm;
         }
 
-        // ✅ Matches XAML: SelectionChanged="OnStudentSelectionChanged"
+        protected override async void OnAppearing()
+        {
+            base.OnAppearing();
+
+            try
+            {
+                // ✅ Load the list data when the page shows
+                await _vm.LoadAsync();
+
+                // Let user tap the same row again
+                StudentsCollection.SelectedItem = null;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"StudentsListPage OnAppearing failed: {ex}");
+            }
+        }
+
         private async void OnStudentSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             try
@@ -27,7 +45,6 @@ namespace MinistryTracker.Views
                 if (selected is null)
                     return;
 
-                // Clear selection so the same item can be tapped again
                 if (sender is CollectionView cv)
                     cv.SelectedItem = null;
 
@@ -41,7 +58,6 @@ namespace MinistryTracker.Views
             }
         }
 
-        // ✅ Matches XAML: Invoked="OnEditSwipeInvoked"
         private async void OnEditSwipeInvoked(object sender, EventArgs e)
         {
             try
@@ -60,7 +76,6 @@ namespace MinistryTracker.Views
             }
         }
 
-        // ✅ Matches XAML: Invoked="OnAddVisitSwipeInvoked"
         private async void OnAddVisitSwipeInvoked(object sender, EventArgs e)
         {
             try
@@ -79,7 +94,6 @@ namespace MinistryTracker.Views
             }
         }
 
-        // Optional: floating "+" button handler (if you have it wired in XAML)
         private async void OnAddStudentClicked(object sender, EventArgs e)
         {
             var page = MauiProgram.Services.GetRequiredService<AddStudentPage>();

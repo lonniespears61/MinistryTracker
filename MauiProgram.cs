@@ -1,35 +1,38 @@
 ﻿using CommunityToolkit.Maui;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using MinistryTracker.Data;
 using MinistryTracker.ViewModels;
 using MinistryTracker.Views;
-using MinistryTracker.Models;
-using System;
 
 namespace MinistryTracker;
 
 public static class MauiProgram
 {
-    // ✅ Make DI container accessible app-wide
+    // Optional global escape hatch; prefer constructor DI when possible.
     public static IServiceProvider Services { get; private set; } = default!;
 
     public static MauiApp CreateMauiApp()
     {
         var builder = MauiApp.CreateBuilder();
+
         builder
             .UseMauiApp<App>()
             .UseMauiCommunityToolkit()
-            .ConfigureFonts(f =>
+            .ConfigureFonts(fonts =>
             {
-                f.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
-                f.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
+                fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
+                fonts.AddFont("OpenSans-Semibold.ttf", "OpenSansSemibold");
             });
 
-        // Services
-        builder.Services.AddSingleton<DataService>();
+#if DEBUG
+        builder.Logging.AddDebug(); // helpful during emulator/device testing
+#endif
 
-        // ViewModels
+        // ===== Services =====
+        builder.Services.AddSingleton<DataService>(); // SQLite wrapper / repo
+
+        // ===== ViewModels =====
         builder.Services.AddTransient<DashboardViewModel>();
         builder.Services.AddTransient<StudentsListViewModel>();
         builder.Services.AddTransient<AddStudentViewModel>();
@@ -37,7 +40,8 @@ public static class MauiProgram
         builder.Services.AddTransient<AddVisitViewModel>();
         builder.Services.AddTransient<StudentProfileViewModel>();
 
-        // Pages
+        // ===== Pages =====
+        // Register every page you navigate to so DI can supply their VMs/services.
         builder.Services.AddTransient<DashboardPage>();
         builder.Services.AddTransient<StudentsListPage>();
         builder.Services.AddTransient<AddStudentPage>();
@@ -45,49 +49,36 @@ public static class MauiProgram
         builder.Services.AddTransient<AddVisitPage>();
         builder.Services.AddTransient<StudentProfilePage>();
 
-        // -------- FACTORIES (each returns the concrete Page type) --------
-        builder.Services.AddTransient<Func<Student, EditStudentPage>>(sp => student =>
-        {
-            var page = sp.GetRequiredService<EditStudentPage>();
-            var vm = sp.GetRequiredService<EditStudentViewModel>();
-            vm.Load(student);
-            page.BindingContext = vm;
-            return page; // ✅ return EditStudentPage
-        });
-
-        builder.Services.AddTransient<Func<Student, AddVisitPage>>(sp => student =>
-        {
-            var page = sp.GetRequiredService<AddVisitPage>();
-            var vm = sp.GetRequiredService<AddVisitViewModel>();
-            vm.Load(student);
-            page.BindingContext = vm;
-            return page; // ✅ return AddVisitPage
-        });
-
-        builder.Services.AddTransient<Func<Student, StudentProfilePage>>(sp => student =>
-        {
-            var page = sp.GetRequiredService<StudentProfilePage>();
-            var vm = sp.GetRequiredService<StudentProfileViewModel>();
-            vm.Load(student);
-            page.BindingContext = vm;
-            return page; // ✅ return StudentProfilePage
-        });
-
-#if DEBUG
-        builder.Logging.AddDebug();
-#endif
-
-        // ✅ BUILD FIRST
+        // ✅ Build first; only then use Services
         var app = builder.Build();
 
-        // ✅ expose DI container globally
+        // ✅ Make provider available (avoid using this inside constructors if possible)
         Services = app.Services;
 
-        // ✅ initialize DB once at startup (sync wait is fine here)
-        var dataService = Services.GetRequiredService<DataService>();
-        dataService.InitializeAsync().GetAwaiter().GetResult();
+        // ✅ Fire-and-forget startup work (non-blocking)
+        _ = InitializeAsync(app.Services);
 
-        // ✅ return the built app
         return app;
+    }
+
+    /// <summary>
+    /// Perform non-blocking startup tasks (DB warm-up, one-time migrations, etc.).
+    /// Never block the UI thread here.
+    /// </summary>
+    private static async Task InitializeAsync(IServiceProvider services)
+    {
+        var logger = services.GetService<ILoggerFactory>()?.CreateLogger("Startup");
+
+        try
+        {
+            var dataService = services.GetRequiredService<DataService>();
+            await dataService.InitializeAsync().ConfigureAwait(false);
+            logger?.LogInformation("Database initialized successfully.");
+        }
+        catch (Exception ex)
+        {
+            // Log and continue; surface a toast/dialog later if desired.
+            logger?.LogError(ex, "Startup initialization failed.");
+        }
     }
 }

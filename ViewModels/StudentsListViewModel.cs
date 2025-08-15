@@ -1,56 +1,89 @@
-// StudentsListViewModel.cs
-// Show Students directly to simplify bindings. FilteredStudents is what the UI binds to.
-
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MinistryTracker.Data;
-using MinistryTracker.Models;                    // <-- Student
 using System.Collections.ObjectModel;
 using System.Linq;
+using MinistryTracker.Models.Enums; // <-- where StudentStatus lives
+using System.Threading.Tasks;
+using MinistryTracker.Data;
+using MinistryTracker.Models;
 
-namespace MinistryTracker.ViewModels
+public partial class StudentsListViewModel : ObservableObject
 {
-    public partial class StudentsListViewModel : ObservableObject
+    private readonly DataService _data;
+
+    public ObservableCollection<Student> Students { get; } = new();
+
+    [ObservableProperty]
+    private ObservableCollection<Student> filteredStudents = new();
+
+    [ObservableProperty]
+    private string? searchText;
+
+    // ✅ default ON to mirror Dashboard behavior
+    [ObservableProperty]
+    private bool isActiveOnly = true;
+
+    [ObservableProperty]
+    private bool isBusy;
+
+    public StudentsListViewModel(DataService data)
     {
-        private readonly DataService _data;
+        _data = data;
+    }
 
-        // Full set loaded from DB
-        public ObservableCollection<Student> Students { get; } = new();
-
-        // What the UI shows (after search filter)
-        public ObservableCollection<Student> FilteredStudents { get; } = new();
-
-        // Two-way bound to SearchBar.Text
-        [ObservableProperty] private string? searchText;
-
-        public StudentsListViewModel(DataService data) => _data = data;
-
-        [RelayCommand]
-        public async Task LoadAsync()
+    public async Task LoadAsync()
+    {
+        if (IsBusy) return;
+        try
         {
-            Students.Clear();
+            IsBusy = true;
 
-            var list = await _data.GetStudentsAsync();
-            foreach (var s in list.OrderBy(s => s.Name))
+            var all = await _data.GetStudentsAsync(); // should return ALL students
+            Students.Clear();
+            foreach (var s in all)
                 Students.Add(s);
 
             ApplyFilter();
         }
-
-        // Auto-called by MVVM Toolkit when SearchText changes
-        partial void OnSearchTextChanged(string? value) => ApplyFilter();
-
-        private void ApplyFilter()
+        finally
         {
-            var q = (searchText ?? string.Empty).Trim();
-            var query = string.IsNullOrWhiteSpace(q)
-                ? Students
-                : Students.Where(s => (s.Name ?? string.Empty)
-                        .IndexOf(q, StringComparison.OrdinalIgnoreCase) >= 0);
-
-            FilteredStudents.Clear();
-            foreach (var s in query)
-                FilteredStudents.Add(s);
+            IsBusy = false;
         }
+    }
+
+    // 🔄 Pull-to-refresh
+    [RelayCommand]
+    private async Task Refresh()
+    {
+        await LoadAsync();
+    }
+
+    partial void OnSearchTextChanged(string? value) => ApplyFilter();
+    partial void OnIsActiveOnlyChanged(bool value) => ApplyFilter();
+
+    private void ApplyFilter()
+    {
+        var term = (SearchText ?? string.Empty).Trim();
+        var query = Students.AsEnumerable();
+
+        if (IsActiveOnly)
+        {
+            // Adjust predicate to your actual model
+            // If you have an enum: s.Status == StudentStatus.Active
+            query = query.Where(s => s.Status is StudentStatus.Active);
+        }
+
+        if (!string.IsNullOrEmpty(term))
+        {
+            query = query.Where(s =>
+                (!string.IsNullOrEmpty(s.Name) && s.Name.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrEmpty(s.PreferredLanguage) && s.PreferredLanguage.Contains(term, StringComparison.OrdinalIgnoreCase))
+            );
+        }
+
+        // Update the existing collection so the binding sees changes
+        FilteredStudents.Clear();
+        foreach (var s in query)
+            FilteredStudents.Add(s);
     }
 }
