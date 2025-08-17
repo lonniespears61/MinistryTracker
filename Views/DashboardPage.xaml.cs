@@ -6,19 +6,25 @@ namespace MinistryTracker.Views
 {
     public partial class DashboardPage : ContentPage
     {
+        private readonly DashboardViewModel _vm; // ✅ add this
+
         public DashboardPage(DashboardViewModel vm)
         {
             InitializeComponent();
-            BindingContext = vm;
+            _vm = vm; // ✅ keep a handle to the VM you bound
+            BindingContext = _vm;
         }
         protected override async void OnAppearing()
         {
             base.OnAppearing();
             // 👇 ensure data is pulled every time we land here
-            if (_vm.LoadAsyncCommand is not null)
-                await _vm.LoadAsyncCommand.ExecuteAsync(null);
-            else if (_vm.LoadAsync is not null)
-                await _vm.LoadAsync(); // whichever you implemented
+            try
+            {
+                await _vm.LoadAsync();
+            } catch (Exception ex) {
+                // Log or handle the exception as needed
+                log
+                { }
         }
         private async void OnActiveStudentsTapped(object sender, EventArgs e)
         {
