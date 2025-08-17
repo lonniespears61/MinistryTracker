@@ -6,8 +6,8 @@ namespace MinistryTracker.Models.Enums
     {
         Scheduled,
         Completed,
-        Cancelled,
-        Rescheduled,
-        NeedsReschedule
+        Canceled,
+        Cancelled = Canceled, // <-- alias, keeps both spellings valid
+        NoShow
     }
 }

@@ -25,7 +25,7 @@ public class Visit
     /// Visit-specific notes. Used to record what was discussed, what follow-up is needed,
     /// or any observations. Shown when reviewing the visit history.
     /// </summary>
-    public string? Note { get; set; } = string.Empty;
+    public string? Notes { get; set; } = string.Empty;
 
     public string? CancellationReason { get; set; }
 

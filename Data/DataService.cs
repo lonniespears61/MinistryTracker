@@ -4,7 +4,7 @@ using SQLite;
 
 namespace MinistryTracker.Data
 {
-    public class DataService
+    public partial class DataService
     {
         private readonly SemaphoreSlim _initGate = new(1, 1);
         private SQLiteAsyncConnection? _database;

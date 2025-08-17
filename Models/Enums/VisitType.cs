@@ -16,6 +16,9 @@ namespace MinistryTracker.Models.Enums
         [Display(Name = "Letter Writing")]
         LetterWriting,
 
+        [Display(Name = "Cart/SPMW")]
+        CartWitnessing,
+
         [Display(Name = "Informal Witnessing")]
         InformalWitnessing,
 

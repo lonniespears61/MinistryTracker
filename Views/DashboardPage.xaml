@@ -1,15 +1,15 @@
-<ContentPage 
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MinistryTracker.Views.DashboardPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
-    x:Class="MinistryTracker.Views.DashboardPage"
+    xmlns:dto="clr-namespace:MinistryTracker.Models.DTOs"
     x:DataType="viewmodels:DashboardViewModel">
 
     <!-- Scrollable content for smaller screens -->
     <ScrollView>
-        <VerticalStackLayout 
-            Padding="24"
-            Spacing="16">
+        <VerticalStackLayout Padding="24" Spacing="16">
 
             <!-- Page Header -->
             <Label Text="Welcome to MinistryTracker!"
@@ -21,8 +21,11 @@
             <!-- Active Students Card (Tappable) -->
             <Border BackgroundColor="PaleTurquoise"
                     StrokeThickness="1"
-                    StrokeShape="RoundRectangle 10"
                     Padding="12">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="10" />
+                </Border.StrokeShape>
+
                 <Border.GestureRecognizers>
                     <TapGestureRecognizer Tapped="OnActiveStudentsTapped" />
                 </Border.GestureRecognizers>
@@ -30,28 +33,83 @@
                 <Border.Shadow>
                     <Shadow Brush="Gray" Offset="2,2" Radius="4" />
                 </Border.Shadow>
+
                 <VerticalStackLayout>
                     <Label Text="Active Calls" FontAttributes="Bold" FontSize="18" />
-                    <Label Text="{Binding ActiveStudentCount}" FontSize="24" TextColor="DarkGreen" />
+                    <Label Text="{Binding ActiveStudentsCount}" FontSize="24" TextColor="DarkGreen" />
                 </VerticalStackLayout>
             </Border>
 
-            <!-- Card: Calls This Week -->
-            <Border BackgroundColor="PowderBlue"
+            <!-- Calls This Week -->
+            <Border Stroke="{AppThemeBinding Light=#e5e5e5, Dark=#333}"
+                    BackgroundColor="{AppThemeBinding Light=#ffffff, Dark=#1e1e1e}"
                     StrokeThickness="1"
-                    StrokeShape="RoundRectangle 10"
-                    Padding="12">
-                <Border.Shadow>
-                    <Shadow Brush="Gray" Offset="2,2" Radius="4" />
-                </Border.Shadow>
-                <VerticalStackLayout>
-                    <Label Text="Calls This Week" FontAttributes="Bold" FontSize="18" />
-                    <Label Text="2" FontSize="24" TextColor="Blue" />
+                    Padding="16"
+                    Margin="0,8,0,0">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="10" />
+                </Border.StrokeShape>
+
+                <VerticalStackLayout Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
+                        <Label Text="Calls This Week" FontSize="18" FontAttributes="Bold" />
+                        <Label Grid.Column="1"
+                               Text="{Binding ThisWeekScheduledCount}"
+                               FontSize="24"
+                               FontAttributes="Bold" />
+
+                        <HorizontalStackLayout Grid.Row="1" Spacing="12" Margin="0,6,0,0">
+                            <Border Padding="8,2" BackgroundColor="#2D7FF9">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10" />
+                                </Border.StrokeShape>
+                                <Label Text="{Binding ThisWeekScheduledCount, StringFormat='Scheduled: {0}'}"
+                                       TextColor="White" />
+                            </Border>
+
+                            <Border Padding="8,2" BackgroundColor="#2E8B57">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10" />
+                                </Border.StrokeShape>
+                                <Label Text="{Binding ThisWeekCompletedCount, StringFormat='Completed: {0}'}"
+                                       TextColor="White" />
+                            </Border>
+
+                            <Border Padding="8,2" BackgroundColor="#C94F4F">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="10" />
+                                </Border.StrokeShape>
+                                <Label Text="{Binding ThisWeekCanceledCount, StringFormat='Canceled: {0}'}"
+                                       TextColor="White" />
+                            </Border>
+                        </HorizontalStackLayout>
+                    </Grid>
+
+                    <!-- Mini list of upcoming scheduled visits this week -->
+                    <CollectionView ItemsSource="{Binding ThisWeekUpcoming}" SelectionMode="None">
+                        <CollectionView.EmptyView>
+                            <Label Text="No more scheduled calls this week." TextColor="Gray" />
+                        </CollectionView.EmptyView>
+
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="dto:VisitWithStudent">
+                                <Grid ColumnDefinitions="Auto,*" Padding="0,6">
+                                    <Label Text="{Binding Visit.ScheduledDateTime, StringFormat='{0:ddd h:mm tt}'}"
+                                           FontAttributes="Bold"
+                                           WidthRequest="110" />
+                                    <Label Grid.Column="1"
+                                           Text="{Binding Student.Name}"
+                                           LineBreakMode="TailTruncation"
+                                           TextColor="{AppThemeBinding Light=#444, Dark=#ccc}" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
                 </VerticalStackLayout>
             </Border>
 
             <!-- Add more dashboard cards here if needed -->
-           
+
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

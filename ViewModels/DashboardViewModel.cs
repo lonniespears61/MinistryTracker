@@ -1,51 +1,67 @@
 ﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using MinistryTracker.Data;
-using System.Diagnostics;
+using System;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
+using MinistryTracker.Data;
+using MinistryTracker.Models;
+using MinistryTracker.Models.DTOs;
+using MinistryTracker.Models.Enums;
 
 namespace MinistryTracker.ViewModels
 {
-    /// <summary>
-    /// ViewModel for the Dashboard page.
-    /// Displays summary stats such as active student count.
-    /// </summary>
     public partial class DashboardViewModel : ObservableObject
     {
-        // Service responsible for accessing local SQLite data
-        private readonly DataService _dataService;
+        private readonly DataService _data;
 
-        /// <summary>
-        /// Total number of active (non-deleted) students.
-        /// This is displayed on the Dashboard.
-        /// </summary>
-        [ObservableProperty]
-        private int activeStudentCount;
+        [ObservableProperty] private int activeStudentsCount;
 
-        /// <summary>
-        /// Initializes the DashboardViewModel with injected data service.
-        /// </summary>
-        /// <param name="dataService">An instance of the data access service.</param>
-        public DashboardViewModel(DataService dataService)
+        [ObservableProperty] private int thisWeekScheduledCount;
+        [ObservableProperty] private int thisWeekCompletedCount;
+        [ObservableProperty] private int thisWeekCanceledCount;
+
+        public ObservableCollection<VisitWithStudent> ThisWeekUpcoming { get; } = new();
+
+        [ObservableProperty] private bool isBusy;
+
+        public DashboardViewModel(DataService data) => _data = data;
+
+        [RelayCommand]
+        public async Task LoadAsync()
         {
-            _dataService = dataService;
-            LoadDashboardData(); // Fire and forget; it's okay here for initial UI
-        }
+            if (IsBusy) return;
 
-        /// <summary>
-        /// Loads data needed for dashboard UI components.
-        /// </summary>
-        private async void LoadDashboardData()
-        {
             try
             {
-                var students = await _dataService.GetStudentsAsync();
-                ActiveStudentCount = students.Count(s => !s.IsDeleted);
-                Debug.WriteLine($"[DashboardViewModel] Loaded {ActiveStudentCount} active students.");
+                IsBusy = true;
+
+                // Active students count (safe default: non-deleted)
+                var students = await _data.GetStudentsAsync();
+                ActiveStudentsCount = students.Count(s => !s.IsDeleted);
+
+                // Visits this week
+                var allThisWeek = await _data.GetVisitsThisWeekAsync(includeCanceled: true);
+
+                ThisWeekScheduledCount = allThisWeek.Count(v => v.Status == VisitStatus.Scheduled);
+                ThisWeekCompletedCount = allThisWeek.Count(v => v.Status == VisitStatus.Completed);
+                ThisWeekCanceledCount = allThisWeek.Count(v => v.Status == VisitStatus.Canceled);
+
+                // Next 5 scheduled from now within the week
+                var now = DateTime.Now;
+                var upcoming = (await _data.GetVisitsWithStudentsThisWeekAsync(includeCanceled: false))
+                               .Where(x => x.Visit.Status == VisitStatus.Scheduled && x.Visit.ScheduledDateTime >= now)
+                               .OrderBy(x => x.Visit.ScheduledDateTime)
+                               .Take(5)
+                               .ToList();
+
+                ThisWeekUpcoming.Clear();
+                foreach (var item in upcoming)
+                    ThisWeekUpcoming.Add(item);
             }
-            catch (Exception ex)
+            finally
             {
-                Debug.WriteLine($"❌ Error loading dashboard data: {ex.Message}");
+                IsBusy = false;
             }
         }
     }

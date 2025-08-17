@@ -73,6 +73,8 @@ public static class MauiProgram
         {
             var dataService = services.GetRequiredService<DataService>();
             await dataService.InitializeAsync().ConfigureAwait(false);
+            await dataService.SeedVisitsAsync().ConfigureAwait(false)   ;   // <-- added this to see dev data in the app
+
             logger?.LogInformation("Database initialized successfully.");
         }
         catch (Exception ex)
