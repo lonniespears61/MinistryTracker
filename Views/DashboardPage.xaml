@@ -35,7 +35,7 @@
                 </Border.Shadow>
 
                 <VerticalStackLayout>
-                    <Label Text="Active Calls" FontAttributes="Bold" FontSize="18" />
+                    <Label Text="Active Students" FontAttributes="Bold" FontSize="18" />
                     <Label Text="{Binding ActiveStudentsCount}" FontSize="24" TextColor="DarkGreen" />
                 </VerticalStackLayout>
             </Border>

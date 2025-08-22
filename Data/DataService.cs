@@ -1,89 +1,80 @@
-using System.Diagnostics;
-using MinistryTracker.Models;
+// ---------------------------------------------------------------------------------------------------------------------
+// DataService.cs (base)
+// A thin repository-style wrapper around sqlite-net-pcl. This file owns:
+//   - Opening the single SQLite connection
+//   - One-time database initialization (CreateTableAsync for all entities)
+//   - Shared helpers (e.g., exposing the connection via Db)
+//
+// WHY a single connection?
+//   sqlite-net-pcl is lightweight, but opening multiple connections to the same file can invite timing/race hazards,
+//   especially if you initialize tables on one connection and query on another. Centralizing here keeps behavior sane.
+// ---------------------------------------------------------------------------------------------------------------------
+
 using SQLite;
 
 namespace MinistryTracker.Data
 {
     public partial class DataService
     {
-        private readonly SemaphoreSlim _initGate = new(1, 1);
+        // The filename for the SQLite database that lives in the app's sandboxed storage.
+        private const string DbFileName = "ministrytracker.db3";
+
+        // The single async connection used everywhere in the app.
         private SQLiteAsyncConnection? _database;
 
+        // Simple guard to ensure InitializeAsync runs once, even if called redundantly.
+        private readonly SemaphoreSlim _gate = new(1, 1);
+        private bool _initialized;
+
+        // Centralized accessor so all partials consistently use the same connection.
+        private SQLiteAsyncConnection Db =>
+            _database ?? throw new InvalidOperationException("Database not initialized. Call InitializeAsync() first.");
+
+        /// <summary>
+        /// Create the SQLite connection and the database tables once.
+        /// Safe to call multiple times; subsequent calls return immediately.
+        /// </summary>
         public async Task InitializeAsync()
         {
-            if (_database is not null) return;
+            if (_initialized) return;
 
-            await _initGate.WaitAsync();
+            await _gate.WaitAsync();
             try
             {
-                if (_database is not null) return;
+                if (_initialized) return;
 
-                var dbPath = Path.Combine(FileSystem.AppDataDirectory, "ministrytracker.db3");
-                Debug.WriteLine($"Database path: {dbPath}");
+                // Determine the on-device path for the DB file.
+                var path = Path.Combine(FileSystem.AppDataDirectory, DbFileName);
 
+                // Open (or create) the database file.
                 _database = new SQLiteAsyncConnection(
-                    dbPath,
-                    SQLiteOpenFlags.Create | SQLiteOpenFlags.ReadWrite | SQLiteOpenFlags.SharedCache
-                );
+                    path,
+                    SQLiteOpenFlags.ReadWrite |
+                    SQLiteOpenFlags.Create |
+                    SQLiteOpenFlags.SharedCache);
 
-                await _database.CreateTableAsync<Household>();
-                await _database.CreateTableAsync<Student>();
-                await _database.CreateTableAsync<Visit>();
+                // IMPORTANT: Create all entity tables here.
+                // Add any new tables as your domain grows.
+                await Db.CreateTableAsync<Models.Student>();
+                await Db.CreateTableAsync<Models.Visit>();
+
+                // Optional but recommended: indexes that match your common filters/sorts.
+                await Db.ExecuteAsync(
+                    "CREATE INDEX IF NOT EXISTS IX_Visit_StudentDate ON Visit(StudentId, ScheduledDateTime)");
+
+                _initialized = true;
             }
-            finally { _initGate.Release(); }
+            finally
+            {
+                _gate.Release();
+            }
         }
 
-        private SQLiteAsyncConnection Db =>
-            _database ?? throw new InvalidOperationException("Database not initialized. Call InitializeAsync() once at startup.");
-
-        // ----- STUDENT CRUD -----
-        public Task<int> AddStudentAsync(Student student) => Db.InsertAsync(student);
-        public Task<List<Student>> GetStudentsAsync() =>
-            Db.Table<Student>().Where(s => !s.IsDeleted).ToListAsync();
-
-        public Task<Student?> GetStudentByIdAsync(int id) =>
-            Db.Table<Student>().Where(s => s.StudentId == id && !s.IsDeleted).FirstOrDefaultAsync();
-
-        public Task<int> UpdateStudentAsync(Student student) => Db.UpdateAsync(student);
-
-        public async Task<int> SoftDeleteStudentAsync(int id)
-        {
-            var student = await GetStudentByIdAsync(id);
-            if (student is null) return 0;
-            student.IsDeleted = true;
-            return await Db.UpdateAsync(student);
-        }
-
-        public async Task<int> PurgeDeletedStudentsAsync()
-        {
-            var deleted = await Db.Table<Student>().Where(s => s.IsDeleted).ToListAsync();
-            var count = 0;
-            foreach (var s in deleted) count += await Db.DeleteAsync(s);
-            return count;
-        }
-
-        // ----- HOUSEHOLD CRUD -----
-        public Task<int> AddHouseholdAsync(Household household) => Db.InsertAsync(household);
-        public Task<List<Household>> GetHouseholdsAsync() => Db.Table<Household>().ToListAsync();
-        public Task<Household?> GetHouseholdByIdAsync(int id) => Db.FindAsync<Household>(id);
-        public Task<int> UpdateHouseholdAsync(Household household) => Db.UpdateAsync(household);
-        public async Task<int> DeleteHouseholdAsync(int id)
-        {
-            var h = await GetHouseholdByIdAsync(id);
-            return h != null ? await Db.DeleteAsync(h) : 0;
-        }
-
-        // ----- VISIT CRUD -----
-        public Task<int> AddVisitAsync(Visit visit) => Db.InsertAsync(visit);
-        public Task<List<Visit>> GetVisitsForStudentAsync(int studentId) =>
-            Db.Table<Visit>().Where(v => v.StudentId == studentId)
-              .OrderByDescending(v => v.ScheduledDateTime)
-              .ToListAsync();
-        public Task<int> UpdateVisitAsync(Visit visit) => Db.UpdateAsync(visit);
-        public async Task<int> DeleteVisitAsync(int id)
-        {
-            var v = await Db.FindAsync<Visit>(id);
-            return v != null ? await Db.DeleteAsync(v) : 0;
-        }
+        // --- OPTIONAL HELPER: useful when logging startup issues ---
+        /// <summary>
+        /// Returns the fully-qualified path to the database file (for logs or support).
+        /// </summary>
+        public string GetDatabasePath() =>
+            Path.Combine(FileSystem.AppDataDirectory, DbFileName);
     }
 }

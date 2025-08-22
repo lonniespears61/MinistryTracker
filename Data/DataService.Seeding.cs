@@ -1,8 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using SQLite; // sqlite-net-pcl
+// ---------------------------------------------------------------------------------------------------------------------
+// DataService.Seeding.cs
+// Development-only seeding of Visit rows so the UI has something to show.
+// SAFE: Always calls InitializeAsync() first and uses the shared Db connection.
+// ---------------------------------------------------------------------------------------------------------------------
+
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
 
@@ -10,15 +11,21 @@ namespace MinistryTracker.Data
 {
     public partial class DataService
     {
-        // Call this once during startup AFTER seeding students.
+        /// <summary>
+        /// Seed Visit rows if (and only if) there are none. No-op if students are absent.
+        /// Intended for development/demo; call during app startup AFTER students are seeded.
+        /// </summary>
         public async Task SeedVisitsAsync()
         {
-            // NOTE: This relies on the base DataService having a SQLiteAsyncConnection named "_database".
-            // See section #3 if you don't have that.
-            var existing = await _database.Table<Visit>().CountAsync();
+            // Defensive: ensure DB and tables exist.
+            await InitializeAsync();
+
+            // Avoid duplicate seeds on subsequent runs.
+            var existing = await Db.Table<Visit>().CountAsync();
             if (existing > 0) return;
 
-            var students = await _database.Table<Student>().ToListAsync();
+            // We need students to attach visits to.
+            var students = await Db.Table<Student>().ToListAsync();
             if (students.Count == 0) return;
 
             var rnd = new Random(20250815);
@@ -26,26 +33,15 @@ namespace MinistryTracker.Data
 
             DateTime RandomDate(bool future = false)
             {
-                var days = future ? rnd.Next(0, 45) : rnd.Next(-60, 30); // mostly past
+                var days = future ? rnd.Next(0, 45) : rnd.Next(-60, 30); // mostly past, some future
                 var hour = rnd.Next(9, 20);
                 var min = new[] { 0, 15, 30, 45 }[rnd.Next(4)];
                 return DateTime.Today.AddDays(days).AddHours(hour).AddMinutes(min);
             }
 
-            string[] genericNotes =
-            {
-                "Good conversation at the door.",
-                "Left tract and brief invitation.",
-                "Reviewed Lesson 1 and set homework.",
-                "Answered question about suffering.",
-                "Scheduled follow-up for next week.",
-                "Prefers evening visits.",
-                "Asked for a brochure in their language."
-            };
-
-            // Weighted pool for more realistic distribution
             VisitType PickType()
             {
+                // Slightly weighted toward ReturnVisit and BibleStudy.
                 var pool = new[]
                 {
                     VisitType.ReturnVisit, VisitType.ReturnVisit, VisitType.ReturnVisit,
@@ -60,15 +56,24 @@ namespace MinistryTracker.Data
                 return pool[rnd.Next(pool.Length)];
             }
 
+            string[] notesPool =
+            {
+                "Good conversation at the door.",
+                "Left tract and brief invitation.",
+                "Reviewed Lesson 1 and set homework.",
+                "Answered question about suffering.",
+                "Scheduled follow-up for next week.",
+                "Prefers evening visits.",
+                "Asked for a brochure in their language."
+            };
+
             foreach (var s in students)
             {
-                // 2–6 visits per student
-                var count = rnd.Next(2, 7);
+                var count = rnd.Next(2, 7);                  // 2–6 visits per student
                 var scheduleFuture = rnd.NextDouble() < 0.6; // ~60% have an upcoming one
 
                 for (int i = 0; i < count; i++)
                 {
-                    var type = PickType();
                     var future = (i == count - 1) && scheduleFuture;
                     var when = RandomDate(future);
 
@@ -76,15 +81,14 @@ namespace MinistryTracker.Data
                     {
                         StudentId = s.StudentId,
                         ScheduledDateTime = when,
-                        VisitType = type,
+                        VisitType = PickType(),
                         Status = when <= DateTime.Now ? VisitStatus.Completed : VisitStatus.Scheduled,
-                        Notes = genericNotes[rnd.Next(genericNotes.Length)],
-                        CancellationReason = null
+                        Notes = notesPool[rnd.Next(notesPool.Length)]
                     });
                 }
             }
 
-            // A few “today” items to make the UI feel alive
+            // A couple of items "today" to make the dashboard feel alive.
             foreach (var s in students.Take(Math.Min(3, students.Count)))
             {
                 visits.Add(new Visit
@@ -93,18 +97,11 @@ namespace MinistryTracker.Data
                     ScheduledDateTime = DateTime.Today.AddHours(18),
                     VisitType = VisitType.ReturnVisit,
                     Status = VisitStatus.Scheduled,
-                    Notes = "Confirm availability for study.",
-                    CancellationReason = null
+                    Notes = "Confirm availability for study."
                 });
             }
 
-            // Nicer browsing if you query raw
-            visits = visits
-                .OrderBy(v => v.StudentId)
-                .ThenByDescending(v => v.ScheduledDateTime)
-                .ToList();
-
-            await _database.InsertAllAsync(visits);
+            await Db.InsertAllAsync(visits);
         }
     }
 }

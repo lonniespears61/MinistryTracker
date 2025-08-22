@@ -1,36 +1,91 @@
-﻿<ContentPage 
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MinistryTracker.Views.EditStudentPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:viewModels="clr-namespace:MinistryTracker.ViewModels"
-    xmlns:enums="clr-namespace:MinistryTracker.Models.Enums"
-    x:Class="MinistryTracker.Views.EditStudentPage"
+    xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
+    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    x:DataType="viewmodels:EditStudentViewModel"
     Title="Edit Student">
 
-    <ContentPage.Content>
-        <ScrollView>
-            <VerticalStackLayout Padding="20" Spacing="16">
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Save" Order="Primary" Priority="0"
+                     Command="{Binding SaveCommand}" />
+        <ToolbarItem Text="Cancel" Order="Secondary" Priority="1"
+                     Clicked="OnCancelClicked" />
+    </ContentPage.ToolbarItems>
 
-                <!-- 🧾 Name -->
-                <Label Text="Name" />
-                <Entry Text="{Binding Name}" Placeholder="Enter name" />
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
 
-                <!-- 📞 Call Type -->
-                <Label Text="Initial Call Type" />
-                <Picker 
-                      Title="Select Initial Call Type"
-                      ItemsSource="{x:Static enums:InitialCallTypeValues.All}" 
-                      SelectedItem="{Binding CallType}" />
+            <!-- REQUIRED -->
+            <Border StrokeThickness="1"
+                    Stroke="{AppThemeBinding Light=#DDDDDD, Dark=#333333}"
+                    Background="{AppThemeBinding Light=#FFFFFF, Dark=#1e1e1e}"
+                    StrokeShape="RoundRectangle 16"
+                    Padding="14">
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Required" FontAttributes="Bold" FontSize="18" />
 
-                <!-- 📅 First Contact Date -->
-                <Label Text="First Contact Date" />
-                <DatePicker Date="{Binding FirstContactDate}" />
+                    <!-- Name -->
+                    <VerticalStackLayout>
+                        <Label Text="Name" FontSize="12" Opacity="0.7" />
+                        <Entry Text="{Binding Name, Mode=TwoWay}"
+                               Placeholder="Enter full name" />
+                    </VerticalStackLayout>
 
-                <!-- 💾 Save Button -->
-                <Button Text="Save"
-                        Command="{Binding SaveCommand}"
-                        BackgroundColor="ForestGreen"
-                        TextColor="White" />
-            </VerticalStackLayout>
-        </ScrollView>
-    </ContentPage.Content>
+                    <!-- Initial Call Type (enum in VM) -->
+                    <VerticalStackLayout>
+                        <Label Text="Initial Call Type" FontSize="12" Opacity="0.7" />
+                        <!-- Provide ItemsSource from VM later; leaving empty compiles fine -->
+                        <Picker Title="Select type"
+                                SelectedItem="{Binding CallType, Mode=TwoWay}" />
+                    </VerticalStackLayout>
+
+                    <!-- First Contact Date -->
+                    <VerticalStackLayout>
+                        <Label Text="First Contact Date" FontSize="12" Opacity="0.7" />
+                        <DatePicker Date="{Binding FirstContactDate, Mode=TwoWay}" />
+                    </VerticalStackLayout>
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- OPTIONAL (collapsed by default) -->
+            <Border StrokeThickness="1"
+                    Stroke="{AppThemeBinding Light=#DDDDDD, Dark=#333333}"
+                    Background="{AppThemeBinding Light=#FFFFFF, Dark=#1e1e1e}"
+                    StrokeShape="RoundRectangle 16"
+                    Padding="0">
+                <toolkit:Expander IsExpanded="False">
+                    <toolkit:Expander.Header>
+                        <Grid Padding="14" ColumnDefinitions="*,Auto">
+                            <Label Text="Show more (optional)"
+                                   FontAttributes="Bold"
+                                   FontSize="18" />
+                            <Label Text="⯈" Grid.Column="1" Opacity="0.6" />
+                        </Grid>
+                    </toolkit:Expander.Header>
+
+                    <VerticalStackLayout Padding="14" Spacing="12">
+                        <!-- Add bindings as your VM exposes these fields -->
+                        <VerticalStackLayout>
+                            <Label Text="Address" FontSize="12" Opacity="0.7" />
+                            <Entry Placeholder="Street, City, State" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout>
+                            <Label Text="Preferred Language" FontSize="12" Opacity="0.7" />
+                            <Entry Placeholder="e.g., English, Spanish" />
+                        </VerticalStackLayout>
+
+                        <VerticalStackLayout>
+                            <Label Text="Notes" FontSize="12" Opacity="0.7" />
+                            <Editor AutoSize="TextChanges" Placeholder="General notes..." />
+                        </VerticalStackLayout>
+                    </VerticalStackLayout>
+                </toolkit:Expander>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>
