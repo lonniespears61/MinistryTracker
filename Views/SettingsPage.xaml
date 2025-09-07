@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MinistryTracker.Views.SettingsPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:MinistryTracker.ViewModels"
+    Title="Settings">
+
+    <ContentPage.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Margin" Value="0,6"/>
+        </Style>
+        <Style TargetType="Label">
+            <Setter Property="TextColor" Value="{DynamicResource PrimaryTextColor}" />
+        </Style>
+    </ContentPage.Resources>
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="18">
+
+            <!-- DB HEALTH -->
+            <Frame Padding="12" HasShadow="False" BorderColor="{DynamicResource Gray300}" CornerRadius="10">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Database Health" FontAttributes="Bold" FontSize="18"/>
+                    <Button Text="Show DB Health" Command="{Binding ShowHealthCommand}" />
+                    <Editor Text="{Binding DbHealthText}" AutoSize="TextChanges" IsReadOnly="True"/>
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- TEST DATA -->
+            <Frame Padding="12" HasShadow="False" BorderColor="{DynamicResource Gray300}" CornerRadius="10">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Test Data" FontAttributes="Bold" FontSize="18"/>
+                    <Label Text="Populate a small, deterministic set (safe to tap if empty)." FontSize="12"/>
+                    <Button Text="Re-seed Test Data" Command="{Binding ReseedCommand}" />
+                </VerticalStackLayout>
+            </Frame>
+
+            <!-- BETA RESET -->
+            <Frame Padding="12" HasShadow="False" BorderColor="{DynamicResource Gray300}" CornerRadius="10">
+                <VerticalStackLayout Spacing="8">
+                    <Label Text="Beta Reset" FontAttributes="Bold" FontSize="18"/>
+                    <Label Text="Clear the local DB to a clean slate. App will recreate schema on next run." FontSize="12"/>
+                    <Button Text="Reset Local Database" Command="{Binding ResetDbCommand}" BackgroundColor="#b00020" TextColor="White"/>
+                </VerticalStackLayout>
+            </Frame>
+
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

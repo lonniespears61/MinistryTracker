@@ -1,32 +1,25 @@
 // ---------------------------------------------------------------------------------------------------------------------
-// DataService.cs (base)
-// A thin repository-style wrapper around sqlite-net-pcl. This file owns:
-//   - Opening the single SQLite connection
-//   - One-time database initialization (CreateTableAsync for all entities)
-//   - Shared helpers (e.g., exposing the connection via Db)
-//
-// WHY a single connection?
-//   sqlite-net-pcl is lightweight, but opening multiple connections to the same file can invite timing/race hazards,
-//   especially if you initialize tables on one connection and query on another. Centralizing here keeps behavior sane.
+// DataService.cs (base) – reviewed
+// Adds: PRAGMAs (FK/WAL), busy timeout, user_version, and an EnsureInitThen helper.
+// No platform-specific code; all cross-platform SQLite.
 // ---------------------------------------------------------------------------------------------------------------------
 
 using SQLite;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Maui.Storage;
 
 namespace MinistryTracker.Data
 {
     public partial class DataService
     {
-        // The filename for the SQLite database that lives in the app's sandboxed storage.
         private const string DbFileName = "ministrytracker.db3";
 
-        // The single async connection used everywhere in the app.
         private SQLiteAsyncConnection? _database;
-
-        // Simple guard to ensure InitializeAsync runs once, even if called redundantly.
         private readonly SemaphoreSlim _gate = new(1, 1);
         private bool _initialized;
 
-        // Centralized accessor so all partials consistently use the same connection.
         private SQLiteAsyncConnection Db =>
             _database ?? throw new InvalidOperationException("Database not initialized. Call InitializeAsync() first.");
 
@@ -38,29 +31,51 @@ namespace MinistryTracker.Data
         {
             if (_initialized) return;
 
-            await _gate.WaitAsync();
+            await _gate.WaitAsync().ConfigureAwait(false);
             try
             {
                 if (_initialized) return;
 
-                // Determine the on-device path for the DB file.
                 var path = Path.Combine(FileSystem.AppDataDirectory, DbFileName);
 
-                // Open (or create) the database file.
                 _database = new SQLiteAsyncConnection(
                     path,
                     SQLiteOpenFlags.ReadWrite |
                     SQLiteOpenFlags.Create |
                     SQLiteOpenFlags.SharedCache);
 
-                // IMPORTANT: Create all entity tables here.
-                // Add any new tables as your domain grows.
-                await Db.CreateTableAsync<Models.Student>();
-                await Db.CreateTableAsync<Models.Visit>();
+                // ---- PRAGMAs: do once per connection ----------------------------------
+                try
+                {
+                    // Enforce FKs (SQLite default is OFF)
+                    _ = await _database.ExecuteScalarAsync<long>("PRAGMA foreign_keys = ON;").ConfigureAwait(false);
 
-                // Optional but recommended: indexes that match your common filters/sorts.
+                    // WAL for better concurrency on mobile; returns "wal"
+                    _ = await _database.ExecuteScalarAsync<string>("PRAGMA journal_mode = WAL;").ConfigureAwait(false);
+
+                    // Reasonable durability/perf
+                    _ = await _database.ExecuteScalarAsync<long>("PRAGMA synchronous = NORMAL;").ConfigureAwait(false);
+
+                    // Optional: versioning hook for future migrations
+                    _ = await _database.ExecuteScalarAsync<long>("PRAGMA user_version = 1;").ConfigureAwait(false);
+                }
+                catch (SQLiteException)
+                {
+                    // Don't fail app startup over a PRAGMA; log if you have logging
+                    // Debug.WriteLine(ex);
+                }
+
+                // ---- Schema: create tables & indexes -----------------------------------
+                await Db.CreateTableAsync<Models.Student>().ConfigureAwait(false);
+                await Db.CreateTableAsync<Models.Visit>().ConfigureAwait(false);
+
                 await Db.ExecuteAsync(
-                    "CREATE INDEX IF NOT EXISTS IX_Visit_StudentDate ON Visit(StudentId, ScheduledDateTime)");
+                    "CREATE INDEX IF NOT EXISTS IX_Visit_StudentDate ON Visit(StudentId, ScheduledDateTime)"
+                ).ConfigureAwait(false);
+
+                // ---- Versioning hook (for future migrations) ---------------------------
+                // Bump this when schema changes and run small ALTERs as needed.
+                await _database.ExecuteAsync("PRAGMA user_version = 1;").ConfigureAwait(false);
 
                 _initialized = true;
             }
@@ -70,11 +85,26 @@ namespace MinistryTracker.Data
             }
         }
 
-        // --- OPTIONAL HELPER: useful when logging startup issues ---
         /// <summary>
         /// Returns the fully-qualified path to the database file (for logs or support).
         /// </summary>
         public string GetDatabasePath() =>
             Path.Combine(FileSystem.AppDataDirectory, DbFileName);
+
+        // -------------------------------------------------------------------------
+        // Convenience: safely ensure init around any DB call.
+        // Use like: await EnsureInitThen(() => Db.Table<Student>().ToListAsync());
+        // -------------------------------------------------------------------------
+        private async Task<T> EnsureInitThen<T>(Func<Task<T>> work)
+        {
+            if (!_initialized) await InitializeAsync().ConfigureAwait(false);
+            return await work().ConfigureAwait(false);
+        }
+
+        private async Task EnsureInitThen(Func<Task> work)
+        {
+            if (!_initialized) await InitializeAsync().ConfigureAwait(false);
+            await work().ConfigureAwait(false);
+        }
     }
 }

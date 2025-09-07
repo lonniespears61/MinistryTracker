@@ -7,6 +7,16 @@
     xmlns:dto="clr-namespace:MinistryTracker.Models.DTOs"
     x:DataType="viewmodels:DashboardViewModel">
 
+    <!-- Top-right gear -->
+    <ContentPage.ToolbarItems>
+        <ToolbarItem
+            Text="Settings"
+            IconImageSource="settings_icon.png"
+            Priority="0"
+            Order="Primary"
+            Clicked="OnSettingsClicked" />
+    </ContentPage.ToolbarItems>
+
     <!-- Scrollable content for smaller screens -->
     <ScrollView>
         <VerticalStackLayout Padding="24" Spacing="16">
@@ -52,7 +62,7 @@
 
                 <VerticalStackLayout Spacing="10">
                     <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
-                        <Label Text="Calls This Week" FontSize="18" FontAttributes="Bold" />
+                        <Label Text="Calls Next 7 Days" FontSize="18" FontAttributes="Bold" />
                         <Label Grid.Column="1"
                                Text="{Binding ThisWeekScheduledCount}"
                                FontSize="24"

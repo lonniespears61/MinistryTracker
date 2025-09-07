@@ -6,34 +6,33 @@ namespace MinistryTracker.Views
 {
     /// <summary>
     /// Dashboard page displaying summary information for the ministry.
-    /// The view model is provided via dependency injection and stored in <see cref="_vm"/>.
     /// </summary>
     public partial class DashboardPage : ContentPage
     {
-        private readonly DashboardViewModel _vm; // ✅ add this
+        private readonly DashboardViewModel _vm;
 
         public DashboardPage(DashboardViewModel vm)
         {
             InitializeComponent();
-            _vm = vm; // ✅ keep a handle to the VM you bound
+            _vm = vm;
             BindingContext = _vm;
         }
-      
-         protected override async void OnAppearing()
+
+        protected override async void OnAppearing()
         {
             base.OnAppearing();
-
-            // Safely call ViewModel's load logic
-            if (_vm != null)
-            {
-                await _vm.LoadAsync();
-            }
+            await _vm.LoadAsync();
         }
-        
-        /// <summary>
-        /// Navigates to the list of active students.
-        /// </summary>
-        private async void OnActiveStudentsTapped(object sender, EventArgs e)
+
+        // Toolbar "Settings" button (matches XAML: Clicked="OnSettingsClicked")
+        private async void OnSettingsClicked(object sender, EventArgs e)
+        {
+            var page = MauiProgram.Services.GetRequiredService<SettingsPage>();
+            await Navigation.PushAsync(page);
+        }
+
+        // Tap on the "Active Students" card (matches XAML TapGestureRecognizer)
+        private async void OnActiveStudentsTapped(object sender, TappedEventArgs e)
         {
             var page = MauiProgram.Services.GetRequiredService<StudentsListPage>();
             await Navigation.PushAsync(page);
