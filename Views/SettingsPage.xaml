@@ -22,7 +22,8 @@
             <Frame Padding="12" HasShadow="False" BorderColor="{DynamicResource Gray300}" CornerRadius="10">
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Database Health" FontAttributes="Bold" FontSize="18"/>
-                    <Button Text="Show DB Health" Command="{Binding ShowHealthCommand}" />
+                    <Button Text="Show DB Health" Command="{Binding ShowDbHealthCommand}" />
+                    <!-- Bind to a string exposed by the VM, not the command -->
                     <Editor Text="{Binding DbHealthText}" AutoSize="TextChanges" IsReadOnly="True"/>
                 </VerticalStackLayout>
             </Frame>
@@ -32,7 +33,7 @@
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Test Data" FontAttributes="Bold" FontSize="18"/>
                     <Label Text="Populate a small, deterministic set (safe to tap if empty)." FontSize="12"/>
-                    <Button Text="Re-seed Test Data" Command="{Binding ReseedCommand}" />
+                    <Button Text="Re-seed Test Data" Command="{Binding SeedDemoDataCommand}" />
                 </VerticalStackLayout>
             </Frame>
 
@@ -41,7 +42,7 @@
                 <VerticalStackLayout Spacing="8">
                     <Label Text="Beta Reset" FontAttributes="Bold" FontSize="18"/>
                     <Label Text="Clear the local DB to a clean slate. App will recreate schema on next run." FontSize="12"/>
-                    <Button Text="Reset Local Database" Command="{Binding ResetDbCommand}" BackgroundColor="#b00020" TextColor="White"/>
+                    <Button Text="Reset Local Database" Command="{Binding ResetAndSeedCommand}" BackgroundColor="#b00020" TextColor="White"/>
                 </VerticalStackLayout>
             </Frame>
 

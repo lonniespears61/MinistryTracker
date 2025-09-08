@@ -119,6 +119,25 @@
             </Border>
 
             <!-- Add more dashboard cards here if needed -->
+            <Border
+    Stroke="{DynamicResource Gray300}"
+    StrokeShape="RoundRectangle 12"
+    StrokeThickness="1"
+    BackgroundColor="White"
+    Padding="12"
+    Margin="0,8">
+
+                <VerticalStackLayout Spacing="4">
+                    <Label Text="DB Info (ORM)" 
+               FontAttributes="Bold"
+               FontSize="16" />
+                    <Label Text="{Binding DbFileName}" 
+               FontSize="12" />
+                    <Label Text="{Binding DbFilePath}" 
+               FontSize="10" 
+               LineBreakMode="CharacterWrap" />
+                </VerticalStackLayout>
+            </Border>
 
         </VerticalStackLayout>
     </ScrollView>

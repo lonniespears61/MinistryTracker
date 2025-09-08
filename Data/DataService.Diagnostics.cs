@@ -1,9 +1,7 @@
-// ---------------------------------------------------------------------------------------------------------------------
+﻿// ---------------------------------------------------------------------------------------------------------------------
 // DataService.Diagnostics.cs
-// Diagnostics + maintenance helpers for the SQLite DB.
-// - GetDbHealthAsync(): quick health snapshot (exists/size/integrity/tables/counts)
-// - ReseedAsync(): inserts small, deterministic sample data (only if empty)
-// - ResetDatabaseAsync(): clears local DB (beta-safe), then recreates schema
+// Health snapshot + maintenance utilities for the local SQLite DB.
+// Also exposes a tiny façade to trigger dev seeding (implemented in DataService.Seeding.cs).
 // ---------------------------------------------------------------------------------------------------------------------
 
 using System;
@@ -17,7 +15,7 @@ namespace MinistryTracker.Data
 {
     public partial class DataService
     {
-        // Helper for table-name query (moved OUT of the method; C# doesn't allow local type declarations in methods)
+        // Helper for table-name query (C# does not allow local type declarations in methods)
         private sealed class _NameRow { public string V { get; set; } = ""; }
 
         public sealed class DbHealth
@@ -30,6 +28,9 @@ namespace MinistryTracker.Data
             public int StudentCount { get; init; }
             public int VisitCount { get; init; }
 
+            // NEW: shows dangling Visit rows without a Student
+            public int OrphanVisitCount { get; init; }
+
             public override string ToString()
             {
                 var sb = new StringBuilder();
@@ -38,11 +39,14 @@ namespace MinistryTracker.Data
                 sb.AppendLine($"Integrity: {Integrity}");
                 sb.AppendLine($"Tables: {TablesCsv}");
                 sb.AppendLine($"Students: {StudentCount}   Visits: {VisitCount}");
+                sb.AppendLine($"Orphaned Visits: {OrphanVisitCount}");
                 return sb.ToString();
             }
         }
 
-        /// <summary>Quick on-device status: file exists/size, integrity, tables, row counts.</summary>
+        /// <summary>
+        /// Quick on-device status: file exists/size, integrity, table list, and row counts.
+        /// </summary>
         public async Task<DbHealth> GetDbHealthAsync()
         {
             await InitializeAsync().ConfigureAwait(false);
@@ -51,60 +55,45 @@ namespace MinistryTracker.Data
             var exists = File.Exists(dbPath);
             var size = exists ? new FileInfo(dbPath).Length : 0;
 
-            using var ro = new SQLiteConnection(dbPath, SQLiteOpenFlags.ReadOnly);
-
-            var integrity = ro.ExecuteScalar<string>("PRAGMA integrity_check;");
-            var tables = ro.Query<_NameRow>("SELECT name AS V FROM sqlite_master WHERE type='table' ORDER BY name;");
-            var tablesCsv = string.Join(",", tables.Select(t => t.V));
-
-            int students = 0, visits = 0;
-            try { students = ro.ExecuteScalar<int>("SELECT COUNT(*) FROM Student;"); } catch { }
-            try { visits = ro.ExecuteScalar<int>("SELECT COUNT(*) FROM Visit;"); } catch { }
-
-            return new DbHealth
+            // Run the synchronous SQLite work off the UI thread
+            return await Task.Run(() =>
             {
-                Path = dbPath,
-                FileExists = exists,
-                FileBytes = size,
-                Integrity = integrity,
-                TablesCsv = tablesCsv,
-                StudentCount = students,
-                VisitCount = visits
-            };
+                using var ro = new SQLiteConnection(dbPath, SQLiteOpenFlags.ReadOnly);
+
+                var integrity = ro.ExecuteScalar<string>("PRAGMA integrity_check;");
+                var tables = ro.Query<_NameRow>("SELECT name AS V FROM sqlite_master WHERE type='table' ORDER BY name;");
+                var tablesCsv = string.Join(",", tables.Select(t => t.V));
+
+                int students = 0, visits = 0, orphanVisits = 0;
+                try { students = ro.ExecuteScalar<int>("SELECT COUNT(*) FROM Student;"); } catch { }
+                try { visits = ro.ExecuteScalar<int>("SELECT COUNT(*) FROM Visit;"); } catch { }
+                try
+                {
+                    orphanVisits = ro.ExecuteScalar<int>(
+                        @"SELECT COUNT(*)
+                          FROM Visit v
+                          LEFT JOIN Student s ON v.StudentId = s.StudentId
+                          WHERE s.StudentId IS NULL;");
+                }
+                catch { }
+
+                return new DbHealth
+                {
+                    Path = dbPath,
+                    FileExists = exists,
+                    FileBytes = size,
+                    Integrity = integrity,
+                    TablesCsv = tablesCsv,
+                    StudentCount = students,
+                    VisitCount = visits,
+                    OrphanVisitCount = orphanVisits
+                };
+            }).ConfigureAwait(false);
         }
 
-        /// <summary>Seed a small, deterministic set of data (only when empty). Safe to call repeatedly.</summary>
-        public async Task ReseedAsync()
-        {
-            await InitializeAsync().ConfigureAwait(false);
-
-            // Avoid EnsureInitThen() here to prevent overload ambiguity across partials
-            var existing = await Db.Table<Models.Student>().CountAsync().ConfigureAwait(false);
-            if (existing > 0) return; // already has data
-
-            // Minimal fields to avoid model mismatches; adjust to your actual model as needed
-            var s1 = new Models.Student
-            {
-                Name = "Jane Doe",
-                Status = Models.Enums.StudentStatus.Active
-            };
-            var s2 = new Models.Student
-            {
-                Name = "John Smith",
-                Status = Models.Enums.StudentStatus.Active
-            };
-
-            await Db.InsertAllAsync(new[] { s1, s2 }).ConfigureAwait(false);
-
-            var visits = new[]
-            {
-                new Models.Visit { StudentId = s1.StudentId, ScheduledDateTime = DateTime.Today.AddDays(1), Notes = "Initial visit" },
-                new Models.Visit { StudentId = s2.StudentId, ScheduledDateTime = DateTime.Today.AddDays(2), Notes = "Follow-up"   },
-            };
-            await Db.InsertAllAsync(visits).ConfigureAwait(false);
-        }
-
-        /// <summary>Removes the DB file and recreates a clean, empty DB. Useful for beta testers.</summary>
+        /// <summary>
+        /// Removes the DB file and recreates a clean, empty DB. Useful for beta testers and “start fresh” flows.
+        /// </summary>
         public async Task ResetDatabaseAsync()
         {
             // Ensure nothing else is using the file while we reset
@@ -139,6 +128,25 @@ namespace MinistryTracker.Data
             {
                 _gate.Release();
             }
+        }
+
+        // ---------------------------------------------------------------------------------------------
+        // Diagnostics façade → Seeding (so Settings can “call diagnostics,” which delegates to seeding)
+        // ---------------------------------------------------------------------------------------------
+
+        /// <summary>
+        /// Convenience wrapper so UI can ask the Diagnostics surface to seed dev/demo data.
+        /// Implementation lives in DataService.Seeding.cs.
+        /// </summary>
+        public Task SeedDevDataFromDiagnosticsAsync(bool force = false) => SeedDevDataAsync(force);
+
+        /// <summary>
+        /// Handy combo for Settings: reset DB then re-seed demo data in one tap.
+        /// </summary>
+        public async Task ResetAndSeedFromDiagnosticsAsync()
+        {
+            await ResetDatabaseAsync().ConfigureAwait(false);
+            await SeedDevDataAsync(force: true).ConfigureAwait(false);
         }
     }
 }

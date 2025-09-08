@@ -4,10 +4,14 @@
 // No direct SQL is required here; sqlite-net's LINQ-like API is sufficient.
 // ---------------------------------------------------------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Globalization;
 using MinistryTracker.Models;
 using MinistryTracker.Models.DTOs;
 using MinistryTracker.Models.Enums;
-using System.Globalization;
 
 namespace MinistryTracker.Data
 {
@@ -115,18 +119,72 @@ namespace MinistryTracker.Data
                 {
                     result.Add(new VisitWithStudent
                     {
-                        VisitId = v.Id,
+                        VisitId = v.Id, // NOTE: your Visit PK is 'Id'
                         StudentId = v.StudentId,
                         StudentName = stu.Name ?? "(Unnamed)",
                         ScheduledDateTime = v.ScheduledDateTime,
                         Status = v.Status,
                         VisitType = v.VisitType,
-                        NotesPreview = string.IsNullOrWhiteSpace(v.Notes) ? "" : v.Notes!.Length > 80 ? v.Notes![..80] + "…" : v.Notes
+                        NotesPreview = string.IsNullOrWhiteSpace(v.Notes)
+                            ? string.Empty
+                            : (v.Notes!.Length > 80 ? v.Notes[..80] + "…" : v.Notes)
                     });
                 }
             }
 
             // Sort for pleasant UI consumption (earliest first).
+            return result.OrderBy(x => x.ScheduledDateTime).ToList();
+        }
+
+        /// <summary>
+        /// RANGE-BASED version of the DTO helper.
+        /// Returns visits in [startInclusive, endExclusive) joined with Student,
+        /// optionally excluding canceled visits. Great for weeks, months, or custom ranges.
+        /// </summary>
+        public async Task<List<VisitWithStudent>> GetVisitsWithStudentsInRangeAsync(
+            DateTime startInclusive,
+            DateTime endExclusive,
+            bool includeCanceled = true)
+        {
+            // 1) Get visits for range
+            var visitsQuery = Db.Table<Visit>()
+                                .Where(v => v.ScheduledDateTime >= startInclusive &&
+                                            v.ScheduledDateTime < endExclusive);
+
+            if (!includeCanceled)
+                visitsQuery = visitsQuery.Where(v => v.Status != VisitStatus.Canceled);
+
+            var visits = await visitsQuery.ToListAsync();
+            if (visits.Count == 0) return new List<VisitWithStudent>();
+
+            // 2) Load only the students we need (and not deleted)
+            var studentIds = visits.Select(v => v.StudentId).Distinct().ToList();
+            var students = await Db.Table<Student>()
+                                   .Where(s => studentIds.Contains(s.StudentId) && !s.IsDeleted)
+                                   .ToListAsync();
+
+            var byId = students.ToDictionary(s => s.StudentId);
+
+            // 3) Project to DTO
+            var result = new List<VisitWithStudent>(visits.Count);
+            foreach (var v in visits)
+            {
+                byId.TryGetValue(v.StudentId, out var stu);
+
+                result.Add(new VisitWithStudent
+                {
+                    VisitId = v.Id, // NOTE: your Visit PK is 'Id'
+                    StudentId = v.StudentId,
+                    StudentName = stu?.Name ?? "(Unnamed)",
+                    ScheduledDateTime = v.ScheduledDateTime,
+                    Status = v.Status,
+                    VisitType = v.VisitType,
+                    NotesPreview = string.IsNullOrWhiteSpace(v.Notes)
+                        ? string.Empty
+                        : (v.Notes!.Length > 80 ? v.Notes[..80] + "…" : v.Notes)
+                });
+            }
+
             return result.OrderBy(x => x.ScheduledDateTime).ToList();
         }
     }

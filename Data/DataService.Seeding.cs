@@ -1,9 +1,13 @@
 // ---------------------------------------------------------------------------------------------------------------------
 // DataService.Seeding.cs
-// Development-only seeding of Visit rows so the UI has something to show.
-// SAFE: Always calls InitializeAsync() first and uses the shared Db connection.
+// Development-only seeded data for Students + Visits.
+// Deterministic, idempotent, and safe: always calls InitializeAsync() and checks counts.
 // ---------------------------------------------------------------------------------------------------------------------
 
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
 
@@ -12,23 +16,57 @@ namespace MinistryTracker.Data
     public partial class DataService
     {
         /// <summary>
-        /// Seed Visit rows if (and only if) there are none. No-op if students are absent.
-        /// Intended for development/demo; call during app startup AFTER students are seeded.
+        /// Public entrypoint for dev/demo seeding.
+        /// - No-ops if data exists (unless force=true).
+        /// - Seeds a small Student set, then Visit rows attached to those students.
         /// </summary>
-        public async Task SeedVisitsAsync()
+        public async Task SeedDevDataAsync(bool force = false)
         {
-            // Defensive: ensure DB and tables exist.
-            await InitializeAsync();
+            await InitializeAsync().ConfigureAwait(false);
 
-            // Avoid duplicate seeds on subsequent runs.
-            var existing = await Db.Table<Visit>().CountAsync();
+            if (force)
+            {
+                try { await Db.DeleteAllAsync<Visit>().ConfigureAwait(false); } catch { }
+                try { await Db.DeleteAllAsync<Student>().ConfigureAwait(false); } catch { }
+            }
+
+            var studentCount = 0;
+            var visitCount = 0;
+            try { studentCount = await Db.Table<Student>().CountAsync().ConfigureAwait(false); } catch { }
+            try { visitCount = await Db.Table<Visit>().CountAsync().ConfigureAwait(false); } catch { }
+
+            if (studentCount == 0)
+                await SeedStudentsAsync().ConfigureAwait(false);
+
+            if (visitCount == 0)
+                await SeedVisitsAgainstExistingStudentsAsync().ConfigureAwait(false);
+        }
+
+        /// <summary>Deterministic sample students. Idempotent.</summary>
+        private async Task SeedStudentsAsync()
+        {
+            var existing = await Db.Table<Student>().CountAsync().ConfigureAwait(false);
             if (existing > 0) return;
 
-            // We need students to attach visits to.
-            var students = await Db.Table<Student>().ToListAsync();
+            await Db.InsertAllAsync(new[]
+            {
+                new Student { Name = "Jane Doe",   Status = StudentStatus.Active },
+                new Student { Name = "John Smith", Status = StudentStatus.Active },
+                new Student { Name = "Avery Brown",Status = StudentStatus.Active },
+                new Student { Name = "Chris Lee",  Status = StudentStatus.Active }
+            }).ConfigureAwait(false);
+        }
+
+        /// <summary>Seeds visits for all current students, weighted by type and time distribution. Idempotent.</summary>
+        private async Task SeedVisitsAgainstExistingStudentsAsync()
+        {
+            var existing = await Db.Table<Visit>().CountAsync().ConfigureAwait(false);
+            if (existing > 0) return;
+
+            var students = await Db.Table<Student>().ToListAsync().ConfigureAwait(false);
             if (students.Count == 0) return;
 
-            var rnd = new Random(20250815);
+            var rnd = new Random(20250815); // deterministic seed
             var visits = new List<Visit>();
 
             DateTime RandomDate(bool future = false)
@@ -101,7 +139,7 @@ namespace MinistryTracker.Data
                 });
             }
 
-            await Db.InsertAllAsync(visits);
+            await Db.InsertAllAsync(visits).ConfigureAwait(false);
         }
     }
 }

@@ -4,11 +4,12 @@
 // No platform-specific code; all cross-platform SQLite.
 // ---------------------------------------------------------------------------------------------------------------------
 
-using SQLite;
+using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Maui.Storage;
+using SQLite;
 
 namespace MinistryTracker.Data
 {
@@ -74,7 +75,6 @@ namespace MinistryTracker.Data
                 ).ConfigureAwait(false);
 
                 // ---- Versioning hook (for future migrations) ---------------------------
-                // Bump this when schema changes and run small ALTERs as needed.
                 await _database.ExecuteAsync("PRAGMA user_version = 1;").ConfigureAwait(false);
 
                 _initialized = true;
@@ -85,16 +85,11 @@ namespace MinistryTracker.Data
             }
         }
 
-        /// <summary>
-        /// Returns the fully-qualified path to the database file (for logs or support).
-        /// </summary>
+        /// <summary>Returns the fully-qualified path to the database file (for logs or support).</summary>
         public string GetDatabasePath() =>
             Path.Combine(FileSystem.AppDataDirectory, DbFileName);
 
-        // -------------------------------------------------------------------------
         // Convenience: safely ensure init around any DB call.
-        // Use like: await EnsureInitThen(() => Db.Table<Student>().ToListAsync());
-        // -------------------------------------------------------------------------
         private async Task<T> EnsureInitThen<T>(Func<Task<T>> work)
         {
             if (!_initialized) await InitializeAsync().ConfigureAwait(false);
