@@ -65,7 +65,7 @@ namespace MinistryTracker.Data
                 var tablesCsv = string.Join(",", tables.Select(t => t.V));
 
                 int students = 0, visits = 0, orphanVisits = 0;
-                try { students = ro.ExecuteScalar<int>("SELECT COUNT(*) FROM Student;"); } catch { }
+                try { students = ro.ExecuteScalar<int>("SELECT COUNT(*) FROM Students;"); } catch { }
                 try { visits = ro.ExecuteScalar<int>("SELECT COUNT(*) FROM Visit;"); } catch { }
                 try
                 {
