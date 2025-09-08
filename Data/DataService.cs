@@ -101,5 +101,21 @@ namespace MinistryTracker.Data
             if (!_initialized) await InitializeAsync().ConfigureAwait(false);
             await work().ConfigureAwait(false);
         }
+
+        // Ensures the SQLite connection is initialized ONCE, then runs 'work'.
+        // Use this for any DB method that touches 'Db' (queries, inserts, updates).
+        private async Task<T> EnsureInitThen<T>(Func<Task<T>> work, CancellationToken ct = default)
+        {
+            if (!_initialized) await InitializeAsync().ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
+            return await work().ConfigureAwait(false);
+        }
+
+        private async Task EnsureInitThen(Func<Task> work, CancellationToken ct = default)
+        {
+            if (!_initialized) await InitializeAsync().ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
+            await work().ConfigureAwait(false);
+        }
     }
 }

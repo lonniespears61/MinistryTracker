@@ -1,14 +1,15 @@
 ﻿// ---------------------------------------------------------------------------------------------------------------------
 // DataService.Visits.cs
-// Query helpers for Visit-related data. These keep raw DB logic out of your ViewModels.
-// No direct SQL is required here; sqlite-net's LINQ-like API is sufficient.
+// Visit queries and UI-friendly DTO projections.
+// Uses EnsureInitThen(...) so initialization is consistent across partials and supports CancellationToken.
 // ---------------------------------------------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Globalization;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using MinistryTracker.Models;
 using MinistryTracker.Models.DTOs;
 using MinistryTracker.Models.Enums;
@@ -18,65 +19,175 @@ namespace MinistryTracker.Data
     public partial class DataService
     {
         /// <summary>
-        /// Visits scheduled between [start, end). Canceled optionally excluded.
+        /// Visits scheduled between [startInclusive, endExclusive). Canceled optionally excluded.
         /// </summary>
-        public Task<List<Visit>> GetVisitsBetweenAsync(DateTime startInclusive, DateTime endExclusive, bool includeCanceled = false)
-        {
-            var query = Db.Table<Visit>()
-                          .Where(v => v.ScheduledDateTime >= startInclusive &&
-                                      v.ScheduledDateTime < endExclusive);
+        public Task<List<Visit>> GetVisitsBetweenAsync(
+            DateTime startInclusive,
+            DateTime endExclusive,
+            bool includeCanceled = false,
+            CancellationToken ct = default)
+            => EnsureInitThen(() =>
+            {
+                var query = Db.Table<Visit>()
+                              .Where(v => v.ScheduledDateTime >= startInclusive &&
+                                          v.ScheduledDateTime < endExclusive);
 
-            if (!includeCanceled)
-                query = query.Where(v => v.Status != VisitStatus.Canceled);
+                if (!includeCanceled)
+                    query = query.Where(v => v.Status != VisitStatus.Canceled);
 
-            return query.OrderBy(v => v.ScheduledDateTime).ToListAsync();
-        }
+                return query.OrderBy(v => v.ScheduledDateTime).ToListAsync();
+            }, ct);
 
         /// <summary>
-        /// Today’s visits: midnight → midnight, inclusive start, exclusive end.
+        /// Today’s visits: midnight → midnight (inclusive start, exclusive end).
         /// </summary>
-        public Task<List<Visit>> GetVisitsTodayAsync()
-        {
-            var start = DateTime.Today;
-            var end = start.AddDays(1);
-            return Db.Table<Visit>()
-                     .Where(v => v.ScheduledDateTime >= start && v.ScheduledDateTime < end)
-                     .OrderBy(v => v.ScheduledDateTime)
-                     .ToListAsync();
-        }
+        public Task<List<Visit>> GetVisitsTodayAsync(CancellationToken ct = default)
+            => EnsureInitThen(() =>
+            {
+                var start = DateTime.Today;
+                var end = start.AddDays(1);
+                return Db.Table<Visit>()
+                         .Where(v => v.ScheduledDateTime >= start && v.ScheduledDateTime < end)
+                         .OrderBy(v => v.ScheduledDateTime)
+                         .ToListAsync();
+            }, ct);
 
         /// <summary>
         /// Upcoming scheduled visits within N days from now.
         /// </summary>
-        public Task<List<Visit>> GetUpcomingVisitsAsync(int days = 7)
-        {
-            var start = DateTime.Now;
-            var end = start.AddDays(days);
-            return Db.Table<Visit>()
-                     .Where(v => v.Status == VisitStatus.Scheduled &&
-                                 v.ScheduledDateTime >= start &&
-                                 v.ScheduledDateTime <= end)
-                     .OrderBy(v => v.ScheduledDateTime)
-                     .ToListAsync();
-        }
+        public Task<List<Visit>> GetUpcomingVisitsAsync(int days = 7, CancellationToken ct = default)
+            => EnsureInitThen(() =>
+            {
+                var start = DateTime.Now;
+                var end = start.AddDays(days);
+                return Db.Table<Visit>()
+                         .Where(v => v.Status == VisitStatus.Scheduled &&
+                                     v.ScheduledDateTime >= start &&
+                                     v.ScheduledDateTime <= end)
+                         .OrderBy(v => v.ScheduledDateTime)
+                         .ToListAsync();
+            }, ct);
 
         /// <summary>
         /// All visits in the current week per device culture (Sunday/Monday start respected).
         /// </summary>
-        public async Task<List<Visit>> GetVisitsThisWeekAsync(bool includeCanceled = true)
-        {
-            var (start, end) = GetThisWeekRange();
-            var query = Db.Table<Visit>()
-                          .Where(v => v.ScheduledDateTime >= start && v.ScheduledDateTime < end);
+        public Task<List<Visit>> GetVisitsThisWeekAsync(bool includeCanceled = true, CancellationToken ct = default)
+            => EnsureInitThen(() =>
+            {
+                var (start, end) = GetThisWeekRange();
+                var query = Db.Table<Visit>()
+                              .Where(v => v.ScheduledDateTime >= start && v.ScheduledDateTime < end);
 
-            if (!includeCanceled)
-                query = query.Where(v => v.Status != VisitStatus.Canceled);
+                if (!includeCanceled)
+                    query = query.Where(v => v.Status != VisitStatus.Canceled);
 
-            return await query.OrderBy(v => v.ScheduledDateTime).ToListAsync();
-        }
+                return query.OrderBy(v => v.ScheduledDateTime).ToListAsync();
+            }, ct);
 
         /// <summary>
-        /// Helper: compute the current week's [start, end) by culture.
+        /// RANGE-BASED DTO helper: visits in [startInclusive, endExclusive) joined with Student into a view-friendly DTO.
+        /// Assumes small datasets; for large data consider SQL JOIN or paging.
+        /// </summary>
+        public Task<List<VisitWithStudent>> GetVisitsWithStudentsInRangeAsync(
+            DateTime startInclusive,
+            DateTime endExclusive,
+            bool includeCanceled = true,
+            CancellationToken ct = default)
+            => EnsureInitThen(async () =>
+            {
+                // 1) visits in range
+                var visitsQuery = Db.Table<Visit>()
+                                    .Where(v => v.ScheduledDateTime >= startInclusive &&
+                                                v.ScheduledDateTime < endExclusive);
+                if (!includeCanceled)
+                    visitsQuery = visitsQuery.Where(v => v.Status != VisitStatus.Canceled);
+
+                var visits = await visitsQuery.ToListAsync().ConfigureAwait(false);
+                if (visits.Count == 0) return new List<VisitWithStudent>();
+
+                // 2) referenced students (not deleted)
+                var studentIds = visits.Select(v => v.StudentId).Distinct().ToList();
+                var students = await Db.Table<Student>()
+                                       .Where(s => studentIds.Contains(s.StudentId) && !s.IsDeleted)
+                                       .ToListAsync()
+                                       .ConfigureAwait(false);
+                var byId = students.ToDictionary(s => s.StudentId);
+
+                // 3) project to DTO
+                var result = new List<VisitWithStudent>(visits.Count);
+                foreach (var v in visits)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    byId.TryGetValue(v.StudentId, out var stu);
+
+                    result.Add(new VisitWithStudent
+                    {
+                        VisitId = v.Id, // PK on Visit
+                        StudentId = v.StudentId,
+                        StudentName = stu?.Name ?? "(Unnamed)",
+                        ScheduledDateTime = v.ScheduledDateTime,
+                        Status = v.Status,
+                        VisitType = v.VisitType,
+                        NotesPreview = string.IsNullOrWhiteSpace(v.Notes)
+                            ? string.Empty
+                            : (v.Notes!.Length > 80 ? v.Notes[..80] + "…" : v.Notes)
+                    });
+                }
+
+                return result.OrderBy(x => x.ScheduledDateTime).ToList();
+            }, ct);
+
+        /// <summary>
+        /// WEEK-BASED DTO helper: visits for the current week joined with Student (UI-friendly).
+        /// </summary>
+        public Task<List<VisitWithStudent>> GetVisitsWithStudentsThisWeekAsync(
+            bool includeCanceled = true,
+            CancellationToken ct = default)
+            => EnsureInitThen(async () =>
+            {
+                var (start, end) = GetThisWeekRange();
+
+                var visitsQuery = Db.Table<Visit>()
+                                    .Where(v => v.ScheduledDateTime >= start &&
+                                                v.ScheduledDateTime < end);
+                if (!includeCanceled)
+                    visitsQuery = visitsQuery.Where(v => v.Status != VisitStatus.Canceled);
+
+                var visits = await visitsQuery.ToListAsync().ConfigureAwait(false);
+                if (visits.Count == 0) return new List<VisitWithStudent>();
+
+                var studentIds = visits.Select(v => v.StudentId).Distinct().ToList();
+                var students = await Db.Table<Student>()
+                                       .Where(s => studentIds.Contains(s.StudentId) && !s.IsDeleted)
+                                       .ToListAsync()
+                                       .ConfigureAwait(false);
+                var byId = students.ToDictionary(s => s.StudentId);
+
+                var result = new List<VisitWithStudent>(visits.Count);
+                foreach (var v in visits)
+                {
+                    ct.ThrowIfCancellationRequested();
+                    byId.TryGetValue(v.StudentId, out var stu);
+
+                    result.Add(new VisitWithStudent
+                    {
+                        VisitId = v.Id,
+                        StudentId = v.StudentId,
+                        StudentName = stu?.Name ?? "(Unnamed)",
+                        ScheduledDateTime = v.ScheduledDateTime,
+                        Status = v.Status,
+                        VisitType = v.VisitType,
+                        NotesPreview = string.IsNullOrWhiteSpace(v.Notes)
+                            ? string.Empty
+                            : (v.Notes!.Length > 80 ? v.Notes[..80] + "…" : v.Notes)
+                    });
+                }
+
+                return result.OrderBy(x => x.ScheduledDateTime).ToList();
+            }, ct);
+
+        /// <summary>
+        /// Compute the current week’s [start, end) by culture (Sun/Mon start respected).
         /// </summary>
         private static (DateTime start, DateTime end) GetThisWeekRange()
         {
@@ -88,104 +199,6 @@ namespace MinistryTracker.Data
             var start = today.AddDays(-diff);
             var end = start.AddDays(7);
             return (start, end);
-        }
-
-        // ------------------------- Using DTOs ---------------------------------
-        // WHY DTOs?
-        // - Your database entities are persistence-optimized (flat, simple, FK ids).
-        // - Your UI often needs *composed* views: Visit + Student.Name, Address, etc.
-        // - A DTO (Data Transfer Object) is a lightweight shape tailored for the view.
-        //   It prevents polluting your entity with UI-only properties and avoids
-        //   tight coupling between data and presentation layers.
-
-        /// <summary>
-        /// Returns visits for the current week, *joined in memory* with Student
-        /// data to produce a UI-friendly DTO. This avoids complex SQL and keeps
-        /// the entity models simple.
-        /// </summary>
-        public async Task<List<VisitWithStudent>> GetVisitsWithStudentsThisWeekAsync(bool includeCanceled = true)
-        {
-            var visits = await GetVisitsThisWeekAsync(includeCanceled);
-
-            // Small data set assumption: load all relevant students and join in memory.
-            // If you outgrow this, fetch only the required student IDs.
-            var allStudents = await Db.Table<Student>().Where(s => !s.IsDeleted).ToListAsync();
-            var byId = allStudents.ToDictionary(s => s.StudentId);
-
-            var result = new List<VisitWithStudent>(visits.Count);
-            foreach (var v in visits)
-            {
-                if (byId.TryGetValue(v.StudentId, out var stu))
-                {
-                    result.Add(new VisitWithStudent
-                    {
-                        VisitId = v.Id, // NOTE: your Visit PK is 'Id'
-                        StudentId = v.StudentId,
-                        StudentName = stu.Name ?? "(Unnamed)",
-                        ScheduledDateTime = v.ScheduledDateTime,
-                        Status = v.Status,
-                        VisitType = v.VisitType,
-                        NotesPreview = string.IsNullOrWhiteSpace(v.Notes)
-                            ? string.Empty
-                            : (v.Notes!.Length > 80 ? v.Notes[..80] + "…" : v.Notes)
-                    });
-                }
-            }
-
-            // Sort for pleasant UI consumption (earliest first).
-            return result.OrderBy(x => x.ScheduledDateTime).ToList();
-        }
-
-        /// <summary>
-        /// RANGE-BASED version of the DTO helper.
-        /// Returns visits in [startInclusive, endExclusive) joined with Student,
-        /// optionally excluding canceled visits. Great for weeks, months, or custom ranges.
-        /// </summary>
-        public async Task<List<VisitWithStudent>> GetVisitsWithStudentsInRangeAsync(
-            DateTime startInclusive,
-            DateTime endExclusive,
-            bool includeCanceled = true)
-        {
-            // 1) Get visits for range
-            var visitsQuery = Db.Table<Visit>()
-                                .Where(v => v.ScheduledDateTime >= startInclusive &&
-                                            v.ScheduledDateTime < endExclusive);
-
-            if (!includeCanceled)
-                visitsQuery = visitsQuery.Where(v => v.Status != VisitStatus.Canceled);
-
-            var visits = await visitsQuery.ToListAsync();
-            if (visits.Count == 0) return new List<VisitWithStudent>();
-
-            // 2) Load only the students we need (and not deleted)
-            var studentIds = visits.Select(v => v.StudentId).Distinct().ToList();
-            var students = await Db.Table<Student>()
-                                   .Where(s => studentIds.Contains(s.StudentId) && !s.IsDeleted)
-                                   .ToListAsync();
-
-            var byId = students.ToDictionary(s => s.StudentId);
-
-            // 3) Project to DTO
-            var result = new List<VisitWithStudent>(visits.Count);
-            foreach (var v in visits)
-            {
-                byId.TryGetValue(v.StudentId, out var stu);
-
-                result.Add(new VisitWithStudent
-                {
-                    VisitId = v.Id, // NOTE: your Visit PK is 'Id'
-                    StudentId = v.StudentId,
-                    StudentName = stu?.Name ?? "(Unnamed)",
-                    ScheduledDateTime = v.ScheduledDateTime,
-                    Status = v.Status,
-                    VisitType = v.VisitType,
-                    NotesPreview = string.IsNullOrWhiteSpace(v.Notes)
-                        ? string.Empty
-                        : (v.Notes!.Length > 80 ? v.Notes[..80] + "…" : v.Notes)
-                });
-            }
-
-            return result.OrderBy(x => x.ScheduledDateTime).ToList();
         }
     }
 }

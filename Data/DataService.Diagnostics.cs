@@ -1,13 +1,15 @@
 ﻿// ---------------------------------------------------------------------------------------------------------------------
 // DataService.Diagnostics.cs
-// Health snapshot + maintenance utilities for the local SQLite DB.
-// Also exposes a tiny façade to trigger dev seeding (implemented in DataService.Seeding.cs).
+// Health snapshot + maintenance + dev seeding façade.
+// Uses EnsureInitThen(...) where touching ORM (counts). Uses raw connection for PRAGMA + table scan.
+// Fixes table naming by reading sqlite-net mappings (e.g., Student -> "Students").
 // ---------------------------------------------------------------------------------------------------------------------
 
 using System;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using SQLite;
 
@@ -15,7 +17,7 @@ namespace MinistryTracker.Data
 {
     public partial class DataService
     {
-        // Helper for table-name query (C# does not allow local type declarations in methods)
+        // Helper for table-name query when listing sqlite_master
         private sealed class _NameRow { public string V { get; set; } = ""; }
 
         public sealed class DbHealth
@@ -28,7 +30,7 @@ namespace MinistryTracker.Data
             public int StudentCount { get; init; }
             public int VisitCount { get; init; }
 
-            // NEW: shows dangling Visit rows without a Student
+            // Rows in Visit that have no matching Student (based on StudentId)
             public int OrphanVisitCount { get; init; }
 
             public override string ToString()
@@ -45,37 +47,50 @@ namespace MinistryTracker.Data
         }
 
         /// <summary>
-        /// Quick on-device status: file exists/size, integrity, table list, and row counts.
+        /// Quick on-device status:
+        /// - counts via ORM (respects table mapping/attributes)
+        /// - optional PRAGMA integrity_check (deep mode)
+        /// - list of tables
+        /// - orphaned visits (raw LEFT JOIN)
         /// </summary>
-        public async Task<DbHealth> GetDbHealthAsync()
+        public async Task<DbHealth> GetDbHealthAsync(bool deep = false, CancellationToken ct = default)
         {
-            await InitializeAsync().ConfigureAwait(false);
+            // ORM counts (mapped table names, async connection)
+            var ormStudents = await EnsureInitThen(() => Db.Table<Models.Student>().CountAsync(), ct).ConfigureAwait(false);
+            var ormVisits = await EnsureInitThen(() => Db.Table<Models.Visit>().CountAsync(), ct).ConfigureAwait(false);
 
+            // File info
             var dbPath = GetDatabasePath();
             var exists = File.Exists(dbPath);
             var size = exists ? new FileInfo(dbPath).Length : 0;
 
-            // Run the synchronous SQLite work off the UI thread
+            // Raw-only bits: PRAGMA + sqlite_master + orphan join (off UI thread)
             return await Task.Run(() =>
             {
                 using var ro = new SQLiteConnection(dbPath, SQLiteOpenFlags.ReadOnly);
+                ro.BusyTimeout = TimeSpan.FromSeconds(2);
 
-                var integrity = ro.ExecuteScalar<string>("PRAGMA integrity_check;");
+                // Read sqlite-net mappings to get the actual table names
+                var studentTable = ro.GetMapping(typeof(Models.Student)).TableName; // e.g., "Students"
+                var visitTable = ro.GetMapping(typeof(Models.Visit)).TableName;   // likely "Visit"
+
+                var integrity = deep
+                    ? ro.ExecuteScalar<string>("PRAGMA integrity_check;")
+                    : "SKIPPED (fast mode)";
+
                 var tables = ro.Query<_NameRow>("SELECT name AS V FROM sqlite_master WHERE type='table' ORDER BY name;");
                 var tablesCsv = string.Join(",", tables.Select(t => t.V));
 
-                int students = 0, visits = 0, orphanVisits = 0;
-                try { students = ro.ExecuteScalar<int>("SELECT COUNT(*) FROM Students;"); } catch { }
-                try { visits = ro.ExecuteScalar<int>("SELECT COUNT(*) FROM Visit;"); } catch { }
+                int orphanVisits = 0;
                 try
                 {
-                    orphanVisits = ro.ExecuteScalar<int>(
-                        @"SELECT COUNT(*)
-                          FROM Visit v
-                          LEFT JOIN Student s ON v.StudentId = s.StudentId
-                          WHERE s.StudentId IS NULL;");
+                    orphanVisits = ro.ExecuteScalar<int>($@"
+                        SELECT COUNT(*)
+                        FROM ""{visitTable}"" v
+                        LEFT JOIN ""{studentTable}"" s ON v.StudentId = s.StudentId
+                        WHERE s.StudentId IS NULL;");
                 }
-                catch { }
+                catch { /* best effort on dev devices */ }
 
                 return new DbHealth
                 {
@@ -84,20 +99,20 @@ namespace MinistryTracker.Data
                     FileBytes = size,
                     Integrity = integrity,
                     TablesCsv = tablesCsv,
-                    StudentCount = students,
-                    VisitCount = visits,
+                    StudentCount = ormStudents,
+                    VisitCount = ormVisits,
                     OrphanVisitCount = orphanVisits
                 };
-            }).ConfigureAwait(false);
+            }, ct).ConfigureAwait(false);
         }
 
         /// <summary>
         /// Removes the DB file and recreates a clean, empty DB. Useful for beta testers and “start fresh” flows.
         /// </summary>
-        public async Task ResetDatabaseAsync()
+        public async Task ResetDatabaseAsync(CancellationToken ct = default)
         {
             // Ensure nothing else is using the file while we reset
-            await _gate.WaitAsync().ConfigureAwait(false);
+            await _gate.WaitAsync(ct).ConfigureAwait(false);
             try
             {
                 if (_database is not null)
@@ -114,9 +129,11 @@ namespace MinistryTracker.Data
                     catch
                     {
                         // Fallback: if delete fails due to a lingering handle, drop rows instead
-                        await InitializeAsync().ConfigureAwait(false);
-                        try { await Db.DeleteAllAsync<Models.Visit>().ConfigureAwait(false); } catch { }
-                        try { await Db.DeleteAllAsync<Models.Student>().ConfigureAwait(false); } catch { }
+                        await EnsureInitThen(async () =>
+                        {
+                            try { await Db.DeleteAllAsync<Models.Visit>().ConfigureAwait(false); } catch { }
+                            try { await Db.DeleteAllAsync<Models.Student>().ConfigureAwait(false); } catch { }
+                        }, ct).ConfigureAwait(false);
                         return;
                     }
                 }
@@ -130,23 +147,35 @@ namespace MinistryTracker.Data
             }
         }
 
+        /// <summary>
+        /// Flush WAL so newly opened read-only connections immediately see latest data.
+        /// </summary>
+        public Task ForceWalCheckpointAsync(CancellationToken ct = default)
+            => EnsureInitThen(async () =>
+            {
+                try { _ = await Db.ExecuteScalarAsync<long>("PRAGMA wal_checkpoint(FULL);").ConfigureAwait(false); }
+                catch { /* best effort */ }
+            }, ct);
+
         // ---------------------------------------------------------------------------------------------
-        // Diagnostics façade → Seeding (so Settings can “call diagnostics,” which delegates to seeding)
+        // Diagnostics façade → Seeding (so Settings can trigger seeding through diagnostics)
         // ---------------------------------------------------------------------------------------------
 
         /// <summary>
         /// Convenience wrapper so UI can ask the Diagnostics surface to seed dev/demo data.
         /// Implementation lives in DataService.Seeding.cs.
         /// </summary>
-        public Task SeedDevDataFromDiagnosticsAsync(bool force = false) => SeedDevDataAsync(force);
+        public Task SeedDevDataFromDiagnosticsAsync(bool force = false, CancellationToken ct = default)
+            => SeedDevDataAsync(force, ct);
 
         /// <summary>
-        /// Handy combo for Settings: reset DB then re-seed demo data in one tap.
+        /// Handy combo for Settings: reset DB then re-seed demo data in one tap (and checkpoint).
         /// </summary>
-        public async Task ResetAndSeedFromDiagnosticsAsync()
+        public async Task ResetAndSeedFromDiagnosticsAsync(CancellationToken ct = default)
         {
-            await ResetDatabaseAsync().ConfigureAwait(false);
-            await SeedDevDataAsync(force: true).ConfigureAwait(false);
+            await ResetDatabaseAsync(ct).ConfigureAwait(false);
+            await SeedDevDataAsync(force: true, ct).ConfigureAwait(false);
+            await ForceWalCheckpointAsync(ct).ConfigureAwait(false);
         }
     }
 }
