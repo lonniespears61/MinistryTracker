@@ -80,42 +80,11 @@ namespace MinistryTracker.Models
         /// </summary>
         public bool IsDeleted { get; set; } = false;
 
-        // This returns a readable version of StudyLocationType
-        public string StudyLocationLabel => StudyLocationType.ToString();
-
-
-        // This formats the FirstContactDate
-        public string FirstContactFormatted => $"Contacted: {FirstContactDate:MMM dd, yyyy}";
-
         /// <summary>
         /// [Ignored] In-memory reference to a related household object (not stored in DB).
         /// </summary>
         [Ignore]
         public Household? Household { get; set; }
-
-        [Ignore]
-        public Color StatusBorderColor
-        {
-            get
-            {
-                return Status switch
-                {
-                    StudentStatus.Active => Colors.ForestGreen,
-                    StudentStatus.Paused => Colors.DarkOrange,
-                    StudentStatus.NotInterested => Colors.Gray,
-                    _ => Colors.LightGray
-                };
-            }
-        }
-
-        [Ignore]
-        public Color StatusBackgroundColor => Status switch
-        {
-            StudentStatus.Active => Color.FromArgb("#e6ffe6"),         // Light green
-            StudentStatus.Paused => Color.FromArgb("#fffbe6"),         // Light orange
-            StudentStatus.NotInterested => Color.FromArgb("#f2f2f2"),  // Light gray
-            _ => Colors.White
-        };
 
     }
 }

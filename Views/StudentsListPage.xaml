@@ -1,130 +1,55 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+﻿<!-- Views/StudentsListPage.xaml -->
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage
     x:Class="MinistryTracker.Views.StudentsListPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:MinistryTracker.ViewModels"
     xmlns:models="clr-namespace:MinistryTracker.Models"
-    x:DataType="vm:StudentsListViewModel">
+    Title="Students">
 
-    <!-- Two rows: search (Auto) + list (*) -->
-    <Grid RowDefinitions="Auto,*">
+    <!-- Optional: Add button in the toolbar -->
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Add" Priority="0" Order="Primary" Clicked="OnAddStudentClicked" />
+    </ContentPage.ToolbarItems>
 
-        <!-- 🔎 Search -->
-        <SearchBar
-            Grid.Row="0"
-            Placeholder="Search students..."
-            Text="{Binding SearchText}"
-            Margin="20,20,20,10" />
+    <Grid RowDefinitions="Auto,*" Padding="16">
 
-        <!-- 📋 Students list (CollectionView scrolls itself) -->
-        <CollectionView
-            Grid.Row="1"
-            x:Name="StudentsCollection"
-            ItemsSource="{Binding FilteredStudents}"
-            SelectionMode="Single"
-            SelectionChanged="OnStudentSelectionChanged"
-            ItemSizingStrategy="MeasureAllItems"
-            VerticalOptions="FillAndExpand"
-            Margin="20,0,20,20">
+        <!-- Search / Header row (optional) -->
+        <Label Text="Students" FontSize="24" FontAttributes="Bold" />
 
-            <!-- Empty state -->
-            <CollectionView.EmptyView>
-                <Grid Padding="24" RowDefinitions="Auto,Auto">
-                    <Label Text="No students yet"
-                           FontSize="18"
-                           FontAttributes="Bold"
-                           HorizontalOptions="Center" />
-                    <Label Grid.Row="1"
-                           Text="Tap + to add your first student."
-                           TextColor="Gray"
-                           HorizontalOptions="Center" />
-                </Grid>
-            </CollectionView.EmptyView>
-
-            <!-- Item template: strongly typed to Student -->
+        <CollectionView Grid.Row="1"
+                        x:Name="StudentsCollection"
+                        ItemsSource="{Binding Students}"
+                        SelectionMode="Single"
+                        SelectionChanged="OnStudentSelectionChanged">
             <CollectionView.ItemTemplate>
-                <DataTemplate x:DataType="models:Student">
-
+                <DataTemplate x:DataType="vm:StudentViewModel">
                     <SwipeView>
                         <SwipeView.RightItems>
-                            <SwipeItems Mode="Reveal">
-
-                                <!-- ✏️ Edit (1 touch) -->
-                                <SwipeItem 
-                                    Text="Edit"
-                                    BackgroundColor="#FF8C00"
-                                    IconImageSource="edit_profile_icon.png"
-                                    Invoked="OnEditSwipeInvoked"
-                                    CommandParameter="{Binding .}" />
-
-                                <!-- ➕ Add Visit (1 touch) -->
-                                <SwipeItem 
-                                    Text="Add Visit"
-                                    BackgroundColor="#228B22"
-                                    IconImageSource="add_visit_icon.png"
-                                    Invoked="OnAddVisitSwipeInvoked"
-                                    CommandParameter="{Binding .}" />
-
-                            </SwipeItems>
+                            <!-- Edit -->
+                            <SwipeItem Text="Edit"
+                                       BackgroundColor="#2E7D32"
+                                       CommandParameter="{Binding Model}"
+                                       Invoked="OnEditSwipeInvoked" />
+                            <!-- Add Visit -->
+                            <SwipeItem Text="Add Visit"
+                                       BackgroundColor="#1565C0"
+                                       CommandParameter="{Binding Model}"
+                                       Invoked="OnAddVisitSwipeInvoked" />
                         </SwipeView.RightItems>
 
-                        <!-- Your card -->
-                        <Border Stroke="LightGray"
-                                StrokeThickness="1"
-                                BackgroundColor="WhiteSmoke"
-                                Padding="12"
-                                Margin="0,0,0,10">
-                            <Border.StrokeShape>
-                                <RoundRectangle CornerRadius="12" />
-                            </Border.StrokeShape>
-
-                            <VerticalStackLayout Spacing="6">
-
-                                <!-- Name -->
-                                <Label Text="{Binding Name,
-                                                      FallbackValue='(no Name property)',
-                                                      TargetNullValue='(name is null)'}"
-                                       FontSize="18"
-                                       FontAttributes="Bold"
-                                       LineBreakMode="TailTruncation"
-                                       TextColor="{AppThemeBinding Light=Black, Dark=White}" />
-
-                                <!-- First contact date -->
-                                <Label Text="{Binding FirstContactDate,
-                                                      StringFormat='First contact: {0:d}',
-                                                      FallbackValue='(no FirstContactDate property)'}"
-                                       FontSize="14"
-                                       TextColor="{AppThemeBinding Light=#555555, Dark=#CCCCCC}" />
-
-                                <!-- Study location -->
-                                <Label Text="{Binding StudyLocationType,
-                                                      FallbackValue='(no StudyLocationType property)',
-                                                      TargetNullValue='(not set)'}"
-                                       FontSize="14"
-                                       TextColor="{AppThemeBinding Light=DarkGreen, Dark=LightGreen}" />
+                        <!-- Row content -->
+                        <Grid Padding="12" ColumnDefinitions="*,Auto">
+                            <VerticalStackLayout>
+                                <Label Text="{Binding Name}" FontAttributes="Bold" />
+                                <Label Text="{Binding LastVisitSummary}" FontSize="12" Opacity="0.7" />
                             </VerticalStackLayout>
-                        </Border>
-
+                            <Image Grid.Column="1" Source="chevron_right.png" VerticalOptions="Center" />
+                        </Grid>
                     </SwipeView>
                 </DataTemplate>
             </CollectionView.ItemTemplate>
         </CollectionView>
-
-        <!-- ➕ Floating Add button (overlay across both rows) -->
-        <Button
-            Grid.RowSpan="2"
-            Text="+"
-            FontSize="24"
-            WidthRequest="60"
-            HeightRequest="60"
-            CornerRadius="30"
-            HorizontalOptions="End"
-            VerticalOptions="End"
-            Margin="20"
-            BackgroundColor="ForestGreen"
-            TextColor="White"
-            Clicked="OnAddStudentClicked"
-            ZIndex="10" />
     </Grid>
 </ContentPage>

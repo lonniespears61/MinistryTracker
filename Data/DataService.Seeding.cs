@@ -79,7 +79,8 @@ namespace MinistryTracker.Data
                     "Answered question about suffering.",
                     "Scheduled follow-up for next week.",
                     "Prefers evening visits.",
-                    "Asked for a brochure in their language."
+                    "Asked for a brochure in their language.",
+                    "Asked to be put on Do Not Call List"
                 };
 
                 var students = new[] { s1, s2, s3, s4 };

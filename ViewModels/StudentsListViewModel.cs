@@ -18,10 +18,10 @@ public partial class StudentsListViewModel : ObservableObject
     private readonly DataService _data;
     private readonly ILogger<StudentsListViewModel>? _log;
 
-    public ObservableCollection<Student> Students { get; } = new();
+    public ObservableCollection<StudentViewModel> Students { get; } = new();
 
     [ObservableProperty]
-    private ObservableCollection<Student> filteredStudents = new();
+    private ObservableCollection<StudentViewModel> filteredStudents = new();
 
     [ObservableProperty]
     private string? searchText;
@@ -58,7 +58,7 @@ public partial class StudentsListViewModel : ObservableObject
             {
                 Students.Clear();
                 foreach (var s in all)
-                    Students.Add(s);
+                    Students.Add(new StudentViewModel(s));
 
                 ApplyFilter(); // will also run on UI thread
             });
@@ -95,19 +95,18 @@ public partial class StudentsListViewModel : ObservableObject
 
         var term = (SearchText ?? string.Empty).Trim();
 
-        IEnumerable<Student> query = Students;
+        IEnumerable<StudentViewModel> query = Students;
 
         if (IsActiveOnly)
         {
-            // Works for both StudentStatus and StudentStatus?
-            query = query.Where(s => s.Status == StudentStatus.Active);
+           query = query.Where(s => s.Model.Status == StudentStatus.Active);
         }
 
         if (!string.IsNullOrEmpty(term))
         {
             query = query.Where(s =>
                 (!string.IsNullOrEmpty(s.Name) && s.Name.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(s.PreferredLanguage) && s.PreferredLanguage.Contains(term, StringComparison.OrdinalIgnoreCase))
+                 (!string.IsNullOrEmpty(s.Model.PreferredLanguage) && s.Model.PreferredLanguage.Contains(term, StringComparison.OrdinalIgnoreCase))
             );
         }
 

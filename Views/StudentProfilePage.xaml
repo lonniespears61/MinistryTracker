@@ -70,7 +70,7 @@
                         </Border>
 
                         <Label Text="First Contact" TextColor="#333" FontSize="14" Margin="0,8,0,0" />
-                        <Label Text="{Binding StudentModel.FirstContactFormatted}" FontSize="16" TextColor="#222" />
+                        <Label Text="{Binding FirstContactFormatted}" FontSize="16" TextColor="#222" />
                     </VerticalStackLayout>
                 </Border>
 

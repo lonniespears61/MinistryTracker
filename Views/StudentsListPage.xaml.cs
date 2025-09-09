@@ -1,9 +1,12 @@
-﻿using System;
+﻿// Views/StudentsListPage.xaml.cs
+using System;
 using System.Diagnostics;
 using System.Linq; // FirstOrDefault
 using Microsoft.Maui.Controls;
+using Microsoft.Extensions.DependencyInjection;   // ✅ Needed for GetRequiredService
 using MinistryTracker.Models;
 using MinistryTracker.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace MinistryTracker.Views
 {
@@ -28,7 +31,7 @@ namespace MinistryTracker.Views
                 // ✅ Load the list data when the page shows
                 await _vm.LoadAsync();
 
-                // Let user tap the same row again
+                // Let user tap the same row again (requires x:Name="StudentsCollection" in XAML)
                 StudentsCollection.SelectedItem = null;
             }
             catch (Exception ex)
@@ -41,7 +44,8 @@ namespace MinistryTracker.Views
         {
             try
             {
-                var selected = e.CurrentSelection?.FirstOrDefault() as Student;
+                var selectedVm = e.CurrentSelection?.FirstOrDefault() as StudentViewModel;
+                var selected = selectedVm?.Model;
                 if (selected is null)
                     return;
 
@@ -62,8 +66,7 @@ namespace MinistryTracker.Views
         {
             try
             {
-                if (sender is SwipeItem swipe &&
-                    swipe.CommandParameter is Student student)
+                if (sender is SwipeItem swipe && swipe.CommandParameter is Student student)
                 {
                     var page = MauiProgram.Services.GetRequiredService<EditStudentPage>();
                     (page.BindingContext as EditStudentViewModel)?.Load(student);
@@ -80,8 +83,7 @@ namespace MinistryTracker.Views
         {
             try
             {
-                if (sender is SwipeItem swipe &&
-                    swipe.CommandParameter is Student student)
+                if (sender is SwipeItem swipe && swipe.CommandParameter is Student student)
                 {
                     var page = MauiProgram.Services.GetRequiredService<AddVisitPage>();
                     (page.BindingContext as AddVisitViewModel)?.Load(student);

@@ -1,10 +1,6 @@
-using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using MinistryTracker.Models;
-using MinistryTracker.ViewModels; // For StudentViewModel
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace MinistryTracker.ViewModels
 {
@@ -45,21 +41,37 @@ namespace MinistryTracker.ViewModels
         /// Optional address for display.
         /// </summary>
         public string? StudyAddress => student.StudyAddress;
-
-        /// <summary>
-        /// Formatted string for initial contact date.
-        /// </summary>
-        /// <summary>
-        /// Friendly display of contact date for the card view.
-        /// </summary>
-        public string FirstContactFormatted => student.FirstContactDate.ToString("MMM dd, yyyy");
+        public string FirstContactFormatted => $"Contacted: {student.FirstContactDate:MMM dd, yyyy}";
 
         /// <summary>
         /// Study location as a string label.
         /// </summary>
         public string StudyLocationLabel => student.StudyLocationType.ToString();
 
-       
+
+        /// <summary>
+        /// Border color representing the student's status.
+        /// </summary>
+        public Color StatusBorderColor => student.Status switch
+        {
+            StudentStatus.Active => Colors.ForestGreen,
+            StudentStatus.Paused => Colors.DarkOrange,
+            StudentStatus.NotInterested => Colors.Gray,
+            _ => Colors.LightGray
+        };
+
+        /// <summary>
+        /// Background color representing the student's status.
+        /// </summary>
+        public Color StatusBackgroundColor => student.Status switch
+        {
+            StudentStatus.Active => Color.FromArgb("#e6ffe6"),         // Light green
+            StudentStatus.Paused => Color.FromArgb("#fffbe6"),         // Light orange
+            StudentStatus.NotInterested => Color.FromArgb("#f2f2f2"),  // Light gray
+            _ => Colors.White
+        };
+
+        /// <summary>
         /// <summary>
         /// Color code based on interest level (used for card styling).
         /// </summary>

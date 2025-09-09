@@ -41,11 +41,17 @@ namespace MinistryTracker.ViewModels
         /// </summary>
         public string StatusText => StudentModel.Status.ToString();
 
+        /// <summary>
+        /// Friendly display of the first contact date.
+        /// </summary>
+        public string FirstContactFormatted => $"Contacted: {StudentModel.FirstContactDate:MMM dd, yyyy}";
+
         // When StudentModel changes, also notify that StatusColor/StatusText changed.
         partial void OnStudentModelChanged(Student value)
         {
             OnPropertyChanged(nameof(StatusColor));
             OnPropertyChanged(nameof(StatusText));
+            OnPropertyChanged(nameof(FirstContactFormatted));
         }
     }
 }
