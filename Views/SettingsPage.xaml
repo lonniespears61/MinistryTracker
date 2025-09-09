@@ -3,6 +3,7 @@
     x:Class="MinistryTracker.Views.SettingsPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
     xmlns:vm="clr-namespace:MinistryTracker.ViewModels"
     x:DataType="vm:SettingsViewModel"
     Title="Settings">
@@ -15,30 +16,58 @@
             <VerticalStackLayout Padding="16" Spacing="18">
 
                 <!-- CARD: Database Health -->
-                <Border
-                    Stroke="{DynamicResource Gray300}"
-                    StrokeThickness="1"
-                    BackgroundColor="White"
-                    Padding="12"
-                    Margin="0,6">
+                <Border Stroke="{DynamicResource Gray300}"
+        StrokeThickness="1"
+        BackgroundColor="White"
+        Padding="12"
+        Margin="0,6">
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="10" />
                     </Border.StrokeShape>
 
-                    <VerticalStackLayout Spacing="8">
-                        <Label Text="Database Health"
-                               FontAttributes="Bold"
-                               FontSize="18"/>
+                    <toolkit:Expander IsExpanded="{Binding HealthExpanded}">
+                        <toolkit:Expander.Header>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <Label Text="Database Health"
+               FontAttributes="Bold"
+               FontSize="18" />
 
-                        <Button Text="Show DB Health"
-                                Command="{Binding ShowDbHealthCommand}" />
+                                <!-- Collapsed: show "Show DB Health" -->
+                                <Button Text="Show DB Health"
+                Command="{Binding ShowDbHealthCommand}"
+                Grid.Column="1">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button"
+                         Binding="{Binding HealthExpanded}"
+                         Value="True">
+                                            <Setter Property="IsVisible" Value="False" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
 
-                        <!-- Show the health snapshot text -->
-                        <Editor Text="{Binding DbHealthText}"
-                                AutoSize="TextChanges"
-                                IsReadOnly="True"
-                                HeightRequest="180" />
-                    </VerticalStackLayout>
+                                <!-- Expanded: show "Hide" -->
+                                <Button Text="Hide"
+                Command="{Binding HideHealthCommand}"
+                Grid.Column="1"
+                IsVisible="False">
+                                    <Button.Triggers>
+                                        <DataTrigger TargetType="Button"
+                         Binding="{Binding HealthExpanded}"
+                         Value="True">
+                                            <Setter Property="IsVisible" Value="True" />
+                                        </DataTrigger>
+                                    </Button.Triggers>
+                                </Button>
+                            </Grid>
+                        </toolkit:Expander.Header>
+
+                        <toolkit:Expander.Content>
+                            <Editor Text="{Binding DbHealthText}"
+              AutoSize="TextChanges"
+              IsReadOnly="True"
+              HeightRequest="220" />
+                        </toolkit:Expander.Content>
+                    </toolkit:Expander>
                 </Border>
 
                 <!-- CARD: Test Data -->

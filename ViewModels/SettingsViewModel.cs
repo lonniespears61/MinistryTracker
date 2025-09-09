@@ -10,8 +10,9 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.ComponentModel;            // [ObservableProperty]
-using CommunityToolkit.Mvvm.Input;                     // [RelayCommand]
+                // [RelayCommand]
 using CommunityToolkit.Mvvm.Messaging;                 // WeakReferenceMessenger
 using MinistryTracker.Data;
 using MinistryTracker.ViewModels.Messages;
@@ -21,14 +22,16 @@ namespace MinistryTracker.ViewModels
     public partial class SettingsViewModel : ObservableObject
     {
         private readonly DataService _data;
-
-        // We keep one CTS for the "currently running" operation.
-        // Starting a new op cancels any in-flight operation immediately.
+        [RelayCommand]
+        private void HideHealth() => HealthExpanded = false;
+         
+        // Single active operation CTS; new operation cancels the previous one
         private CancellationTokenSource? _activeCts;
 
         // Bindables (XAML)
         [ObservableProperty] private bool isBusy;
         [ObservableProperty] private string dbHealthText = string.Empty;
+        [ObservableProperty] private bool healthExpanded; // collapsed by default; expands after health loads
 
         public SettingsViewModel(DataService data) => _data = data;
 
@@ -104,15 +107,16 @@ namespace MinistryTracker.ViewModels
         {
             if (IsBusy) return;
 
-            // Ask the View to confirm (MVVM-pure). The page will call SetResult with the user's choice.
-            bool proceed = false;
+            // Ask the View to confirm (MVVM-pure). Await the user's choice via TCS callback.
+            var tcs = new TaskCompletionSource<bool>();
             WeakReferenceMessenger.Default.Send(new UiConfirmMessage(
-                "Reset Database",
-                "This will wipe local data and recreate the DB, then seed demo data.\nContinue?",
-                confirmed => proceed = confirmed,
+                title: "Reset Database",
+                message: "This will wipe local data and recreate the DB, then seed demo data.\nContinue?",
+                setResult: confirmed => tcs.TrySetResult(confirmed),
                 accept: "Yes",
                 cancel: "No"));
 
+            var proceed = await tcs.Task.ConfigureAwait(false);
             if (!proceed) return;
 
             var ct = StartOperation();
@@ -133,7 +137,7 @@ namespace MinistryTracker.ViewModels
             }
             catch (OperationCanceledException)
             {
-                // User cancelled—no error UI needed
+                // user cancelled / navigated away — ignore
             }
             catch (Exception ex)
             {
@@ -150,7 +154,7 @@ namespace MinistryTracker.ViewModels
         /// - counts via ORM (mapping-safe)
         /// - fast path PRAGMA (skips deep integrity scan unless you opt-in)
         /// - table list + orphaned visits
-        /// Writes text to DbHealthText (bound to the XAML Editor).
+        /// Writes text to DbHealthText (bound to the XAML Editor) and expands the card.
         /// </summary>
         [RelayCommand(AllowConcurrentExecutions = false)]
         private async Task ShowDbHealth()
@@ -169,6 +173,9 @@ namespace MinistryTracker.ViewModels
 
                 var health = await _data.GetDbHealthAsync(deep: false, linked.Token).ConfigureAwait(false);
                 DbHealthText = health.ToString();
+
+                // Expand the card after a successful fetch
+                HealthExpanded = true;
 
                 WeakReferenceMessenger.Default.Send(new UiToastMessage("DB health updated"));
             }
