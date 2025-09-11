@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using MinistryTracker.Models;
+using MinistryTracker.Models.Enums;
 
 namespace MinistryTracker.ViewModels
 {

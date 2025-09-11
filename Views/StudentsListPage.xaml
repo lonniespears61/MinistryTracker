@@ -1,5 +1,4 @@
-﻿<!-- Views/StudentsListPage.xaml -->
-<?xml version="1.0" encoding="utf-8" ?>
+﻿<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage
     x:Class="MinistryTracker.Views.StudentsListPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
@@ -8,14 +7,12 @@
     xmlns:models="clr-namespace:MinistryTracker.Models"
     Title="Students">
 
-    <!-- Optional: Add button in the toolbar -->
     <ContentPage.ToolbarItems>
         <ToolbarItem Text="Add" Priority="0" Order="Primary" Clicked="OnAddStudentClicked" />
     </ContentPage.ToolbarItems>
 
     <Grid RowDefinitions="Auto,*" Padding="16">
 
-        <!-- Search / Header row (optional) -->
         <Label Text="Students" FontSize="24" FontAttributes="Bold" />
 
         <CollectionView Grid.Row="1"
@@ -26,17 +23,20 @@
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="vm:StudentViewModel">
                     <SwipeView>
+                        <!-- ✅ MAUI requires a SwipeItems wrapper here -->
                         <SwipeView.RightItems>
-                            <!-- Edit -->
-                            <SwipeItem Text="Edit"
-                                       BackgroundColor="#2E7D32"
-                                       CommandParameter="{Binding Model}"
-                                       Invoked="OnEditSwipeInvoked" />
-                            <!-- Add Visit -->
-                            <SwipeItem Text="Add Visit"
-                                       BackgroundColor="#1565C0"
-                                       CommandParameter="{Binding Model}"
-                                       Invoked="OnAddVisitSwipeInvoked" />
+                            <SwipeItems>
+                                <!-- Edit -->
+                                <SwipeItem Text="Edit"
+                                           BackgroundColor="#2E7D32"
+                                           CommandParameter="{Binding Model}"
+                                           Invoked="OnEditSwipeInvoked" />
+                                <!-- Add Visit -->
+                                <SwipeItem Text="Add Visit"
+                                           BackgroundColor="#1565C0"
+                                           CommandParameter="{Binding Model}"
+                                           Invoked="OnAddVisitSwipeInvoked" />
+                            </SwipeItems>
                         </SwipeView.RightItems>
 
                         <!-- Row content -->
