@@ -20,3 +20,5 @@
 - Single SQLite connection managed by DataService
 - DI via MauiProgram.cs
 - Resources (icons, fonts) organized under /Resources
+
+![Architecture Folder Structure](architecture_structure_v2.png)
