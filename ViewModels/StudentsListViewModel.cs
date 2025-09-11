@@ -26,6 +26,22 @@ public partial class StudentsListViewModel : ObservableObject
     [ObservableProperty]
     private string? searchText;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     // ✅ default ON to mirror Dashboard behavior
     [ObservableProperty]
     private bool isActiveOnly = true;
