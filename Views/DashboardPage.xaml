@@ -119,8 +119,8 @@
             </Border>
 
             <!-- Add more dashboard cards here if needed -->
-
-<Border
+            <!--  Database Info Card Temporary for debugging purposes -->
+            <Border
 Stroke="{DynamicResource Gray300}"
 StrokeShape="RoundRectangle 12"
 StrokeThickness="1"

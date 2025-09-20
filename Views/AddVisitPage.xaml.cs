@@ -15,6 +15,7 @@ namespace MinistryTracker.Views
             BindingContext = _vm;
         }
 
+        // Called by StudentsListPage before navigation to prefill the VM
         public void Load(Student student) => _vm.Load(student);
     }
 }

@@ -1,33 +1,92 @@
-<ContentPage 
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MinistryTracker.Views.AddVisitPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
-    xmlns:utilities="clr-namespace:MinistryTracker.Utilities"
-    x:Class="MinistryTracker.Views.AddVisitPage"
-    x:DataType="viewmodels:AddVisitViewModel"
-    Title="Schedule Visit">
+    xmlns:models="clr-namespace:MinistryTracker.Models"
+    Title="Add Visit">
+
+    <ContentPage.ToolbarItems>
+        <ToolbarItem Text="Save" Command="{Binding SaveCommand}" />
+    </ContentPage.ToolbarItems>
 
     <ScrollView>
-        <VerticalStackLayout Padding="24" Spacing="16">
+        <VerticalStackLayout Padding="16" Spacing="16">
 
-            <Label Text="Schedule a Visit"
-                   FontSize="24"
-                   FontAttributes="Bold"
-                   HorizontalOptions="Center" />
+            <!-- Student (readonly) -->
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                <Label Text="Student ID" VerticalTextAlignment="Center"/>
+                <Entry Grid.Column="1" Text="{Binding StudentId}" IsReadOnly="True"/>
+            </Grid>
 
-            <Picker Title="Visit Type"
-                 ItemsSource="{x:Static utilities:VisitTypeValues.All}" 
-                    SelectedItem="{Binding SelectedVisitType}" />
+            <!-- Month header -->
+            <Grid ColumnDefinitions="Auto,*,Auto" VerticalOptions="Center">
+                <Button Text="◀" Command="{Binding PrevMonthCommand}" />
+                <Label Grid.Column="1"
+               HorizontalTextAlignment="Center"
+               FontAttributes="Bold"
+               Text="{Binding DisplayMonth, StringFormat='{0:MMMM yyyy}'}" />
+                <Button Grid.Column="2" Text="▶" Command="{Binding NextMonthCommand}" />
+            </Grid>
 
-            <DatePicker Date="{Binding ScheduledDateTime}" />
-            <TimePicker Time="{Binding ScheduledDateTime, Mode=TwoWay}" />
+            <!-- Weekday headers -->
+            <Grid ColumnDefinitions="*,*,*,*,*,*,*">
+                <Label Text="Mon" HorizontalTextAlignment="Center"/>
+                <Label Grid.Column="1" Text="Tue" HorizontalTextAlignment="Center"/>
+                <Label Grid.Column="2" Text="Wed" HorizontalTextAlignment="Center"/>
+                <Label Grid.Column="3" Text="Thu" HorizontalTextAlignment="Center"/>
+                <Label Grid.Column="4" Text="Fri" HorizontalTextAlignment="Center"/>
+                <Label Grid.Column="5" Text="Sat" HorizontalTextAlignment="Center"/>
+                <Label Grid.Column="6" Text="Sun" HorizontalTextAlignment="Center"/>
+            </Grid>
 
-            <Editor Placeholder="Visit notes..."
-                    AutoSize="TextChanges"
-                    Text="{Binding Note}" />
+            <!-- Inline calendar grid (no popups) -->
+            <CollectionView ItemsSource="{Binding Days}"
+                      SelectionMode="None">
+                <CollectionView.ItemsLayout>
+                    <GridItemsLayout Orientation="Vertical" Span="7"/>
+                </CollectionView.ItemsLayout>
 
-            <Button Text="Save"
-                    Command="{Binding SaveVisitCommand}" />
+                <CollectionView.ItemTemplate>
+                    <DataTemplate x:DataType="models:DayCell">
+                        <Grid Padding="4">
+                            <Border
+                  StrokeThickness="{Binding IsSelected, Converter={StaticResource BoolToThickness}, ConverterParameter=2}"
+                  Stroke="{Binding IsSelected, Converter={StaticResource BoolToColor}, ConverterParameter=#2563EB}"
+                  BackgroundColor="{Binding IsCurrentMonth, Converter={StaticResource BoolToColor}, ConverterParameter=Transparent;#F3F4F6}"
+                  StrokeShape="RoundRectangle 8">
+                                <VerticalStackLayout>
+                                    <Button Text="{Binding DayNumber}"
+                          Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.SelectDayCommand}"
+                          CommandParameter="{Binding}"
+                          BackgroundColor="Transparent"
+                          TextColor="{Binding IsCurrentMonth, Converter={StaticResource BoolToColor}, ConverterParameter=#111827;#9CA3AF}"
+                          FontAttributes="{Binding IsToday, Converter={StaticResource BoolToFontAttrs}, ConverterParameter=Bold}"
+                          Padding="8"/>
+                                </VerticalStackLayout>
+                            </Border>
+                        </Grid>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
+
+            <!-- Time chips (no popups) -->
+            <Label Text="Time" />
+            <CollectionView ItemsSource="{Binding TimeSlots}" SelectionMode="None">
+                <CollectionView.ItemsLayout>
+                    <LinearItemsLayout Orientation="Horizontal" ItemSpacing="8"/>
+                </CollectionView.ItemsLayout>
+                <CollectionView.ItemTemplate>
+                    <DataTemplate>
+                        <Border Stroke="#D1D5DB" StrokeThickness="1" Padding="8,6" StrokeShape="RoundRectangle 12">
+                            <Button Text="{Binding StringFormat='{}{0:hh\\:mm}'}"
+                      Command="{Binding Source={RelativeSource AncestorType={x:Type ContentPage}}, Path=BindingContext.SelectTimeCommand}"
+                      CommandParameter="{Binding}"
+                      BackgroundColor="Transparent"/>
+                        </Border>
+                    </DataTemplate>
+                </CollectionView.ItemTemplate>
+            </CollectionView>
 
         </VerticalStackLayout>
     </ScrollView>
