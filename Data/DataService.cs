@@ -57,8 +57,7 @@ namespace MinistryTracker.Data
                     // Reasonable durability/perf
                     _ = await _database.ExecuteScalarAsync<long>("PRAGMA synchronous = NORMAL;").ConfigureAwait(false);
 
-                    // Optional: versioning hook for future migrations
-                    _ = await _database.ExecuteScalarAsync<long>("PRAGMA user_version = 1;").ConfigureAwait(false);
+                   
                 }
                 catch (SQLiteException)
                 {

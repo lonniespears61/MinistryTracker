@@ -1,4 +1,4 @@
-namespace MinistryTracker.Models
+namespace MinistryTracker.Models.Enums
 {
     public enum InitialCallType
     {

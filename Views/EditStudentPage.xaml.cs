@@ -1,3 +1,5 @@
+using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Core;
 using MinistryTracker.Models;
 using MinistryTracker.ViewModels;
 
@@ -11,23 +13,33 @@ namespace MinistryTracker.Views
             BindingContext = vm;
         }
 
-        // Called by StudentsListPage: editPage.Init(student);
+        /// <summary>Prefill the form before navigating to this page.</summary>
         public void Init(Student student)
         {
             if (BindingContext is EditStudentViewModel vm)
-            {
-                vm.Name = student.Name;
-                vm.FirstContactDate = student.FirstContactDate;
-
-                // If both sides expose CallType, uncomment:
-                // vm.CallType = student.CallType;
-
-                // If your VM tracks the entity id:
-                // vm.StudentId = student.Id;
-            }
+                vm.Load(student);
         }
 
-        private async void OnCancelClicked(object? sender, EventArgs e)
+        private async void OnCancelClicked(object sender, EventArgs e)
             => await Navigation.PopAsync();
+
+        private async void OnSaveClicked(object sender, EventArgs e)
+        {
+            if (BindingContext is not EditStudentViewModel vm) return;
+
+            try
+            {
+                var ok = await vm.SaveAsync();
+                if (ok)
+                {
+                    await Toast.Make("Saved.", ToastDuration.Short).Show();
+                    await Navigation.PopAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                await Toast.Make($"Error: {ex.Message}", ToastDuration.Long).Show();
+            }
+        }
     }
 }

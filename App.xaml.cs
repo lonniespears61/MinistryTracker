@@ -1,20 +1,21 @@
-﻿using Microsoft.Extensions.DependencyInjection; 
-using MinistryTracker.Data;
+﻿using Microsoft.Maui; // for Window
 using MinistryTracker.Views;
 
 namespace MinistryTracker;
 
 public partial class App : Application
 {
-    public App()
+    private readonly DashboardPage _dashboard;
+
+    // MAUI will resolve DashboardPage from DI and pass it in.
+    public App(DashboardPage dashboard)
     {
         InitializeComponent();
-
+        _dashboard = dashboard;
     }
+
     protected override Window CreateWindow(IActivationState? activationState)
     {
-       
-        var dashboardPage = MauiProgram.Services.GetRequiredService<DashboardPage>();
-        return new Window(new NavigationPage(dashboardPage));
+        return new Window(new NavigationPage(_dashboard));
     }
 }

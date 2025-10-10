@@ -80,18 +80,39 @@ namespace MinistryTracker.Views
         {
             try
             {
-                if (sender is SwipeItem swipe && swipe.CommandParameter is Student student)
+                // 1) Try to get the Student from the SwipeItem.CommandParameter
+                Student? student = null;
+                if (sender is SwipeItem si && si.CommandParameter is Student sFromParam)
                 {
-                    var page = MauiProgram.Services.GetRequiredService<AddVisitPage>();
-                    page.Load(student);                 // ⬅️ prefill VM the way your page is designed
-                    await Navigation.PushAsync(page);   // land directly on calendar + time pickers
+                    student = sFromParam;
                 }
+                else if (sender is Element el && el.BindingContext is StudentViewModel svm && svm.Model is Student sFromVm)
+                {
+                    // 2) Fallback: get it from the row's BindingContext if CommandParameter wasn't set
+                    student = sFromVm;
+                }
+
+                if (student is null)
+                    throw new InvalidOperationException("No student found for Add Visit (CommandParameter not bound).");
+
+                // 3) Resolve page from DI
+                var page = MauiProgram.Services.GetRequiredService<AddVisitPage>();
+                if (page is null) throw new InvalidOperationException("AddVisitPage is not registered in DI.");
+
+                // 4) Prefill the VM via the page’s API (do NOT call a nonexistent PreselectStudent)
+                page.Load(student);  // forwards to AddVisitViewModel.Load(student)  
+
+                // 5) Navigate
+                await Navigation.PushAsync(page);
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Add Visit swipe failed: {ex}");
+                // Visible error so we see precisely what failed on-device/emulator
+                await DisplayAlert("Add Visit failed", ex.Message, "OK");
+                System.Diagnostics.Debug.WriteLine(ex);
             }
         }
+
 
         private async void OnAddStudentClicked(object sender, EventArgs e)
         {

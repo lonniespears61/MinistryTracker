@@ -1,11 +1,15 @@
+using CommunityToolkit.Mvvm.ComponentModel;
+
 namespace MinistryTracker.Models
 {
-    public class DayCell
+    public partial class DayCell : ObservableObject
     {
         public DateTime Date { get; set; }
+
         public int DayNumber => Date.Day;
-        public bool IsCurrentMonth { get; set; }
+
+        [ObservableProperty] private bool isCurrentMonth;
+        [ObservableProperty] private bool isSelected;
         public bool IsToday => Date.Date == DateTime.Today;
-        public bool IsSelected { get; set; }
     }
 }
