@@ -1,59 +1,81 @@
-﻿// Views/StudentsListPage.xaml.cs
-using System;
-using System.Diagnostics;
+﻿using System;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.Controls;
 using MinistryTracker.Models;
 using MinistryTracker.ViewModels;
+using MinistryTracker.Views;
+
 
 namespace MinistryTracker.Views
 {
     public partial class StudentsListPage : ContentPage
     {
-        private readonly StudentsListViewModel _vm;
-
         public StudentsListPage(StudentsListViewModel vm)
         {
             InitializeComponent();
-            _vm = vm;
-            BindingContext = _vm;
+            BindingContext = vm;
         }
 
-        protected override async void OnAppearing()
+        // -------- Common navigator ----------
+        private async System.Threading.Tasks.Task NavigateToProfileAsync(Student student)
         {
-            base.OnAppearing();
-            try
-            {
-                await _vm.LoadAsync();
-                StudentsCollection.SelectedItem = null;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"StudentsListPage OnAppearing failed: {ex}");
-            }
+            var sp = Application.Current?.Handler?.MauiContext?.Services;
+            var profile = sp?.GetRequiredService<StudentProfilePage>();
+            if (profile is null) return;
+
+            profile.Init(student);                 // hydrate VM before navigation
+            await Navigation.PushAsync(profile);   // uses ContentPage.Navigation
         }
 
-        // Kept for completeness (tap opens profile if/when you re-enable tap UX)
+        // -------- CollectionView handler ----------
+        // XAML: SelectionChanged="OnStudentSelectionChanged"
         private async void OnStudentSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             try
             {
-                var selectedVm = e.CurrentSelection?.FirstOrDefault() as StudentViewModel;
-                var selected = selectedVm?.Model;
-                if (selected is null) return;
+                var svm = e.CurrentSelection?.FirstOrDefault() as StudentViewModel;
+                if (svm?.Model is null) return;
+
+                await NavigateToProfileAsync(svm.Model);
 
                 if (sender is CollectionView cv) cv.SelectedItem = null;
+            }
+            catch
+            {
+                // optional log
+            }
+        }
 
-                var page = MauiProgram.Services.GetRequiredService<StudentProfilePage>();
-                if (page.BindingContext is StudentProfileViewModel profileVm)
-                    profileVm.Load(selected);
+        private static Student? TryGetStudentFromSwipeSender(object sender)
+        {
+            if (sender is not SwipeItem swipeItem) return null;
 
-                await Navigation.PushAsync(page);
+            // Prefer CommandParameter if set
+            if (swipeItem.CommandParameter is Student s1) return s1;
+
+            // Otherwise BindingContext may be StudentViewModel
+            if (swipeItem.BindingContext is StudentViewModel svm) return svm.Model;
+
+            // Or BindingContext may be Student (depending on template)
+            return swipeItem.BindingContext as Student;
+        }
+
+        private async void OnAddVisitSwipeInvoked(object sender, EventArgs e)
+        {
+            try
+            {
+                var student = TryGetStudentFromSwipeSender(sender);
+                if (student is null) return;
+
+                await DisplayAlert("Add Visit", $"Add a visit for {student.Name}.", "OK");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Selection navigation failed: {ex}");
+                System.Diagnostics.Debug.WriteLine(ex);
+                await DisplayAlert("Oops",
+                    "Something went wrong. Try again.",
+                    "OK");
             }
         }
 
@@ -61,63 +83,50 @@ namespace MinistryTracker.Views
         {
             try
             {
-                if (sender is SwipeItem swipe && swipe.CommandParameter is Student student)
-                {
-                    var page = MauiProgram.Services.GetRequiredService<EditStudentPage>();
-                    if (page.BindingContext is EditStudentViewModel vm)
-                        vm.Load(student);
+                var student = TryGetStudentFromSwipeSender(sender);
+                if (student is null) return;
 
-                    await Navigation.PushAsync(page);
-                }
+                var sp = Application.Current?.Handler?.MauiContext?.Services;
+                var editPage = sp?.GetRequiredService<EditStudentPage>();
+                if (editPage is null) return;
+
+                editPage.Init(student);
+                await Navigation.PushAsync(editPage);
             }
-            catch (Exception ex)
+            catch
             {
-                Debug.WriteLine($"Edit swipe failed: {ex}");
+                await DisplayAlert("Something Broke", "Back up and try again", "OK");
             }
         }
 
-        private async void OnAddVisitSwipeInvoked(object sender, EventArgs e)
+
+        protected override async void OnAppearing()
+        {
+            base.OnAppearing();
+
+            if (BindingContext is StudentsListViewModel vm)
+                await vm.LoadAsync();
+        }
+        private async void OnAddStudentClicked(object sender, EventArgs e)
+        {
+            await DisplayAlert("Add Student", "Add Student feature coming soon.", "OK");
+        }
+
+
+        // -------- ListView handler (if you use ListView) ----------
+        // XAML: ItemSelected="OnStudentSelected"
+        private async void OnStudentSelected(object sender, SelectedItemChangedEventArgs e)
         {
             try
             {
-                // 1) Try to get the Student from the SwipeItem.CommandParameter
-                Student? student = null;
-                if (sender is SwipeItem si && si.CommandParameter is Student sFromParam)
-                {
-                    student = sFromParam;
-                }
-                else if (sender is Element el && el.BindingContext is StudentViewModel svm && svm.Model is Student sFromVm)
-                {
-                    // 2) Fallback: get it from the row's BindingContext if CommandParameter wasn't set
-                    student = sFromVm;
-                }
+                var student = e.SelectedItem as Student;
+                if (student is null) return;
 
-                if (student is null)
-                    throw new InvalidOperationException("No student found for Add Visit (CommandParameter not bound).");
+                await NavigateToProfileAsync(student);
 
-                // 3) Resolve page from DI
-                var page = MauiProgram.Services.GetRequiredService<AddVisitPage>();
-                if (page is null) throw new InvalidOperationException("AddVisitPage is not registered in DI.");
-
-                // 4) Prefill the VM via the page’s API (do NOT call a nonexistent PreselectStudent)
-                page.Load(student);  // forwards to AddVisitViewModel.Load(student)  
-
-                // 5) Navigate
-                await Navigation.PushAsync(page);
+                if (sender is ListView lv) lv.SelectedItem = null;
             }
-            catch (Exception ex)
-            {
-                // Visible error so we see precisely what failed on-device/emulator
-                await DisplayAlert("Add Visit failed", ex.Message, "OK");
-                System.Diagnostics.Debug.WriteLine(ex);
-            }
-        }
-
-
-        private async void OnAddStudentClicked(object sender, EventArgs e)
-        {
-            var page = MauiProgram.Services.GetRequiredService<AddStudentPage>();
-            await Navigation.PushAsync(page);
+            catch { /* optionally log */ }
         }
     }
 }

@@ -64,7 +64,7 @@
                     <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
                         <Label Text="Calls Next 7 Days" FontSize="18" FontAttributes="Bold" />
                         <Label Grid.Column="1"
-                               Text="{Binding ThisWeekScheduledCount}"
+                               Text=""
                                FontSize="24"
                                FontAttributes="Bold" />
 
