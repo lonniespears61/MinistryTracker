@@ -31,6 +31,7 @@ public static class MauiProgram
 
         // ===== Services =====
         builder.Services.AddSingleton<DataService>(); // SQLite wrapper / repo
+        builder.Services.AddSingleton<AppShell>();    // ✅ Shell root for DI
 
         // ===== ViewModels =====
         builder.Services.AddTransient<DashboardViewModel>();
@@ -41,6 +42,8 @@ public static class MauiProgram
         builder.Services.AddTransient<StudentProfileViewModel>();
         builder.Services.AddTransient<SettingsViewModel>();
         builder.Services.AddTransient<AboutViewModel>();
+        builder.Services.AddTransient<MyCalendarViewModel>();
+
 
         // ===== Pages =====
         // Register every page you navigate to so DI can supply their VMs/services.
@@ -52,6 +55,8 @@ public static class MauiProgram
         builder.Services.AddTransient<StudentProfilePage>();
         builder.Services.AddTransient<SettingsPage>();
         builder.Services.AddTransient<AboutPage>();
+        builder.Services.AddTransient<MyCalendarPage>();
+
 
         // ✅ Build first; only then use Services
         var app = builder.Build();

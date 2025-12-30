@@ -1,21 +1,15 @@
-﻿using Microsoft.Maui; // for Window
-using MinistryTracker.Views;
-
-namespace MinistryTracker;
+﻿namespace MinistryTracker;
 
 public partial class App : Application
 {
-    private readonly DashboardPage _dashboard;
+    private readonly AppShell _shell;
 
-    // MAUI will resolve DashboardPage from DI and pass it in.
-    public App(DashboardPage dashboard)
+    public App(AppShell shell)
     {
         InitializeComponent();
-        _dashboard = dashboard;
+        _shell = shell;
     }
 
     protected override Window CreateWindow(IActivationState? activationState)
-    {
-        return new Window(new NavigationPage(_dashboard));
-    }
+        => new Window(_shell);
 }
