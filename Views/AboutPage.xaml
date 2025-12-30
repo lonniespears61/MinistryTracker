@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MinistryTracker.Views.AboutPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    Title="">
+
+    <!-- Custom title bar (replaces back arrow) -->
+    <NavigationPage.TitleView>
+        <Grid ColumnDefinitions="Auto,*"
+          Padding="0,10,0,0"
+          VerticalOptions="Center">
+
+            <ImageButton
+            Source="icon_home.png"
+            WidthRequest="28"
+            HeightRequest="28"
+            BackgroundColor="Transparent"
+            Clicked="OnHomeClicked"
+            SemanticProperties.Description="Home" />
+
+            <Label Grid.Column="1"
+               Text="About"
+               FontSize="18"
+               FontAttributes="Bold"
+               VerticalOptions="Center"
+               Margin="12,0,0,0" />
+        </Grid>
+    </NavigationPage.TitleView>
+
+    <!-- Page content -->
+    <Grid RowDefinitions="Auto,Auto,*"
+          Padding="16"
+          RowSpacing="12">
+
+        <!-- Header -->
+        <VerticalStackLayout Grid.Row="0" Spacing="8">
+
+            <HorizontalStackLayout Spacing="12" VerticalOptions="Center">
+                <VerticalStackLayout Spacing="2">
+                    <Label Text="{Binding AppName}"
+                           FontSize="24"
+                           FontAttributes="Bold" />
+
+                    <Label Text="{Binding VersionDisplay}"
+                           FontSize="12"
+                           Opacity="0.75" />
+                </VerticalStackLayout>
+            </HorizontalStackLayout>
+
+            <Label Text="A personal tool for organizing students, visits, and notes."
+                   FontSize="14"
+                   Opacity="0.85" />
+        </VerticalStackLayout>
+
+        <!-- Divider -->
+        <BoxView Grid.Row="1"
+                 HeightRequest="1"
+                 Opacity="0.2" />
+
+        <!-- Legal / scrollable content -->
+        <ScrollView Grid.Row="2">
+            <VerticalStackLayout Spacing="12">
+
+                <Label Text="Legal"
+                       FontSize="16"
+                       FontAttributes="Bold" />
+
+                <Label Text="{Binding LegalDisclaimers}"
+                       FontSize="13"
+                       LineBreakMode="WordWrap" />
+
+                <BoxView HeightRequest="1"
+                         Opacity="0.2" />
+
+                <Label Text="{Binding Copyright}"
+                       FontSize="12"
+                       Opacity="0.75" />
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+    </Grid>
+</ContentPage>

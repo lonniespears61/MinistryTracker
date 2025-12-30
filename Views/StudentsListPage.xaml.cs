@@ -1,10 +1,11 @@
-﻿using System;
-using System.Linq;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls.PlatformConfiguration;
 using MinistryTracker.Models;
 using MinistryTracker.ViewModels;
 using MinistryTracker.Views;
+using System;
+using System.Linq;
 
 
 namespace MinistryTracker.Views
@@ -15,6 +16,7 @@ namespace MinistryTracker.Views
         {
             InitializeComponent();
             BindingContext = vm;
+
         }
 
         // -------- Common navigator ----------
@@ -24,7 +26,10 @@ namespace MinistryTracker.Views
             var profile = sp?.GetRequiredService<StudentProfilePage>();
             if (profile is null) return;
 
-            profile.Init(student);                 // hydrate VM before navigation
+            // Pass the Student directly to the ViewModel
+            if (profile.BindingContext is StudentProfileViewModel pvm)
+                pvm.Load(student);
+
             await Navigation.PushAsync(profile);   // uses ContentPage.Navigation
         }
 
@@ -112,6 +117,10 @@ namespace MinistryTracker.Views
             await DisplayAlert("Add Student", "Add Student feature coming soon.", "OK");
         }
 
+        private async void OnHomeClicked(object sender, EventArgs e)
+        {
+            await Navigation.PopToRootAsync(animated: true);
+        }
 
         // -------- ListView handler (if you use ListView) ----------
         // XAML: ItemSelected="OnStudentSelected"

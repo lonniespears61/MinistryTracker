@@ -60,10 +60,11 @@ namespace MinistryTracker.ViewModels
         [ObservableProperty]
         private string? preferredLanguage;                // Optional
 
-        /// <summary>
+        // --------------------------------------------------------------------
         /// ItemsSource for the Initial Call Type <Picker>.
         /// Binding in XAML: ItemsSource="{Binding CallTypeValues}" SelectedItem="{Binding CallType}"
-        /// </summary>
+        /// summary
+       // --------------------------------------------------------------------
         public List<InitialCallType> CallTypeValues =>
             Enum.GetValues(typeof(InitialCallType)).Cast<InitialCallType>().ToList();
 
@@ -80,7 +81,8 @@ namespace MinistryTracker.ViewModels
             // Basic validation: Name is required
             if (string.IsNullOrWhiteSpace(Name))
             {
-                await Application.Current.MainPage.DisplayAlert("Missing Info", "Name is required.", "OK");
+                await 
+                    Application.Current.MainPage.DisplayAlert("Missing Info", "Name is required.", "OK");
                 return;
             }
 

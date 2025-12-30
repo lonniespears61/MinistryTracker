@@ -1,12 +1,10 @@
-﻿using Microsoft.Maui.Controls;
+﻿using System;
+using Microsoft.Maui.Controls;
 using Microsoft.Extensions.DependencyInjection;
 using MinistryTracker.ViewModels;
 
 namespace MinistryTracker.Views
 {
-    /// <summary>
-    /// Dashboard page displaying summary information for the ministry.
-    /// </summary>
     public partial class DashboardPage : ContentPage
     {
         private readonly DashboardViewModel _vm;
@@ -21,21 +19,61 @@ namespace MinistryTracker.Views
         protected override async void OnAppearing()
         {
             base.OnAppearing();
-            await _vm.LoadAsync();
+
+            try
+            {
+                await _vm.LoadAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex);
+                // Optional: await DisplayAlert("Oops", "Dashboard failed to load.", "OK");
+            }
         }
 
-        // Toolbar "Settings" button (matches XAML: Clicked="OnSettingsClicked")
         private async void OnSettingsClicked(object sender, EventArgs e)
         {
+            if (sender is VisualElement ve)
+                await TapAnimateAsync(ve);
+
             var page = MauiProgram.Services.GetRequiredService<SettingsPage>();
             await Navigation.PushAsync(page);
         }
 
-        // Tap on the "Active Students" card (matches XAML TapGestureRecognizer)
+        private async void OnAboutClicked(object sender, EventArgs e)
+        {
+            if (sender is VisualElement ve)
+                await TapAnimateAsync(ve);
+
+            var page = MauiProgram.Services.GetRequiredService<AboutPage>();
+            await Navigation.PushAsync(page);
+        }
+        private static async Task TapAnimateAsync(VisualElement view)
+        {
+            // Quick “press” feel: shrink a bit, then pop back.
+            try
+            {
+                await view.ScaleTo(0.90, 70, Easing.CubicOut);
+                await view.ScaleTo(1.00, 120, Easing.SpringOut);
+            }
+            catch
+            {
+                // If the page is disappearing during navigation, ignore animation failures.
+            }
+        }
+
         private async void OnActiveStudentsTapped(object sender, TappedEventArgs e)
         {
-            var page = MauiProgram.Services.GetRequiredService<StudentsListPage>();
-            await Navigation.PushAsync(page);
+            try
+            {
+                var page = MauiProgram.Services.GetRequiredService<StudentsListPage>();
+                await Navigation.PushAsync(page);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex);
+                await DisplayAlert("Oops", "Could not open Students.", "OK");
+            }
         }
     }
 }

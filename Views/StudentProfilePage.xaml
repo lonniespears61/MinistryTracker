@@ -1,154 +1,132 @@
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage
+    x:Class="MinistryTracker.Views.StudentProfilePage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:viewModels="clr-namespace:MinistryTracker.ViewModels"
-    x:Class="MinistryTracker.Views.StudentProfilePage"
-    Title="Student Profile"
-    BackgroundColor="#f2f2f2">
+    xmlns:vm="clr-namespace:MinistryTracker.ViewModels"
+    x:DataType="vm:StudentProfileViewModel"
+    Title="">
 
-    <Grid>
-        <!-- 🧾 Scrollable Profile Content -->
-        <ScrollView>
-            <VerticalStackLayout Padding="20" Spacing="16">
+    <!-- Top bar: Home + Title (shows only if inside NavigationPage) -->
+    <NavigationPage.TitleView>
+        <Grid ColumnDefinitions="Auto,*"
+              VerticalOptions="Center"
+              Padding="0,6,0,0">
 
-                <!-- 👤 Name and Status -->
-                <Border BackgroundColor="White"
-                        Stroke="#cccccc"
-                        StrokeThickness="1"
-                        StrokeShape="RoundRectangle 12"
-                        Padding="16"
-                        Shadow="Small">
-                    <Grid ColumnSpacing="12">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
+            <ImageButton
+                Source="icon_home.png"
+                WidthRequest="28"
+                HeightRequest="28"
+                BackgroundColor="Transparent"
+                Clicked="OnHomeClicked"
+                SemanticProperties.Description="Home" />
 
-                        <!-- Name -->
-                        <VerticalStackLayout>
-                            <Label Text="Name" TextColor="#333" FontSize="14" />
-                            <Label Text="{Binding StudentModel.Name}" FontSize="20" FontAttributes="Bold" TextColor="#111" />
-                        </VerticalStackLayout>
+            <Label Grid.Column="1"
+                   Text="Student"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   VerticalOptions="Center"
+                   Margin="12,0,0,0" />
+        </Grid>
+    </NavigationPage.TitleView>
 
-                        <!-- Status Pill -->
-                        <Border Grid.Column="1"
-                                Stroke="#cccccc"
+    <ScrollView>
+        <VerticalStackLayout Padding="20" Spacing="16">
+
+            <!-- Header -->
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+                <Border WidthRequest="60" HeightRequest="60"
+                        BackgroundColor="#E8F0FE"
+                        StrokeThickness="0"
+                        VerticalOptions="Center">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="30" />
+                    </Border.StrokeShape>
+
+                    <Label Text="{Binding Initials}"
+                           FontSize="22"
+                           FontAttributes="Bold"
+                           HorizontalOptions="Center"
+                           VerticalOptions="Center"
+                           TextColor="#1A73E8" />
+                </Border>
+
+                <VerticalStackLayout Grid.Column="1" Spacing="4">
+                    <Label Text="{Binding Name}"
+                           FontSize="24"
+                           FontAttributes="Bold" />
+
+                    <Label Text="{Binding SubTitle}"
+                           FontSize="14"
+                           Opacity="0.75" />
+
+                    <HorizontalStackLayout Spacing="8">
+
+                        <!-- Status pill -->
+                        <Border Padding="8,3"
                                 BackgroundColor="{Binding StatusColor}"
-                                StrokeShape="RoundRectangle 20"
-                                Padding="12,6"
-                                MinimumWidthRequest="90"
-                                HorizontalOptions="End"
-                                VerticalOptions="Center">
-                            <Label Text="{Binding StatusText}"
-                                   FontSize="14"
-                                   TextColor="White"
-                                   HorizontalTextAlignment="Center"
-                                   VerticalTextAlignment="Center"
-                                   HorizontalOptions="Center"
-                                   VerticalOptions="Center"/>   
-                        </Border>
-                    </Grid>
-                </Border>
+                                StrokeThickness="0">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
 
-                <!-- 🎓 Call Type & First Contact -->
-                <Border BackgroundColor="White"
-                        Stroke="#cccccc"
-                        StrokeThickness="1"
-                        StrokeShape="RoundRectangle 12"
-                        Padding="16"
-                        Shadow="Small">
-                    <VerticalStackLayout Spacing="8">
-                        <Label Text="Initial Call Type" TextColor="#333" FontSize="14" />
-                        <Border Stroke="#cccccc"
-                                BackgroundColor="#e6f2ff"
-                                StrokeShape="RoundRectangle 16"
-                                Padding="6,2"
-                                HorizontalOptions="Start">
-                            <Label Text="{Binding StudentModel.CallType}"
-                                   FontSize="14"
-                                   TextColor="#0077cc" />
+                            <!-- Bind directly to the Student model -->
+                            <Label Text="{Binding Model.Status}"
+                                   FontSize="12"
+                                   TextColor="White" />
                         </Border>
 
-                        <Label Text="First Contact" TextColor="#333" FontSize="14" Margin="0,8,0,0" />
-                        <Label Text="{Binding FirstContactFormatted}" FontSize="16" TextColor="#222" />
-                    </VerticalStackLayout>
-                </Border>
+                        <!-- Interest pill -->
+                        <Border Padding="8,3"
+                                BackgroundColor="{Binding InterestColor}"
+                                StrokeThickness="0">
+                            <Border.StrokeShape>
+                                <RoundRectangle CornerRadius="12" />
+                            </Border.StrokeShape>
 
-                <!-- 📍 Location -->
-                <Border BackgroundColor="White"
-                        Stroke="#cccccc"
-                        StrokeThickness="1"
-                        StrokeShape="RoundRectangle 12"
-                        Padding="16"
-                        Shadow="Small">
-                    <VerticalStackLayout Spacing="8">
-                        <Label Text="Study Location" TextColor="#333" FontSize="14" />
-                        <Label Text="{Binding StudentModel.StudyLocationType}" FontSize="16" TextColor="#222" />
+                            <!-- Bind directly to the Student model -->
+                            <Label Text="{Binding Model.InterestLevel}"
+                                   FontSize="12"
+                                   TextColor="Black" />
+                        </Border>
 
-                        <Label Text="Region" TextColor="#333" FontSize="14" Margin="0,8,0,0" />
-                        <Label Text="{Binding StudentModel.Region}" FontSize="16" TextColor="#222" />
+                    </HorizontalStackLayout>
 
-                        <Label Text="Study Address" TextColor="#333" FontSize="14" Margin="0,8,0,0" />
-                        <Label Text="{Binding StudentModel.StudyAddress}" FontSize="16" TextColor="#222" />
-                    </VerticalStackLayout>
-                </Border>
+                </VerticalStackLayout>
+            </Grid>
 
-                <!-- 🌐 Language & Interest -->
-                <Border BackgroundColor="White"
-                        Stroke="#cccccc"
-                        StrokeThickness="1"
-                        StrokeShape="RoundRectangle 12"
-                        Padding="16"
-                        Shadow="Small">
-                    <VerticalStackLayout Spacing="8">
-                        <Label Text="Preferred Language" TextColor="#333" FontSize="14" />
-                        <Label Text="{Binding StudentModel.PreferredLanguage}" FontSize="16" TextColor="#222" />
+            <!-- Details -->
+            <Border BackgroundColor="White"
+                    Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#333}"
+                    StrokeThickness="1"
+                    Padding="14">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="12" />
+                </Border.StrokeShape>
 
-                        <Label Text="Interest Level" TextColor="#333" FontSize="14" Margin="0,8,0,0" />
-                        <Label Text="{Binding StudentModel.InterestLevel}" FontSize="16" TextColor="#222" />
-                    </VerticalStackLayout>
-                </Border>
+                <VerticalStackLayout Spacing="10">
+                    <Label Text="Details" FontAttributes="Bold" FontSize="16" />
 
-                <!-- 📝 Notes -->
-                <Border BackgroundColor="White"
-                        Stroke="#cccccc"
-                        StrokeThickness="1"
-                        StrokeShape="RoundRectangle 12"
-                        Padding="16"
-                        Shadow="Small">
-                    <VerticalStackLayout>
-                        <Label Text="Notes" TextColor="#333" FontSize="14" />
-                        <Label Text="{Binding StudentModel.Notes}" FontSize="16" TextColor="#222" />
-                    </VerticalStackLayout>
-                </Border>
+                    <Label Text="{Binding FirstContactFormatted}" />
 
-            </VerticalStackLayout>
-        </ScrollView>
+                    <Label Text="{Binding PreferredLanguage, StringFormat='Language: {0}'}"
+                           IsVisible="{Binding PreferredLanguage, Converter={StaticResource StringNotNullOrEmptyConverter}}" />
 
-        <!-- 🎯 Action Buttons -->
-        <HorizontalStackLayout HorizontalOptions="Center"
-                               VerticalOptions="End"
-                               Spacing="40"
-                               Margin="0,20,0,40">
-            <!-- ✏️ Edit Student -->
-            <VerticalStackLayout>
-                <ImageButton Source="edit_profile_icon.png"
-                             WidthRequest="40"
-                             HeightRequest="40"
-                             BackgroundColor="Transparent"
-                             Clicked="OnEditStudentClicked" />
-                <Label Text="Edit" FontSize="12" HorizontalOptions="Center"/>
-            </VerticalStackLayout>
+                    <Label Text="{Binding StudyLocationLabel, StringFormat='Location: {0}'}" />
 
-            <!-- ➕ Add Visit -->
-            <VerticalStackLayout>
-                <ImageButton Source="add_visit_icon.png"
-                             WidthRequest="40"
-                             HeightRequest="40"
-                             BackgroundColor="Transparent"
-                             Clicked="OnAddVisitClicked" />
-                <Label Text="Add Visit" FontSize="12" HorizontalOptions="Center"/>
-            </VerticalStackLayout>
-        </HorizontalStackLayout>
-    </Grid>
+                    <Label Text="{Binding StudyAddress, StringFormat='Address: {0}'}"
+                           LineBreakMode="WordWrap" />
+
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- Actions -->
+            <Button Text="Edit Student"
+                    Clicked="OnEditStudentClicked"
+                    BackgroundColor="#1A73E8"
+                    TextColor="White"
+                    CornerRadius="12" />
+
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

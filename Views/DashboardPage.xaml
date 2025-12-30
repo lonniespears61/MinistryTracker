@@ -7,120 +7,168 @@
     xmlns:dto="clr-namespace:MinistryTracker.Models.DTOs"
     x:DataType="viewmodels:DashboardViewModel">
 
-    <!-- Top-right gear -->
-    <ContentPage.ToolbarItems>
-        <ToolbarItem
-            Text="Settings"
-            IconImageSource="settings_icon.png"
-            Priority="0"
-            Order="Primary"
-            Clicked="OnSettingsClicked" />
-    </ContentPage.ToolbarItems>
+    <!-- TitleView only shows if this page is inside a NavigationPage -->
+    <NavigationPage.TitleView>
+        <Grid ColumnDefinitions="Auto,*"
+              VerticalOptions="Center"
+              Padding="0,6,0,0">
 
-    <!-- Scrollable content for smaller screens -->
-    <ScrollView>
-        <VerticalStackLayout Padding="24" Spacing="16">
-
-            <!-- Page Header -->
-            <Label Text="Welcome to MinistryTracker!"
-                   TextColor="DarkBlue"
-                   FontSize="24"
+            <Label Text="Ministry Tracker"
+                   FontSize="20"
                    FontAttributes="Bold"
-                   HorizontalOptions="Center" />
+                   TextColor="Black"
+                   VerticalOptions="Center"
+                   HorizontalOptions="Start" />
 
-            <!-- Active Students Card (Tappable) -->
-            <Border BackgroundColor="PaleTurquoise"
-                    StrokeThickness="1"
-                    Padding="12">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="10" />
-                </Border.StrokeShape>
+        </Grid>
+    </NavigationPage.TitleView>
 
-                <Border.GestureRecognizers>
-                    <TapGestureRecognizer Tapped="OnActiveStudentsTapped" />
-                </Border.GestureRecognizers>
+    <!-- Root layout -->
+    <Grid RowDefinitions="Auto,Auto,*">
 
-                <Border.Shadow>
-                    <Shadow Brush="Gray" Offset="2,2" Radius="4" />
-                </Border.Shadow>
+        <!-- ROW 0 — TOP ACTION ICONS -->
+        <Grid Grid.Row="0"
+              ColumnDefinitions="*,Auto"
+              Padding="12,6">
 
-                <VerticalStackLayout>
-                    <Label Text="Active Students" FontAttributes="Bold" FontSize="18" />
-                    <Label Text="{Binding ActiveStudentsCount}" FontSize="24" TextColor="DarkGreen" />
-                </VerticalStackLayout>
-            </Border>
+            <HorizontalStackLayout Grid.Column="1"
+                                   Spacing="8"
+                                   HorizontalOptions="End"
+                                   VerticalOptions="Center">
 
-            <!-- Calls This Week -->
-            <Border Stroke="{AppThemeBinding Light=#e5e5e5, Dark=#333}"
-                    BackgroundColor="{AppThemeBinding Light=#ffffff, Dark=#1e1e1e}"
-                    StrokeThickness="1"
-                    Padding="16"
-                    Margin="0,8,0,0">
-                <Border.StrokeShape>
-                    <RoundRectangle CornerRadius="10" />
-                </Border.StrokeShape>
+                <ImageButton Source="icon_about.png"
+                             WidthRequest="36"
+                             HeightRequest="36"
+                             BackgroundColor="Transparent"
+                             Clicked="OnAboutClicked"
+                             SemanticProperties.Description="About" />
 
-                <VerticalStackLayout Spacing="10">
-                    <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto">
-                        <Label Text="Calls Next 7 Days" FontSize="18" FontAttributes="Bold" />
-                        <Label Grid.Column="1"
-                               Text=""
+                <ImageButton Source="icon_settings.png"
+                             WidthRequest="36"
+                             HeightRequest="36"
+                             BackgroundColor="Transparent"
+                             Clicked="OnSettingsClicked"
+                             SemanticProperties.Description="Settings" />
+
+            </HorizontalStackLayout>
+        </Grid>
+
+        <!-- ROW 1 — DASHBOARD HEADING -->
+        <Label Grid.Row="1"
+               Text="Dashboard"
+               FontSize="22"
+               FontAttributes="Bold"
+               TextColor="DarkBlue"
+               HorizontalTextAlignment="Center"
+               Margin="0,4,0,0" />
+
+        <!-- ROW 2 — SCROLLABLE CONTENT -->
+        <ScrollView Grid.Row="2">
+            <VerticalStackLayout Padding="16" Spacing="16">
+
+                <!-- Active Students Card -->
+                <Border BackgroundColor="PaleTurquoise"
+                        StrokeThickness="1"
+                        Padding="12">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10" />
+                    </Border.StrokeShape>
+
+                    <Border.GestureRecognizers>
+                        <TapGestureRecognizer Tapped="OnActiveStudentsTapped" />
+                    </Border.GestureRecognizers>
+
+                    <Border.Shadow>
+                        <Shadow Brush="Gray"
+                                Offset="2,2"
+                                Radius="4" />
+                    </Border.Shadow>
+
+                    <VerticalStackLayout>
+                        <Label Text="Active Students"
+                               FontAttributes="Bold"
+                               FontSize="18" />
+                        <Label Text="{Binding ActiveStudentsCount}"
                                FontSize="24"
-                               FontAttributes="Bold" />
+                               TextColor="DarkGreen" />
+                    </VerticalStackLayout>
+                </Border>
 
-                        <HorizontalStackLayout Grid.Row="1" Spacing="12" Margin="0,6,0,0">
-                            <Border Padding="8,2" BackgroundColor="#2D7FF9">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="10" />
-                                </Border.StrokeShape>
-                                <Label Text="{Binding ThisWeekScheduledCount, StringFormat='Scheduled: {0}'}"
-                                       TextColor="White" />
-                            </Border>
+                <!-- Calls Next 7 Days -->
+                <Border Stroke="{AppThemeBinding Light=#e5e5e5, Dark=#333}"
+                        BackgroundColor="{AppThemeBinding Light=#ffffff, Dark=#1e1e1e}"
+                        StrokeThickness="1"
+                        Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10" />
+                    </Border.StrokeShape>
 
-                            <Border Padding="8,2" BackgroundColor="#2E8B57">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="10" />
-                                </Border.StrokeShape>
-                                <Label Text="{Binding ThisWeekCompletedCount, StringFormat='Completed: {0}'}"
-                                       TextColor="White" />
-                            </Border>
+                    <VerticalStackLayout Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto"
+                              RowDefinitions="Auto,Auto">
 
-                            <Border Padding="8,2" BackgroundColor="#C94F4F">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="10" />
-                                </Border.StrokeShape>
-                                <Label Text="{Binding ThisWeekCanceledCount, StringFormat='Canceled: {0}'}"
-                                       TextColor="White" />
-                            </Border>
-                        </HorizontalStackLayout>
-                    </Grid>
+                            <Label Text="Calls Next 7 Days"
+                                   FontSize="18"
+                                   FontAttributes="Bold" />
 
-                    <!-- Mini list of upcoming scheduled visits this week -->
-                    <CollectionView ItemsSource="{Binding ThisWeekUpcoming}" SelectionMode="None">
-                        <CollectionView.EmptyView>
-                            <Label Text="No more scheduled calls this week." TextColor="Gray" />
-                        </CollectionView.EmptyView>
+                            <HorizontalStackLayout Grid.Row="1"
+                                                   Spacing="12"
+                                                   Margin="0,6,0,0">
 
-                        <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="dto:VisitWithStudent">
-                                <Grid ColumnDefinitions="Auto,*" Padding="0,6">
-                                    <Label Text="{Binding Visit.ScheduledDateTime, StringFormat='{0:ddd h:mm tt}'}"
-                                           FontAttributes="Bold"
-                                           WidthRequest="110" />
-                                    <Label Grid.Column="1"
-                                           Text="{Binding Student.Name}"
-                                           LineBreakMode="TailTruncation"
-                                           TextColor="{AppThemeBinding Light=#444, Dark=#ccc}" />
-                                </Grid>
-                            </DataTemplate>
-                        </CollectionView.ItemTemplate>
-                    </CollectionView>
-                </VerticalStackLayout>
-            </Border>
+                                <Border Padding="8,2" BackgroundColor="#2D7FF9">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="10" />
+                                    </Border.StrokeShape>
+                                    <Label Text="{Binding ThisWeekScheduledCount, StringFormat='Scheduled: {0}'}"
+                                           TextColor="White" />
+                                </Border>
 
-            <!-- Add more dashboard cards here if needed -->
-           
+                                <Border Padding="8,2" BackgroundColor="#2E8B57">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="10" />
+                                    </Border.StrokeShape>
+                                    <Label Text="{Binding ThisWeekCompletedCount, StringFormat='Completed: {0}'}"
+                                           TextColor="White" />
+                                </Border>
 
-        </VerticalStackLayout>
-    </ScrollView>
+                                <Border Padding="8,2" BackgroundColor="#C94F4F">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="10" />
+                                    </Border.StrokeShape>
+                                    <Label Text="{Binding ThisWeekCanceledCount, StringFormat='Canceled: {0}'}"
+                                           TextColor="White" />
+                                </Border>
+
+                            </HorizontalStackLayout>
+                        </Grid>
+
+                        <CollectionView ItemsSource="{Binding ThisWeekUpcoming}"
+                                        SelectionMode="None">
+                            <CollectionView.EmptyView>
+                                <Label Text="No more scheduled calls this week."
+                                       TextColor="Gray" />
+                            </CollectionView.EmptyView>
+
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="dto:VisitWithStudent">
+                                    <Grid ColumnDefinitions="Auto,*" Padding="0,6">
+                                        <Label Text="{Binding Visit.ScheduledDateTime, StringFormat='{0:ddd h:mm tt}'}"
+                                               FontAttributes="Bold"
+                                               WidthRequest="110" />
+                                        <Label Grid.Column="1"
+                                               Text="{Binding Student.Name}"
+                                               LineBreakMode="TailTruncation"
+                                               TextColor="{AppThemeBinding Light=#444, Dark=#ccc}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
+
+                    </VerticalStackLayout>
+                </Border>
+
+            </VerticalStackLayout>
+        </ScrollView>
+
+    </Grid>
 </ContentPage>

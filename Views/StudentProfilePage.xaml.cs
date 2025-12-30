@@ -1,36 +1,40 @@
-﻿using MinistryTracker.Models;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Maui.Controls;
+using MinistryTracker.Models;
 using MinistryTracker.ViewModels;
 
-namespace MinistryTracker.Views
+namespace MinistryTracker.Views;
+
+public partial class StudentProfilePage : ContentPage
 {
-    public partial class StudentProfilePage : ContentPage
+    private readonly StudentProfileViewModel _vm;
+
+    public StudentProfilePage(StudentProfileViewModel vm)
     {
-        public StudentProfilePage(StudentProfileViewModel vm)
-        {
-            InitializeComponent();
-            BindingContext = vm;
-        }
+        InitializeComponent();
+        _vm = vm;
+        BindingContext = _vm;
 
-        // NEW: explicit initializer so callers can inject the student before showing the page
-        public void Init(Student student)
-        {
-            if (BindingContext is StudentProfileViewModel vm)
-            {
-                vm.Load(student); // populates StudentModel and fires computed bindings
-                Title = string.IsNullOrWhiteSpace(student.Name) ? "Student Profile" : student.Name;
-            }
-        }
+        NavigationPage.SetHasBackButton(this, false);
+    }
 
-        private async void OnEditStudentClicked(object sender, EventArgs e)
-        {
-            var toast = CommunityToolkit.Maui.Alerts.Toast.Make("Edit feature is a coming attraction!", CommunityToolkit.Maui.Core.ToastDuration.Short, 14);
-            await toast.Show();
-        }
+    private async void OnHomeClicked(object sender, EventArgs e)
+    {
+        await Navigation.PopToRootAsync(animated: true);
+    }
 
-        private async void OnAddVisitClicked(object sender, EventArgs e)
-        {
-            var toast = CommunityToolkit.Maui.Alerts.Toast.Make("Add Visit feature coming soon!", CommunityToolkit.Maui.Core.ToastDuration.Short, 14);
-            await toast.Show();
-        }
+    private async void OnEditStudentClicked(object sender, EventArgs e)
+    {
+        if (_vm.Model is not Student student)
+            return;
+
+        var sp = Application.Current?.Handler?.MauiContext?.Services;
+        var editPage = sp?.GetRequiredService<EditStudentPage>();
+        if (editPage is null) return;
+
+        if (editPage.BindingContext is EditStudentViewModel evm)
+            evm.Load(student);
+
+        await Navigation.PushAsync(editPage);
     }
 }

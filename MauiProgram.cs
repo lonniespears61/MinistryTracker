@@ -40,6 +40,7 @@ public static class MauiProgram
         builder.Services.AddTransient<AddVisitViewModel>();
         builder.Services.AddTransient<StudentProfileViewModel>();
         builder.Services.AddTransient<SettingsViewModel>();
+        builder.Services.AddTransient<AboutViewModel>();
 
         // ===== Pages =====
         // Register every page you navigate to so DI can supply their VMs/services.
@@ -50,6 +51,7 @@ public static class MauiProgram
         builder.Services.AddTransient<AddVisitPage>();
         builder.Services.AddTransient<StudentProfilePage>();
         builder.Services.AddTransient<SettingsPage>();
+        builder.Services.AddTransient<AboutPage>();
 
         // ✅ Build first; only then use Services
         var app = builder.Build();
