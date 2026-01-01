@@ -1,12 +1,27 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿// StudentsListPage.xaml.cs (DROP-IN for Shell conversion)
+//
+// TAP BEHAVIOR (UPDATED):
+// - Tap student row = "Next Visit"
+//     If a future visit exists -> open UpdateVisitPage (visitId)
+//     Else -> open AddVisitPage (studentId)
+//
+// WHY:
+// - Your UX rule: one future visit per student is the norm.
+// - Prevents creating duplicate scheduled visits.
+// - Keeps DB calls out of the View (the VM preloads NextFutureVisitId).
+//
+// IMPORTANT PREREQS (one-time, in AppShell):
+// - Routing.RegisterRoute(nameof(StudentProfilePage), typeof(StudentProfilePage));
+// - Routing.RegisterRoute(nameof(EditStudentPage), typeof(EditStudentPage));
+// - Routing.RegisterRoute(nameof(AddVisitPage), typeof(AddVisitPage));
+// - Routing.RegisterRoute(nameof(UpdateVisitPage), typeof(UpdateVisitPage));  <-- NEW for tap behavior
+// - Routing.RegisterRoute(nameof(AddStudentPage), typeof(AddStudentPage));
+
 using Microsoft.Maui.Controls;
-using Microsoft.Maui.Controls.PlatformConfiguration;
 using MinistryTracker.Models;
 using MinistryTracker.ViewModels;
-using MinistryTracker.Views;
 using System;
 using System.Linq;
-
 
 namespace MinistryTracker.Views
 {
@@ -16,41 +31,82 @@ namespace MinistryTracker.Views
         {
             InitializeComponent();
             BindingContext = vm;
-
         }
 
-        // -------- Common navigator ----------
-        private async System.Threading.Tasks.Task NavigateToProfileAsync(Student student)
+        // ------------------------------------------------------------
+        // SHELL NAVIGATION HELPERS
+        // ------------------------------------------------------------
+
+        /// <summary>
+        /// Optional: still available if you later want a "Details" action somewhere.
+        /// Not used by row tap anymore.
+        /// </summary>
+        private static async System.Threading.Tasks.Task GoToStudentProfileAsync(int studentId)
         {
-            var sp = Application.Current?.Handler?.MauiContext?.Services;
-            var profile = sp?.GetRequiredService<StudentProfilePage>();
-            if (profile is null) return;
-
-            // Pass the Student directly to the ViewModel
-            if (profile.BindingContext is StudentProfileViewModel pvm)
-                pvm.Load(student);
-
-            await Navigation.PushAsync(profile);   // uses ContentPage.Navigation
+            await Shell.Current.GoToAsync($"{nameof(StudentProfilePage)}?studentId={studentId}");
         }
 
-        // -------- CollectionView handler ----------
+        private static async System.Threading.Tasks.Task GoToEditStudentAsync(int studentId)
+        {
+            await Shell.Current.GoToAsync($"{nameof(EditStudentPage)}?studentId={studentId}");
+        }
+
+        private static async System.Threading.Tasks.Task GoToAddVisitAsync(int studentId)
+        {
+            await Shell.Current.GoToAsync($"{nameof(AddVisitPage)}?studentId={studentId}");
+        }
+
+        /// <summary>
+        /// NEW: Navigate to UpdateVisitPage when a future visit already exists.
+        /// </summary>
+        private static async System.Threading.Tasks.Task GoToUpdateVisitAsync(int visitId)
+        {
+            await Shell.Current.GoToAsync($"{nameof(UpdateVisitPage)}?visitId={visitId}");
+        }
+
+        private static async System.Threading.Tasks.Task GoToAddStudentAsync()
+        {
+            await Shell.Current.GoToAsync(nameof(AddStudentPage));
+        }
+
+        // ------------------------------------------------------------
+        // COLLECTIONVIEW SELECTION (TAP)
+        // ------------------------------------------------------------
         // XAML: SelectionChanged="OnStudentSelectionChanged"
         private async void OnStudentSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             try
             {
+                // Items are StudentViewModel in your CollectionView template.
                 var svm = e.CurrentSelection?.FirstOrDefault() as StudentViewModel;
                 if (svm?.Model is null) return;
 
-                await NavigateToProfileAsync(svm.Model);
+                // Clear selection ASAP so the same row can be tapped again.
+                if (sender is CollectionView cv)
+                    cv.SelectedItem = null;
 
-                if (sender is CollectionView cv) cv.SelectedItem = null;
+                // TAP = "Next Visit"
+                // - If we preloaded a future visit id, open UpdateVisitPage
+                // - Otherwise, schedule a new one for this student
+                if (svm.NextFutureVisitId is int visitId)
+                {
+                    await GoToUpdateVisitAsync(visitId);
+                }
+                else
+                {
+                    await GoToAddVisitAsync(svm.Model.StudentId);
+                }
             }
             catch
             {
-                // optional log
+                // Intentionally quiet for now.
+                // Later: hook into your support logging pipeline.
             }
         }
+
+        // ------------------------------------------------------------
+        // SWIPE ACTIONS (Edit / Add Visit)
+        // ------------------------------------------------------------
 
         private static Student? TryGetStudentFromSwipeSender(object sender)
         {
@@ -73,14 +129,13 @@ namespace MinistryTracker.Views
                 var student = TryGetStudentFromSwipeSender(sender);
                 if (student is null) return;
 
-                await DisplayAlert("Add Visit", $"Add a visit for {student.Name}.", "OK");
+                // Swipe "Add Visit" always schedules a new visit (intentional override).
+                await GoToAddVisitAsync(student.StudentId);
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine(ex);
-                await DisplayAlert("Oops",
-                    "Something went wrong. Try again.",
-                    "OK");
+                await DisplayAlert("Oops", "Something went wrong. Try again.", "OK");
             }
         }
 
@@ -91,12 +146,7 @@ namespace MinistryTracker.Views
                 var student = TryGetStudentFromSwipeSender(sender);
                 if (student is null) return;
 
-                var sp = Application.Current?.Handler?.MauiContext?.Services;
-                var editPage = sp?.GetRequiredService<EditStudentPage>();
-                if (editPage is null) return;
-
-                editPage.Init(student);
-                await Navigation.PushAsync(editPage);
+                await GoToEditStudentAsync(student.StudentId);
             }
             catch
             {
@@ -104,26 +154,29 @@ namespace MinistryTracker.Views
             }
         }
 
-
+        // ------------------------------------------------------------
+        // PAGE LIFECYCLE
+        // ------------------------------------------------------------
         protected override async void OnAppearing()
         {
             base.OnAppearing();
 
+            // Refresh list when returning from Add/Edit/Update visit pages.
             if (BindingContext is StudentsListViewModel vm)
                 await vm.LoadAsync();
         }
+
+        // ------------------------------------------------------------
+        // ADD STUDENT BUTTON
+        // ------------------------------------------------------------
         private async void OnAddStudentClicked(object sender, EventArgs e)
         {
-            await DisplayAlert("Add Student", "Add Student feature coming soon.", "OK");
+            await GoToAddStudentAsync();
         }
 
-        private async void OnHomeClicked(object sender, EventArgs e)
-        {
-            await Navigation.PopToRootAsync(animated: true);
-        }
-
-        // -------- ListView handler (if you use ListView) ----------
-        // XAML: ItemSelected="OnStudentSelected"
+        // ------------------------------------------------------------
+        // LISTVIEW HANDLER (legacy / optional)
+        // ------------------------------------------------------------
         private async void OnStudentSelected(object sender, SelectedItemChangedEventArgs e)
         {
             try
@@ -131,11 +184,18 @@ namespace MinistryTracker.Views
                 var student = e.SelectedItem as Student;
                 if (student is null) return;
 
-                await NavigateToProfileAsync(student);
+                // If you still have a ListView somewhere, we apply the same "Next Visit" rule.
+                // But since ListView doesn't bind StudentViewModel here, we cannot know NextFutureVisitId
+                // without querying. To avoid DB calls in the View, we keep legacy ListView as profile nav.
+                await GoToStudentProfileAsync(student.StudentId);
 
-                if (sender is ListView lv) lv.SelectedItem = null;
+                if (sender is ListView lv)
+                    lv.SelectedItem = null;
             }
-            catch { /* optionally log */ }
+            catch
+            {
+                // optional log later
+            }
         }
     }
 }

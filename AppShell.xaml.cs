@@ -1,4 +1,4 @@
-using MinistryTracker.Views;
+﻿using MinistryTracker.Views;
 
 namespace MinistryTracker;
 
@@ -9,6 +9,9 @@ public partial class AppShell : Shell
     public AppShell(IServiceProvider services)
     {
         InitializeComponent();
+
+        RegisterRoutes();   // ✅ REQUIRED
+
         _services = services;
 
         BuildTabs();
@@ -50,5 +53,20 @@ public partial class AppShell : Shell
         });
 
         Items.Add(tabs);
+    }
+
+    private static void RegisterRoutes()
+    {
+        // Student-related pages
+        Routing.RegisterRoute(nameof(StudentProfilePage), typeof(StudentProfilePage));
+        Routing.RegisterRoute(nameof(EditStudentPage), typeof(EditStudentPage));
+        Routing.RegisterRoute(nameof(AddStudentPage), typeof(AddStudentPage));
+
+        // Visit-related pages
+        Routing.RegisterRoute(nameof(AddVisitPage), typeof(AddVisitPage));
+        Routing.RegisterRoute(nameof(UpdateVisitPage), typeof(UpdateVisitPage));
+
+        // Optional future routes
+        // Routing.RegisterRoute(nameof(MyCalendarPage), typeof(MyCalendarPage));
     }
 }

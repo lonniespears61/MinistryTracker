@@ -1,7 +1,12 @@
-// ---------------------------------------------------------------------------------------------------------------------
-// DataService.cs (base) � reviewed
-// Adds: PRAGMAs (FK/WAL), busy timeout, user_version, and an EnsureInitThen helper.
-// No platform-specific code; all cross-platform SQLite.
+﻿// ---------------------------------------------------------------------------------------------------------------------
+// DataService.cs (base) – corrected drop-in
+//
+// Fixes / Adds:
+// ✅ Keeps: PRAGMAs (FK/WAL), user_version, schema create, index
+// ✅ Fixes: removes duplicate EnsureInitThen overloads (keeps the CT versions only)
+// ✅ Adds: GetNextFutureVisitForStudentAsync(studentId) to support UX:
+//          Tap student => edit existing future visit if present; otherwise schedule new.
+// ✅ Uses EnsureInitThen wrappers so callers don't have to remember InitializeAsync()
 // ---------------------------------------------------------------------------------------------------------------------
 
 using System;
@@ -21,6 +26,7 @@ namespace MinistryTracker.Data
         private readonly SemaphoreSlim _gate = new(1, 1);
         private bool _initialized;
 
+        // Internal property used by all query/command methods once initialized.
         private SQLiteAsyncConnection Db =>
             _database ?? throw new InvalidOperationException("Database not initialized. Call InitializeAsync() first.");
 
@@ -57,18 +63,21 @@ namespace MinistryTracker.Data
                     // Reasonable durability/perf
                     _ = await _database.ExecuteScalarAsync<long>("PRAGMA synchronous = NORMAL;").ConfigureAwait(false);
 
-                   
+                    // NOTE:
+                    // If you want a busy timeout, sqlite-net-pcl doesn't expose it directly via a PRAGMA
+                    // consistently across platforms. We can add one later if needed using ExecuteAsync.
+                    // Example: PRAGMA busy_timeout = 5000;
                 }
                 catch (SQLiteException)
                 {
                     // Don't fail app startup over a PRAGMA; log if you have logging
-                    // Debug.WriteLine(ex);
                 }
 
                 // ---- Schema: create tables & indexes -----------------------------------
                 await Db.CreateTableAsync<Models.Student>().ConfigureAwait(false);
                 await Db.CreateTableAsync<Models.Visit>().ConfigureAwait(false);
 
+                // Supports fast "next visit" lookups by student+date
                 await Db.ExecuteAsync(
                     "CREATE INDEX IF NOT EXISTS IX_Visit_StudentDate ON Visit(StudentId, ScheduledDateTime)"
                 ).ConfigureAwait(false);
@@ -84,25 +93,22 @@ namespace MinistryTracker.Data
             }
         }
 
-        /// <summary>Returns the fully-qualified path to the database file (for logs or support).</summary>
+        /// <summary>
+        /// Returns the fully-qualified path to the database file (useful for logs/support).
+        /// </summary>
         public string GetDatabasePath() =>
             Path.Combine(FileSystem.AppDataDirectory, DbFileName);
 
-        // Convenience: safely ensure init around any DB call.
-        private async Task<T> EnsureInitThen<T>(Func<Task<T>> work)
-        {
-            if (!_initialized) await InitializeAsync().ConfigureAwait(false);
-            return await work().ConfigureAwait(false);
-        }
-
-        private async Task EnsureInitThen(Func<Task> work)
-        {
-            if (!_initialized) await InitializeAsync().ConfigureAwait(false);
-            await work().ConfigureAwait(false);
-        }
-
-        // Ensures the SQLite connection is initialized ONCE, then runs 'work'.
-        // Use this for any DB method that touches 'Db' (queries, inserts, updates).
+        // -------------------------------------------------------------------------------------------------------------
+        // EnsureInitThen helpers
+        //
+        // WHY:
+        // - Centralize "make sure DB is initialized" so every public DB method is safe.
+        // - Keeps calling code (VMs) simple and less error-prone.
+        //
+        // NOTE:
+        // - We keep ONLY the CancellationToken versions to avoid duplicate signatures.
+        // -------------------------------------------------------------------------------------------------------------
         private async Task<T> EnsureInitThen<T>(Func<Task<T>> work, CancellationToken ct = default)
         {
             if (!_initialized) await InitializeAsync().ConfigureAwait(false);
@@ -115,6 +121,34 @@ namespace MinistryTracker.Data
             if (!_initialized) await InitializeAsync().ConfigureAwait(false);
             ct.ThrowIfCancellationRequested();
             await work().ConfigureAwait(false);
+        }
+
+        // -------------------------------------------------------------------------------------------------------------
+        // Visits – minimal query to support the "Tap = Next Visit" UX
+        // -------------------------------------------------------------------------------------------------------------
+
+        /// <summary>
+        /// Returns the next scheduled (future) visit for a student, or null if none exist.
+        ///
+        /// UX RULE SUPPORTED:
+        /// - Tap student => edit existing future visit if present
+        /// - Otherwise tap => schedule a new visit
+        ///
+        /// PERFORMANCE:
+        /// - Efficient because of IX_Visit_StudentDate (StudentId, ScheduledDateTime).
+        /// </summary>
+        public Task<Models.Visit?> GetNextFutureVisitForStudentAsync(int studentId, CancellationToken ct = default)
+        {
+            return EnsureInitThen(async () =>
+            {
+                var now = DateTime.Now; // consistent with typical local-time scheduling UX
+
+                return await Db.Table<Models.Visit>()
+                    .Where(v => v.StudentId == studentId && v.ScheduledDateTime > now)
+                    .OrderBy(v => v.ScheduledDateTime)
+                    .FirstOrDefaultAsync()
+                    .ConfigureAwait(false);
+            }, ct);
         }
     }
 }

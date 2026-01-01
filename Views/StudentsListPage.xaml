@@ -1,126 +1,102 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
-<ContentPage
+﻿<ContentPage
     x:Class="MinistryTracker.Views.StudentsListPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
     x:DataType="viewmodels:StudentsListViewModel"
-    Title="">
+    Title="Students">
 
-    <!-- Shows ONLY when this page is inside a NavigationPage -->
-    <NavigationPage.TitleView>
-        <Grid ColumnDefinitions="Auto,*"
-              VerticalOptions="Center"
-              Padding="0,20,0,0">
-
-            <!-- Home icon -->
-            <ImageButton
-                Source="icon_home.png"
-                WidthRequest="28"
-                HeightRequest="28"
-                BackgroundColor="Transparent"
-                Clicked="OnHomeClicked"
-                SemanticProperties.Description="Home" />
-
-            <!-- Title -->
-            <Label Grid.Column="1"
-                   Text="Students"
+    <Shell.TitleView>
+        <Grid VerticalOptions="Center" Padding="0,20,0,0">
+            <Label Text="Student List"
                    FontSize="18"
                    FontAttributes="Bold"
-                   VerticalOptions="Center"
-                   Margin="12,0,0,0" />
+                   VerticalOptions="Center" />
         </Grid>
-    </NavigationPage.TitleView>
+    </Shell.TitleView>
 
-    <ContentPage.Content>
-        <Grid RowDefinitions="Auto,*"
-              Padding="16,12">
+    <Grid RowDefinitions="Auto,Auto,*" Padding="16,12">
 
-            <!-- Header row inside page (kept for Add button) -->
-            <Grid Grid.Row="0"
-                  ColumnDefinitions="*,Auto"
-                  Margin="0,6,0,10">
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,6,0,10">
+            <Label Text="Students"
+                   FontSize="24"
+                   VerticalOptions="Center" />
 
-                <Label Text="Students"
-                       FontSize="24"
-                       VerticalOptions="Center" />
-
-                <Button Text="Add"
-                        Grid.Column="1"
-                        Clicked="OnAddStudentClicked"
-                        SemanticProperties.Hint="Add a new student" />
-            </Grid>
-
-            <!-- List -->
-            <CollectionView
-                x:Name="StudentsCollection"
-                Grid.Row="1"
-                ItemsSource="{Binding FilteredStudents}"
-                SelectionMode="Single"
-                SelectionChanged="OnStudentSelectionChanged">
-
-                <CollectionView.ItemTemplate>
-                    <DataTemplate x:DataType="viewmodels:StudentViewModel">
-                        <SwipeView>
-
-                            <SwipeView.LeftItems>
-                                <SwipeItems Mode="Execute">
-                                    <SwipeItem Text="Edit"
-                                               BackgroundColor="#3B82F6"
-                                               Invoked="OnEditSwipeInvoked"
-                                               CommandParameter="{Binding Model}" />
-                                </SwipeItems>
-                            </SwipeView.LeftItems>
-
-                            <SwipeView.RightItems>
-                                <SwipeItems Mode="Execute">
-                                    <SwipeItem Text="Add Visit"
-                                               BackgroundColor="#10B981"
-                                               Invoked="OnAddVisitSwipeInvoked"
-                                               CommandParameter="{Binding Model}" />
-                                </SwipeItems>
-                            </SwipeView.RightItems>
-
-                            <!-- Row content -->
-                            <Grid Padding="12,10"
-                                  ColumnDefinitions="Auto,*,Auto">
-
-                                <Border Padding="8"
-                                        WidthRequest="36"
-                                        HeightRequest="36"
-                                        VerticalOptions="Center"
-                                        BackgroundColor="#EEF2FF"
-                                        StrokeThickness="0">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="18" />
-                                    </Border.StrokeShape>
-
-                                    <Label Text="{Binding Initials}"
-                                           FontAttributes="Bold"
-                                           HorizontalOptions="Center"
-                                           VerticalOptions="Center" />
-                                </Border>
-
-                                <VerticalStackLayout Grid.Column="1"
-                                                     Spacing="2"
-                                                     Padding="12,0">
-                                    <Label Text="{Binding Name}" FontSize="18" />
-                                    <Label Text="{Binding SubTitle}"
-                                           FontSize="12"
-                                           TextColor="{DynamicResource SecondaryTextColor}" />
-                                </VerticalStackLayout>
-
-                                <Image Grid.Column="2"
-                                       Source="chevron_right.png"
-                                       WidthRequest="16"
-                                       HeightRequest="16"
-                                       VerticalOptions="Center"
-                                       Opacity="0.5" />
-                            </Grid>
-                        </SwipeView>
-                    </DataTemplate>
-                </CollectionView.ItemTemplate>
-            </CollectionView>
+            <Button Text="Add"
+                    Grid.Column="1"
+                    Clicked="OnAddStudentClicked" />
         </Grid>
-    </ContentPage.Content>
+
+        <SearchBar Grid.Row="1"
+                   Placeholder="Search students"
+                   Text="{Binding SearchText}"
+                   Margin="0,0,0,10" />
+
+        <CollectionView x:Name="StudentsCollection"
+                        Grid.Row="2"
+                        ItemsSource="{Binding FilteredStudents}"
+                        SelectionMode="Single"
+                        SelectionChanged="OnStudentSelectionChanged">
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="viewmodels:StudentViewModel">
+                    <SwipeView>
+
+                        <SwipeView.LeftItems>
+                            <SwipeItems Mode="Execute">
+                                <SwipeItem Text="Edit"
+                                           BackgroundColor="#3B82F6"
+                                           Invoked="OnEditSwipeInvoked"
+                                           CommandParameter="{Binding Model}" />
+                            </SwipeItems>
+                        </SwipeView.LeftItems>
+
+                        <SwipeView.RightItems>
+                            <SwipeItems Mode="Execute">
+                                <SwipeItem Text="Add Visit"
+                                           BackgroundColor="#10B981"
+                                           Invoked="OnAddVisitSwipeInvoked"
+                                           CommandParameter="{Binding Model}" />
+                            </SwipeItems>
+                        </SwipeView.RightItems>
+
+                        <Grid Padding="12,10" ColumnDefinitions="Auto,*,Auto">
+
+                            <Border Padding="8"
+                                    WidthRequest="36"
+                                    HeightRequest="36"
+                                    VerticalOptions="Center"
+                                    BackgroundColor="#EEF2FF"
+                                    StrokeThickness="0">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="18" />
+                                </Border.StrokeShape>
+
+                                <Label Text="{Binding Initials}"
+                                       FontAttributes="Bold"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center" />
+                            </Border>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="2" Padding="12,0">
+                                <Label Text="{Binding Name}" FontSize="18" />
+                                <Label Text="{Binding SubTitle}" FontSize="12" />
+                            </VerticalStackLayout>
+
+                            <Image Grid.Column="2"
+                                   Source="chevron_right.png"
+                                   WidthRequest="16"
+                                   HeightRequest="16"
+                                   VerticalOptions="Center"
+                                   Opacity="0.5" />
+
+                        </Grid>
+
+                    </SwipeView>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+
+        </CollectionView>
+
+    </Grid>
 </ContentPage>
