@@ -43,7 +43,7 @@ public static class MauiProgram
         builder.Services.AddTransient<SettingsViewModel>();
         builder.Services.AddTransient<AboutViewModel>();
         builder.Services.AddTransient<MyCalendarViewModel>();
-
+        builder.Services.AddTransient<UpdateVisitViewModel>(); 
 
         // ===== Pages =====
         // Register every page you navigate to so DI can supply their VMs/services.
@@ -56,8 +56,7 @@ public static class MauiProgram
         builder.Services.AddTransient<SettingsPage>();
         builder.Services.AddTransient<AboutPage>();
         builder.Services.AddTransient<MyCalendarPage>();
-
-
+        builder.Services.AddTransient<UpdateVisitPage>();
         // ✅ Build first; only then use Services
         var app = builder.Build();
 

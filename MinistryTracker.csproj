@@ -67,6 +67,9 @@
 	  <Compile Update="Views\DashboardPage.xaml.cs">
 	    <DependentUpon>DashboardPage.xaml</DependentUpon>
 	  </Compile>
+	  <Compile Update="Views\MyCalendarPage.xaml.cs">
+	    <DependentUpon>MyCalendarPage.xaml</DependentUpon>
+	  </Compile>
 	  <Compile Update="Views\StudentsListPage.xaml.cs">
 	    <DependentUpon>StudentsListPage.xaml</DependentUpon>
 	  </Compile>
@@ -91,7 +94,7 @@
 	  <MauiXaml Update="Views\EditStudentPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
-	  <MauiXaml Update="Views\MyCalendar.xaml">
+	  <MauiXaml Update="Views\MyCalendarPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	  <MauiXaml Update="Views\SettingsPage.xaml">

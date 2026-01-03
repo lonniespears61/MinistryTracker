@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MinistryTracker.Views.MyCalendarPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
+    xmlns:models="clr-namespace:MinistryTracker.Models.DTOs"
+    x:DataType="viewmodels:MyCalendarViewModel"
+    Title="MyCalendar">
+
+    <!--
+        SHELL CONVERSION NOTE
+        - This is a TabBar page (Shell owns "home" navigation).
+        - Use Shell.TitleView for the header area.
+        - We do NOT put a home icon here; tabs are navigation.
+    -->
+    <Shell.TitleView>
+        <Grid ColumnDefinitions="*,Auto"
+              Padding="0,20,0,0"
+              VerticalOptions="Center">
+
+            <Label Text="My Calendar"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   VerticalOptions="Center" />
+
+            <!-- Optional "Today" button (we'll wire command later) -->
+            <Button Grid.Column="1"
+                    Text="Today"
+                    Padding="12,6"
+                    VerticalOptions="Center"
+                    Command="{Binding GoToTodayCommand}"
+                    IsVisible="{Binding ShowTodayButton}" />
+        </Grid>
+    </Shell.TitleView>
+
+    <!--
+        Overall layout:
+        Row 0: Month header (Prev / Month / Next)
+        Row 1: Weekday names row
+        Row 2: Month grid (7 columns)
+        Row 3: Selected day agenda header
+        Row 4: Selected day visits list (agenda)
+    -->
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*"
+          Padding="16,12"
+          RowSpacing="10">
+
+        <!-- =========================================================
+             ROW 0: Month Header
+             ========================================================= -->
+        <Grid ColumnDefinitions="*,Auto"
+              VerticalOptions="Center">
+
+            <!-- Previous month -->
+            <Button Text="‹"
+                    FontSize="22"
+                    WidthRequest="44"
+                    HeightRequest="44"
+                    CornerRadius="22"
+                    Command="{Binding PrevMonthCommand}"
+                    SemanticProperties.Hint="Previous month" />
+
+            <!-- Month + Year -->
+            <Label Grid.Column="1"
+                   Text="{Binding MonthTitle}"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   HorizontalOptions="Center"
+                   VerticalOptions="Center" />
+
+            <!-- Next month -->
+            <Button Grid.Column="2"
+                    Text="›"
+                    FontSize="22"
+                    WidthRequest="44"
+                    HeightRequest="44"
+                    CornerRadius="22"
+                    Command="{Binding NextMonthCommand}"
+                    SemanticProperties.Hint="Next month" />
+        </Grid>
+
+        <!-- =========================================================
+             ROW 1: Weekday Header Row
+             ========================================================= -->
+        <Grid Grid.Row="1"
+              ColumnDefinitions="*,*,*,*,*,*,*"
+              Padding="0,6"
+              BackgroundColor="#F3F4F6">
+
+            <!--
+                WEEKDAY LABELS
+                - These are static for now.
+                - If you later want Mon-first vs Sun-first based on culture,
+                  we can generate these from the ViewModel.
+            -->
+            <Label Text="Sun" Grid.Column="0" HorizontalOptions="Center" FontAttributes="Bold" FontSize="12" />
+            <Label Text="Mon" Grid.Column="1" HorizontalOptions="Center" FontAttributes="Bold" FontSize="12" />
+            <Label Text="Tue" Grid.Column="2" HorizontalOptions="Center" FontAttributes="Bold" FontSize="12" />
+            <Label Text="Wed" Grid.Column="3" HorizontalOptions="Center" FontAttributes="Bold" FontSize="12" />
+            <Label Text="Thu" Grid.Column="4" HorizontalOptions="Center" FontAttributes="Bold" FontSize="12" />
+            <Label Text="Fri" Grid.Column="5" HorizontalOptions="Center" FontAttributes="Bold" FontSize="12" />
+            <Label Text="Sat" Grid.Column="6" HorizontalOptions="Center" FontAttributes="Bold" FontSize="12" />
+        </Grid>
+
+        <!-- =========================================================
+             ROW 2: Month Grid (Calendar)
+             ========================================================= -->
+        <!--
+            Calendar grid uses a CollectionView with VerticalGrid layout (7 columns).
+            The ViewModel provides DayCells in calendar order, including "blank" padding days.
+        -->
+        <CollectionView Grid.Row="2"
+                        ItemsSource="{Binding DayCells}"
+                        SelectionMode="Single"
+                        SelectedItem="{Binding SelectedDayCell, Mode=TwoWay}"
+                        Margin="0,0,0,6">
+
+            <CollectionView.ItemsLayout>
+                <!-- 7 columns to look like a real calendar -->
+                <GridItemsLayout Orientation="Vertical" Span="7" />
+            </CollectionView.ItemsLayout>
+
+            <CollectionView.ItemTemplate>
+                <!-- DayCell is a ViewModel type we’ll create next -->
+                <DataTemplate x:DataType="viewmodels:CalendarDayCellViewModel">
+                    <!--
+                        Each day cell is a "tile":
+                        - Shows the day number
+                        - Shows a small dot / badge if visits exist that day
+                        - Highlights today
+                        - Highlights selection
+                    -->
+                    <Border Padding="6"
+                            Margin="2"
+                            StrokeThickness="1"
+                            Stroke="{Binding BorderColor}"
+                            BackgroundColor="#E5E7EB">
+                        <Border.StrokeShape> 
+                            <RoundRectangle CornerRadius="10" />
+                        </Border.StrokeShape>
+
+                        <Grid RowDefinitions="Auto,Auto"
+                              ColumnDefinitions="*,Auto">
+
+                            <!-- Day number -->
+                            <Label Text="{Binding DayNumberText}"
+                                   FontAttributes="{Binding DayNumberFontAttributes}"
+                                   TextColor="{Binding DayNumberTextColor}"
+                                   FontSize="14"
+                                   VerticalOptions="Center" />
+
+                            <!-- Small "dot" indicator if visits exist -->
+                            <Border Grid.Column="1"
+                                    WidthRequest="8"
+                                    HeightRequest="8"
+                                    StrokeThickness="0"
+                                    BackgroundColor="{Binding DotColor}"
+                                    IsVisible="{Binding HasVisits}">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="4" />
+                                </Border.StrokeShape>
+                            </Border>
+
+                            <!-- Optional tiny count label (commented out for now)
+                            <Label Grid.Row="1"
+                                   Grid.ColumnSpan="2"
+                                   Text="{Binding VisitCountText}"
+                                   FontSize="10"
+                                   Opacity="0.7"
+                                   IsVisible="{Binding HasVisits}" />
+                            -->
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+        <!-- =========================================================
+             ROW 3: Selected Day / Agenda Header
+             ========================================================= -->
+        <Grid Grid.Row="3"
+              ColumnDefinitions="*,Auto"
+              VerticalOptions="Center">
+
+            <Label Text="{Binding SelectedDayTitle}"
+                   FontSize="16"
+                   FontAttributes="Bold"
+                   VerticalOptions="Center" />
+
+            <!-- “Add” for selected day (creates new visit, prefilled date/time later) -->
+            <Button Grid.Column="1"
+                    Text="Add"
+                    Padding="12,6"
+                    Command="{Binding AddVisitForSelectedDayCommand}"
+                    IsEnabled="{Binding CanAddVisitForSelectedDay}" />
+        </Grid>
+
+        <!-- =========================================================
+             ROW 4: Agenda List for selected day
+             ========================================================= -->
+        <!--
+            This is still a list, BUT it is *secondary*.
+            The primary visual is the month calendar grid.
+        -->
+        <CollectionView Grid.Row="4"
+                        ItemsSource="{Binding SelectedDayVisits}"
+                        EmptyView="No visits scheduled for this day.">
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="models:VisitWithStudent">
+                    <Border Padding="12"
+                            Margin="0,0,0,10"
+                            StrokeThickness="1"
+                            Stroke="{DynamicResource Gray200}">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="14" />
+                        </Border.StrokeShape>
+
+                        <VerticalStackLayout Spacing="4">
+                            <Label Text="{Binding StudentName}"
+                                   FontSize="16"
+                                   FontAttributes="Bold" />
+
+                            <Label Text="{Binding ScheduledDateTime, StringFormat='{0:ddd, MMM d • h:mm tt}'}"
+                                   FontSize="12"
+                                   Opacity="0.8" />
+
+                            <Label Text="{Binding NotesPreview}"
+                                   FontSize="12"
+                                   Opacity="0.75"
+                                   LineBreakMode="TailTruncation" />
+                        </VerticalStackLayout>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+
+    </Grid>
+</ContentPage>
