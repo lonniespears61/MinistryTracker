@@ -48,5 +48,10 @@ namespace MinistryTracker.Models
 
         // What kind of visit this is (return visit, study, letter writing, etc.).
         public VisitType VisitType { get; set; } = VisitType.ReturnVisit;
+        public string? LocationAddressOverride { get; set; }
+
+        public double? LocationLatitudeOverride { get; set; }
+
+        public double? LocationLongitudeOverride { get; set; }
     }
 }

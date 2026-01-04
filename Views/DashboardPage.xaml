@@ -5,13 +5,20 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
     xmlns:dto="clr-namespace:MinistryTracker.Models.DTOs"
-    x:DataType="viewmodels:DashboardViewModel">
+    x:DataType="viewmodels:DashboardViewModel"
+    Title="Dashboard">
 
-    <!-- TitleView only shows if this page is inside a NavigationPage -->
-    <NavigationPage.TitleView>
-        <Grid ColumnDefinitions="Auto,*"
+    <!--
+        CHANGED: NavigationPage.TitleView -> Shell.TitleView
+        WHY:
+          - You are now Shell + TabBar.
+          - NavigationPage.TitleView only applies when wrapped in NavigationPage.
+          - Shell.TitleView is the correct "header" slot for Shell pages.
+    -->
+    <Shell.TitleView>
+        <Grid ColumnDefinitions="*,Auto"
               VerticalOptions="Center"
-              Padding="0,6,0,0">
+              Padding="0,20,0,0">
 
             <Label Text="Ministry Tracker"
                    FontSize="20"
@@ -20,17 +27,7 @@
                    VerticalOptions="Center"
                    HorizontalOptions="Start" />
 
-        </Grid>
-    </NavigationPage.TitleView>
-
-    <!-- Root layout -->
-    <Grid RowDefinitions="Auto,Auto,*">
-
-        <!-- ROW 0 — TOP ACTION ICONS -->
-        <Grid Grid.Row="0"
-              ColumnDefinitions="*,Auto"
-              Padding="12,6">
-
+            <!-- Top action icons (About / Settings) -->
             <HorizontalStackLayout Grid.Column="1"
                                    Spacing="8"
                                    HorizontalOptions="End"
@@ -49,21 +46,24 @@
                              BackgroundColor="Transparent"
                              Clicked="OnSettingsClicked"
                              SemanticProperties.Description="Settings" />
-
             </HorizontalStackLayout>
         </Grid>
+    </Shell.TitleView>
 
-        <!-- ROW 1 — DASHBOARD HEADING -->
-        <Label Grid.Row="1"
+    <!-- Root layout -->
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- ROW 0 — DASHBOARD HEADING -->
+        <Label Grid.Row="0"
                Text="Dashboard"
                FontSize="22"
                FontAttributes="Bold"
                TextColor="DarkBlue"
                HorizontalTextAlignment="Center"
-               Margin="0,4,0,0" />
+               Margin="0,8,0,0" />
 
-        <!-- ROW 2 — SCROLLABLE CONTENT -->
-        <ScrollView Grid.Row="2">
+        <!-- ROW 1 — SCROLLABLE CONTENT -->
+        <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="16" Spacing="16">
 
                 <!-- Active Students Card -->
@@ -75,6 +75,7 @@
                     </Border.StrokeShape>
 
                     <Border.GestureRecognizers>
+                        <!-- Code-behind should use: await Shell.Current.GoToAsync("//students"); -->
                         <TapGestureRecognizer Tapped="OnActiveStudentsTapped" />
                     </Border.GestureRecognizers>
 
@@ -103,7 +104,10 @@
                         <RoundRectangle CornerRadius="10" />
                     </Border.StrokeShape>
 
+                    <!-- Optional: tap the whole card to jump to calendar tab -->
+                   
                     <VerticalStackLayout Spacing="10">
+
                         <Grid ColumnDefinitions="*,Auto"
                               RowDefinitions="Auto,Auto">
 
@@ -111,6 +115,7 @@
                                    FontSize="18"
                                    FontAttributes="Bold" />
 
+                            <!-- Row of 3 status pills -->
                             <HorizontalStackLayout Grid.Row="1"
                                                    Spacing="12"
                                                    Margin="0,6,0,0">
@@ -142,6 +147,15 @@
                             </HorizontalStackLayout>
                         </Grid>
 
+                        <!--
+                            CHANGED: DTO bindings fixed.
+                            WHY:
+                              - Your ItemsSource says dto:VisitWithStudent
+                              - VisitWithStudent has:
+                                    ScheduledDateTime
+                                    StudentName
+                              - It does NOT have Visit.ScheduledDateTime or Student.Name
+                        -->
                         <CollectionView ItemsSource="{Binding ThisWeekUpcoming}"
                                         SelectionMode="None">
                             <CollectionView.EmptyView>
@@ -152,11 +166,11 @@
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="dto:VisitWithStudent">
                                     <Grid ColumnDefinitions="Auto,*" Padding="0,6">
-                                        <Label Text="{Binding Visit.ScheduledDateTime, StringFormat='{0:ddd h:mm tt}'}"
+                                        <Label Text="{Binding ScheduledDateTime, StringFormat='{0:ddd h:mm tt}'}"
                                                FontAttributes="Bold"
                                                WidthRequest="110" />
                                         <Label Grid.Column="1"
-                                               Text="{Binding Student.Name}"
+                                               Text="{Binding StudentName}"
                                                LineBreakMode="TailTruncation"
                                                TextColor="{AppThemeBinding Light=#444, Dark=#ccc}" />
                                     </Grid>
