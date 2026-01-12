@@ -15,7 +15,7 @@ public partial class TestMapPage : ContentPage
     protected override async void OnAppearing()
     {
         base.OnAppearing();
-
+       
         // Center the map on current location (if available)
         try
         {
@@ -28,6 +28,17 @@ public partial class TestMapPage : ContentPage
                     MapSpan.FromCenterAndRadius(
                         new Location(loc.Latitude, loc.Longitude),
                         Distance.FromMiles(2)));
+
+                MapControl.Pins.Clear();
+
+                MapControl.Pins.Add(new Pin
+                {
+                    Label = "Test Student",
+                    Address = "Pinned from code",
+                    Location = new Location(loc.Latitude + 0.001, loc.Longitude + 0.001),
+                    Type = PinType.Place
+                });
+
             }
         }
         catch

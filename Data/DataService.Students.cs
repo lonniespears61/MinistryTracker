@@ -44,5 +44,20 @@ namespace MinistryTracker.Data
         /// <summary>Count active (not soft-deleted) students.</summary>
         public Task<int> GetActiveStudentsCountAsync(CancellationToken ct = default)
             => EnsureInitThen(() => Db.Table<Student>().Where(s => !s.IsDeleted).CountAsync(), ct);
+
+        /// <summary>List students that have GPS coordinates (optionally include soft-deleted).</summary>
+        public Task<List<Student>> GetStudentsWithLocationAsync(bool includeDeleted = false, CancellationToken ct = default)
+            => EnsureInitThen(() =>
+            {
+                var query = Db.Table<Student>()
+                    .Where(s => s.StudyLatitude != null && s.StudyLongitude != null);
+
+                if (!includeDeleted)
+                    query = query.Where(s => !s.IsDeleted);
+
+                return query.OrderBy(s => s.Name).ToListAsync();
+            }, ct);
+
+
     }
 }
