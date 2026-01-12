@@ -40,13 +40,7 @@
                              Clicked="OnAboutClicked"
                              SemanticProperties.Description="About" />
 
-                <ImageButton Source="icon_settings.png"
-                             WidthRequest="36"
-                             HeightRequest="36"
-                             BackgroundColor="Transparent"
-                             Clicked="OnSettingsClicked"
-                             SemanticProperties.Description="Settings" />
-            </HorizontalStackLayout>
+             </HorizontalStackLayout>
         </Grid>
     </Shell.TitleView>
 
@@ -76,7 +70,7 @@
 
                     <Border.GestureRecognizers>
                         <!-- Code-behind should use: await Shell.Current.GoToAsync("//students"); -->
-                        <TapGestureRecognizer Tapped="OnActiveStudentsTapped" />
+                        <!--   <TapGestureRecognizer Tapped="OnActiveStudentsTapped" />  -->
                     </Border.GestureRecognizers>
 
                     <Border.Shadow>

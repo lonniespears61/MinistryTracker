@@ -12,5 +12,15 @@ namespace MinistryTracker.Views
             InitializeComponent();
             BindingContext = vm;
         }
+        protected override void OnAppearing()
+        {
+            base.OnAppearing();
+
+            if (BindingContext is AddStudentViewModel vm)
+            {
+                vm.StudyLatitude = null;
+                vm.StudyLongitude = null;
+            }
+        }
     }
 }

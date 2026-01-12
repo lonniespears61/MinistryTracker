@@ -62,18 +62,6 @@ namespace MinistryTracker.Views
             }
         }
 
-        private async void OnActiveStudentsTapped(object sender, TappedEventArgs e)
-        {
-            try
-            {
-                var page = MauiProgram.Services.GetRequiredService<StudentsListPage>();
-                await Navigation.PushAsync(page);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine(ex);
-                await DisplayAlert("Oops", "Could not open Students.", "OK");
-            }
-        }
+       
     }
 }
