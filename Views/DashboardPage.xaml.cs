@@ -39,6 +39,11 @@ namespace MinistryTracker.Views
             var page = MauiProgram.Services.GetRequiredService<SettingsPage>();
             await Navigation.PushAsync(page);
         }
+        private async void OnTestMapClicked(object sender, EventArgs e)
+        {
+            await Navigation.PushAsync(new TestMapPage());
+        }
+
 
         private async void OnAboutClicked(object sender, EventArgs e)
         {

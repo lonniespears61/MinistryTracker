@@ -1,10 +1,25 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.diakonostools.ministrytracker">
-	<application android:allowBackup="true" android:supportsRtl="true" android:label="Ministry Tracker" android:icon="@mipmap/appicon"></application>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          package="com.diakonostools.ministrytracker">
+
+	<application
+        android:allowBackup="true"
+        android:supportsRtl="true"
+        android:label="Ministry Tracker"
+        android:icon="@mipmap/appicon">
+
+		<!-- Google Maps API Key -->
+		<meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyBTGdseJXqFxgBZkSZfHAUYs13iSbkkXeE" />
+
+	</application>
+
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="android.permission.INTERNET" />
 	<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 	<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 	<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 	<uses-permission android:name="android.permission.ACCESS_LOCATION_EXTRA_COMMANDS" />
+
 </manifest>

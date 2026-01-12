@@ -4,6 +4,8 @@ using Microsoft.Extensions.Logging;
 using MinistryTracker.Data;
 using MinistryTracker.ViewModels;
 using MinistryTracker.Views;
+using Microsoft.Maui.Controls.Maps;
+
 
 namespace MinistryTracker;
 
@@ -18,6 +20,8 @@ public static class MauiProgram
 
         builder
             .UseMauiApp<App>()
+            .UseMauiMaps()
+           
             .UseMauiCommunityToolkit()
             .ConfigureFonts(fonts =>
             {

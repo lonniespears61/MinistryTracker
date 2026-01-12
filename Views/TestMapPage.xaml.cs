@@ -1,0 +1,38 @@
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Controls.Maps;
+using Microsoft.Maui.Devices.Sensors;
+using Microsoft.Maui.Maps;
+
+namespace MinistryTracker.Views;
+
+public partial class TestMapPage : ContentPage
+{
+    public TestMapPage()
+    {
+        InitializeComponent();
+    }
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+
+        // Center the map on current location (if available)
+        try
+        {
+            var loc = await Geolocation.Default.GetLocationAsync(
+                new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(10)));
+
+            if (loc != null)
+            {
+                MapControl.MoveToRegion(
+                    MapSpan.FromCenterAndRadius(
+                        new Location(loc.Latitude, loc.Longitude),
+                        Distance.FromMiles(2)));
+            }
+        }
+        catch
+        {
+            // Keep it simple for now—if location fails, map still should render tiles.
+        }
+    }
+}

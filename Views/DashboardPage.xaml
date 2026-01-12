@@ -171,6 +171,8 @@
                                 </DataTemplate>
                             </CollectionView.ItemTemplate>
                         </CollectionView>
+                        <Button Text="Test Map"
+        Clicked="OnTestMapClicked" />
 
                     </VerticalStackLayout>
                 </Border>
