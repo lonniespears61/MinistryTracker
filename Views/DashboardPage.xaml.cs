@@ -41,9 +41,8 @@ namespace MinistryTracker.Views
         }
         private async void OnTestMapClicked(object sender, EventArgs e)
         {
-            await Navigation.PushAsync(new TestMapPage());
+            await Shell.Current.GoToAsync(nameof(StudentsMapPage));
         }
-
 
         private async void OnAboutClicked(object sender, EventArgs e)
         {

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MinistryTracker.Views.StudentsMapPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:maps="clr-namespace:Microsoft.Maui.Controls.Maps;assembly=Microsoft.Maui.Controls.Maps"
+    xmlns:vm="clr-namespace:MinistryTracker.ViewModels"
+    x:DataType="vm:StudentsMapViewModel"
+    Title="Students Map">
+
+    <Grid RowDefinitions="Auto,*" Padding="10">
+
+        <!-- Status row -->
+        <HorizontalStackLayout Grid.Row="0" Spacing="10">
+            <Label Text="{Binding Status}"
+                   VerticalOptions="Center"
+                   FontSize="12" />
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}"
+                               VerticalOptions="Center" />
+
+            <Button Text="Refresh"
+                    Command="{Binding RefreshPinsCommand}"
+                    HorizontalOptions="EndAndExpand" />
+        </HorizontalStackLayout>
+
+        <!-- Map -->
+        <maps:Map x:Name="StudentsMap"
+          Grid.Row="1"
+          IsShowingUser="True"
+          MapType="Street" />
+    </Grid>
+</ContentPage>

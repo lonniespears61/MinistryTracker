@@ -37,6 +37,11 @@ namespace MinistryTracker.Models
         /// </summary>
         public double? StudyLatitude { get; set; }
         public double? StudyLongitude { get; set; }
+        // Geocoding bookkeeping (helps us avoid retrying too often)
+        public GeocodeStatus GeocodeStatus { get; set; } = GeocodeStatus.None;
+
+        // Last time we attempted forward/reverse geocoding (UTC)
+        public DateTime? LastGeocodeAttemptUtc { get; set; }
 
         public Gender? Gender { get; set; }
         public int? Age { get; set; }
