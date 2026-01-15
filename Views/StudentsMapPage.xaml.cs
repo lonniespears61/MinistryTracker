@@ -1,9 +1,8 @@
-// File: StudentsMapPage.xaml.cs
-// Purpose: Displays a map of students with saved locations
-// Created: 2026-01-14
+// StudentsMapPage.xaml.cs — displays a map of students with saved locations — 2026-01-15
 
 using System;
 using System.Threading.Tasks;
+using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Devices.Sensors;
@@ -20,12 +19,21 @@ namespace MinistryTracker.Views
         {
             InitializeComponent();
             BindingContext = vm;
+
+            // Best available "map is ready enough" signal in MAUI Maps
+            StudentsMap.Loaded += OnMapLoaded;
         }
 
-        protected override async void OnAppearing()
+        protected override void OnDisappearing()
         {
-            base.OnAppearing();
+            base.OnDisappearing();
 
+            // Prevent duplicate handlers if the page is reused
+            StudentsMap.Loaded -= OnMapLoaded;
+        }
+
+        private async void OnMapLoaded(object? sender, EventArgs e)
+        {
             if (_loadedOnce) return;
 
             if (BindingContext is not StudentsMapViewModel vm)
@@ -33,24 +41,46 @@ namespace MinistryTracker.Views
 
             try
             {
-                // 1) Load pins
+                _loadedOnce = true;
+
+                // 1) Load pins into VM
                 await vm.RefreshPinsCommand.ExecuteAsync(null);
 
-                // 2) Center map (device location if possible, otherwise first pin)
-                await CenterMapAsync(vm);
+                // 2) Push pins into the actual Map control (Map.Pins is not bindable)
+                SyncPinsToMap(vm);
 
-                _loadedOnce = true;
+                // 3) Center map (device location if possible, otherwise first pin)
+                await CenterMapAsync(vm);
             }
             catch
             {
-                // swallow: VM already sets Status on failure
+                // Swallow: VM already sets Status on failure
             }
+        }
+
+        private void SyncPinsToMap(StudentsMapViewModel vm)
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                StudentsMap.Pins.Clear();
+
+                foreach (var pin in vm.Pins)
+                {
+                    if (pin?.Location is null)
+                        continue;
+
+                    // Defensive: skip junk (0,0) coords so we don't "successfully" pin the ocean
+                    if (Math.Abs(pin.Location.Latitude) < 0.000001 &&
+                        Math.Abs(pin.Location.Longitude) < 0.000001)
+                        continue;
+
+                    StudentsMap.Pins.Add(pin);
+                }
+            });
         }
 
         private async Task CenterMapAsync(StudentsMapViewModel vm)
         {
-            // This assumes your XAML has: <maps:Map x:Name="StudentsMap" ... />
-
             // Try to center on current device location first
             try
             {
@@ -59,10 +89,13 @@ namespace MinistryTracker.Views
 
                 if (loc is not null)
                 {
-                    StudentsMap.MoveToRegion(
-                        MapSpan.FromCenterAndRadius(
-                            new Location(loc.Latitude, loc.Longitude),
-                            Distance.FromMiles(2)));
+                    MainThread.BeginInvokeOnMainThread(() =>
+                    {
+                        StudentsMap.MoveToRegion(
+                            MapSpan.FromCenterAndRadius(
+                                new Location(loc.Latitude, loc.Longitude),
+                                Distance.FromMiles(2)));
+                    });
 
                     return;
                 }
@@ -75,10 +108,13 @@ namespace MinistryTracker.Views
             // Fallback: first pin
             if (vm.Pins.Count > 0 && vm.Pins[0].Location is not null)
             {
-                StudentsMap.MoveToRegion(
-                    MapSpan.FromCenterAndRadius(
-                        vm.Pins[0].Location,
-                        Distance.FromMiles(5)));
+                MainThread.BeginInvokeOnMainThread(() =>
+                {
+                    StudentsMap.MoveToRegion(
+                        MapSpan.FromCenterAndRadius(
+                            vm.Pins[0].Location,
+                            Distance.FromMiles(5)));
+                });
             }
         }
     }

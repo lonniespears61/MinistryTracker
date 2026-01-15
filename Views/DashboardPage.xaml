@@ -8,13 +8,6 @@
     x:DataType="viewmodels:DashboardViewModel"
     Title="Dashboard">
 
-    <!--
-        CHANGED: NavigationPage.TitleView -> Shell.TitleView
-        WHY:
-          - You are now Shell + TabBar.
-          - NavigationPage.TitleView only applies when wrapped in NavigationPage.
-          - Shell.TitleView is the correct "header" slot for Shell pages.
-    -->
     <Shell.TitleView>
         <Grid ColumnDefinitions="*,Auto"
               VerticalOptions="Center"
@@ -27,7 +20,6 @@
                    VerticalOptions="Center"
                    HorizontalOptions="Start" />
 
-            <!-- Top action icons (About / Settings) -->
             <HorizontalStackLayout Grid.Column="1"
                                    Spacing="8"
                                    HorizontalOptions="End"
@@ -40,14 +32,12 @@
                              Clicked="OnAboutClicked"
                              SemanticProperties.Description="About" />
 
-             </HorizontalStackLayout>
+            </HorizontalStackLayout>
         </Grid>
     </Shell.TitleView>
 
-    <!-- Root layout -->
     <Grid RowDefinitions="Auto,*">
 
-        <!-- ROW 0 — DASHBOARD HEADING -->
         <Label Grid.Row="0"
                Text="Dashboard"
                FontSize="22"
@@ -56,11 +46,9 @@
                HorizontalTextAlignment="Center"
                Margin="0,8,0,0" />
 
-        <!-- ROW 1 — SCROLLABLE CONTENT -->
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="16" Spacing="16">
 
-                <!-- Active Students Card -->
                 <Border BackgroundColor="PaleTurquoise"
                         StrokeThickness="1"
                         Padding="12">
@@ -69,8 +57,7 @@
                     </Border.StrokeShape>
 
                     <Border.GestureRecognizers>
-                        <!-- Code-behind should use: await Shell.Current.GoToAsync("//students"); -->
-                        <!--   <TapGestureRecognizer Tapped="OnActiveStudentsTapped" />  -->
+                        <!-- <TapGestureRecognizer Tapped="OnActiveStudentsTapped" /> -->
                     </Border.GestureRecognizers>
 
                     <Border.Shadow>
@@ -89,7 +76,6 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- Calls Next 7 Days -->
                 <Border Stroke="{AppThemeBinding Light=#e5e5e5, Dark=#333}"
                         BackgroundColor="{AppThemeBinding Light=#ffffff, Dark=#1e1e1e}"
                         StrokeThickness="1"
@@ -98,8 +84,6 @@
                         <RoundRectangle CornerRadius="10" />
                     </Border.StrokeShape>
 
-                    <!-- Optional: tap the whole card to jump to calendar tab -->
-                   
                     <VerticalStackLayout Spacing="10">
 
                         <Grid ColumnDefinitions="*,Auto"
@@ -109,12 +93,15 @@
                                    FontSize="18"
                                    FontAttributes="Bold" />
 
-                            <!-- Row of 3 status pills -->
-                            <HorizontalStackLayout Grid.Row="1"
-                                                   Spacing="12"
-                                                   Margin="0,6,0,0">
+                            <!-- Row of 3 status pills (wraps on small screens) -->
+                            <FlexLayout Grid.Row="1"
+                                        Direction="Row"
+                                        Wrap="Wrap"
+                                        Margin="0,6,0,0">
 
-                                <Border Padding="8,2" BackgroundColor="#2D7FF9">
+                                <Border Padding="8,2"
+                                        Margin="0,0,12,10"
+                                        BackgroundColor="#2D7FF9">
                                     <Border.StrokeShape>
                                         <RoundRectangle CornerRadius="10" />
                                     </Border.StrokeShape>
@@ -122,7 +109,9 @@
                                            TextColor="White" />
                                 </Border>
 
-                                <Border Padding="8,2" BackgroundColor="#2E8B57">
+                                <Border Padding="8,2"
+                                        Margin="0,0,12,10"
+                                        BackgroundColor="#2E8B57">
                                     <Border.StrokeShape>
                                         <RoundRectangle CornerRadius="10" />
                                     </Border.StrokeShape>
@@ -130,7 +119,9 @@
                                            TextColor="White" />
                                 </Border>
 
-                                <Border Padding="8,2" BackgroundColor="#C94F4F">
+                                <Border Padding="8,2"
+                                        Margin="0,0,12,10"
+                                        BackgroundColor="#C94F4F">
                                     <Border.StrokeShape>
                                         <RoundRectangle CornerRadius="10" />
                                     </Border.StrokeShape>
@@ -138,18 +129,9 @@
                                            TextColor="White" />
                                 </Border>
 
-                            </HorizontalStackLayout>
+                            </FlexLayout>
                         </Grid>
 
-                        <!--
-                            CHANGED: DTO bindings fixed.
-                            WHY:
-                              - Your ItemsSource says dto:VisitWithStudent
-                              - VisitWithStudent has:
-                                    ScheduledDateTime
-                                    StudentName
-                              - It does NOT have Visit.ScheduledDateTime or Student.Name
-                        -->
                         <CollectionView ItemsSource="{Binding ThisWeekUpcoming}"
                                         SelectionMode="None">
                             <CollectionView.EmptyView>
@@ -171,8 +153,9 @@
                                 </DataTemplate>
                             </CollectionView.ItemTemplate>
                         </CollectionView>
+
                         <Button Text="Test Map"
-        Clicked="OnTestMapClicked" />
+                                Clicked="OnTestMapClicked" />
 
                     </VerticalStackLayout>
                 </Border>
