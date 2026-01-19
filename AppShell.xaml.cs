@@ -1,4 +1,7 @@
-﻿using MinistryTracker.Views;
+﻿// AppShell.cs — defines Shell tabs and app routes — 2026-01-19
+
+using Microsoft.Extensions.DependencyInjection;
+using MinistryTracker.Views;
 
 namespace MinistryTracker;
 
@@ -10,11 +13,10 @@ public partial class AppShell : Shell
     {
         InitializeComponent();
 
-        RegisterRoutes();   // ✅ REQUIRED
-
         _services = services;
 
-        BuildTabs();
+        RegisterRoutes();   // ✅ Keep routes registered before navigation happens
+        BuildTabs();        // ✅ Build TabBar in code using DI pages
     }
 
     private void BuildTabs()
@@ -38,16 +40,17 @@ public partial class AppShell : Shell
             ContentTemplate = new DataTemplate(() => _services.GetRequiredService<StudentsListPage>())
         });
 
-        tabs.Items.Add(new ShellContent
-        {
-            Title = "Settings",
-            Icon = "icon_settings.png",
-            ContentTemplate = new DataTemplate(() => _services.GetRequiredService<SettingsPage>())
-        });
+        // ✅ Settings removed from TabBar (will be accessed via header icon)
+        // tabs.Items.Add(new ShellContent
+        // {
+        //     Title = "Settings",
+        //     Icon = "icon_settings.png",
+        //     ContentTemplate = new DataTemplate(() => _services.GetRequiredService<SettingsPage>())
+        // });
 
         tabs.Items.Add(new ShellContent
         {
-            Title = "MyCalendar",
+            Title = "My Calendar",
             Icon = "icon_calendar.png",
             ContentTemplate = new DataTemplate(() => _services.GetRequiredService<MyCalendarPage>())
         });
@@ -66,10 +69,7 @@ public partial class AppShell : Shell
         // Visit-related pages
         Routing.RegisterRoute(nameof(AddVisitPage), typeof(AddVisitPage));
         Routing.RegisterRoute(nameof(UpdateVisitPage), typeof(UpdateVisitPage));
-        Routing.RegisterRoute(nameof(EditStudentPage), typeof(EditStudentPage));
 
-
-        // Optional future routes
-        // Routing.RegisterRoute(nameof(MyCalendarPage), typeof(MyCalendarPage));
+        // NOTE: Removed duplicate RegisterRoute(nameof(EditStudentPage), ...) which was redundant.
     }
 }

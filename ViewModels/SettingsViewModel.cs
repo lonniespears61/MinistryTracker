@@ -19,9 +19,12 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Maui.Storage;
 using MinistryTracker.Data;
+using Microsoft.Maui.Storage;
 using MinistryTracker.ViewModels.Messages;
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -38,8 +41,24 @@ namespace MinistryTracker.ViewModels
         [ObservableProperty] private bool isBusy;
         [ObservableProperty] private string dbHealthText = string.Empty;
         [ObservableProperty] private bool healthExpanded; // collapsed by default; expands after health loads
+        private const string DevModeKey = "IsDeveloperMode";
 
-        public SettingsViewModel(DataService data) => _data = data;
+        [ObservableProperty] private bool isDeveloperMode;
+
+        public SettingsViewModel(DataService data)
+        {
+            _data = data;
+
+            try
+            {
+                IsDeveloperMode = Preferences.Get(DevModeKey, false);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Preferences.Get failed: " + ex);
+                IsDeveloperMode = false;
+            }
+        }
 
         // Simple UI helper you already had
         [RelayCommand]
@@ -56,6 +75,11 @@ namespace MinistryTracker.ViewModels
 
             IsBusy = true;
             return _activeCts.Token;
+        }
+
+        partial void OnIsDeveloperModeChanged(bool value)
+        {
+            Preferences.Set(DevModeKey, value);
         }
 
         private void EndOperation() => IsBusy = false;

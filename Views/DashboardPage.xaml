@@ -24,6 +24,12 @@
                                    Spacing="8"
                                    HorizontalOptions="End"
                                    VerticalOptions="Center">
+                <ImageButton Source="icon_settings.png"
+               WidthRequest="36"
+               HeightRequest="36"
+               BackgroundColor="Transparent"
+               Clicked="OnSettingsClicked"
+               SemanticProperties.Description="Settings" />
 
                 <ImageButton Source="icon_about.png"
                              WidthRequest="36"

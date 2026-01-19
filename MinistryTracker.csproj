@@ -109,9 +109,6 @@
 	  <MauiXaml Update="Views\StudentsMapPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
-	  <MauiXaml Update="Views\TestMapPage.xaml">
-	    <Generator>MSBuild:Compile</Generator>
-	  </MauiXaml>
 	  <MauiXaml Update="Views\UpdateVisitPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>

@@ -8,28 +8,32 @@
     x:DataType="vm:SettingsViewModel"
     Title="">
 
-    <!-- Top nav: Home icon + title (requires NavigationPage wrapper) -->
-    <NavigationPage.TitleView>
-        <Grid ColumnDefinitions="Auto,*"
+    <!--
+        Shell.TitleView is the correct header slot for Shell + TabBar.
+        (NavigationPage.TitleView only works when wrapped in NavigationPage.)
+    -->
+    <Shell.TitleView>
+        <Grid ColumnDefinitions="*,Auto"
               VerticalOptions="Center"
-              Padding="0,6,0,0">
+              Padding="0,20,0,0">
 
-            <ImageButton
-                Source="icon_home.png"
-                WidthRequest="28"
-                HeightRequest="28"
-                BackgroundColor="Transparent"
-                Clicked="OnHomeClicked"
-                SemanticProperties.Description="Home" />
-
-            <Label Grid.Column="1"
-                   Text="Settings"
-                   FontSize="18"
+            <Label Text="Settings"
+                   FontSize="20"
                    FontAttributes="Bold"
+                   TextColor="Black"
                    VerticalOptions="Center"
-                   Margin="12,0,0,0" />
+                   HorizontalOptions="Start" />
+
+            <!-- Optional: keep Home icon if you want it (or remove later) -->
+            <ImageButton Grid.Column="1"
+                         Source="icon_home.png"
+                         WidthRequest="36"
+                         HeightRequest="36"
+                         BackgroundColor="Transparent"
+                         Clicked="OnHomeClicked"
+                         SemanticProperties.Description="Home" />
         </Grid>
-    </NavigationPage.TitleView>
+    </Shell.TitleView>
 
     <!-- Page layout: Content + Busy Overlay -->
     <Grid>
@@ -38,62 +42,7 @@
         <ScrollView>
             <VerticalStackLayout Padding="16" Spacing="18">
 
-                <!-- CARD: Database Health -->
-                <Border Stroke="{DynamicResource Gray300}"
-                        StrokeThickness="1"
-                        BackgroundColor="White"
-                        Padding="12"
-                        Margin="0,6">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="10" />
-                    </Border.StrokeShape>
-
-                    <toolkit:Expander IsExpanded="{Binding HealthExpanded}">
-                        <toolkit:Expander.Header>
-                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                <Label Text="Database Health"
-                                       FontAttributes="Bold"
-                                       FontSize="18" />
-
-                                <!-- Collapsed: show "Show DB Health" -->
-                                <Button Text="Show DB Health"
-                                        Command="{Binding ShowDbHealthCommand}"
-                                        Grid.Column="1">
-                                    <Button.Triggers>
-                                        <DataTrigger TargetType="Button"
-                                                     Binding="{Binding HealthExpanded}"
-                                                     Value="True">
-                                            <Setter Property="IsVisible" Value="False" />
-                                        </DataTrigger>
-                                    </Button.Triggers>
-                                </Button>
-
-                                <!-- Expanded: show "Hide" -->
-                                <Button Text="Hide"
-                                        Command="{Binding HideHealthCommand}"
-                                        Grid.Column="1"
-                                        IsVisible="False">
-                                    <Button.Triggers>
-                                        <DataTrigger TargetType="Button"
-                                                     Binding="{Binding HealthExpanded}"
-                                                     Value="True">
-                                            <Setter Property="IsVisible" Value="True" />
-                                        </DataTrigger>
-                                    </Button.Triggers>
-                                </Button>
-                            </Grid>
-                        </toolkit:Expander.Header>
-
-                        <toolkit:Expander.Content>
-                            <Editor Text="{Binding DbHealthText}"
-                                    AutoSize="TextChanges"
-                                    IsReadOnly="True"
-                                    HeightRequest="220" />
-                        </toolkit:Expander.Content>
-                    </toolkit:Expander>
-                </Border>
-
-                <!-- CARD: Test Data -->
+                <!-- USER-FACING SETTINGS (placeholder for next session work) -->
                 <Border Stroke="{DynamicResource Gray300}"
                         StrokeThickness="1"
                         BackgroundColor="White"
@@ -104,18 +53,16 @@
                     </Border.StrokeShape>
 
                     <VerticalStackLayout Spacing="8">
-                        <Label Text="Test Data"
+                        <Label Text="Map / Near Me"
                                FontAttributes="Bold"
                                FontSize="18" />
-                        <Label Text="Populate a small, deterministic set (safe to tap if empty)."
-                               FontSize="12" />
-
-                        <Button Text="Re-seed Test Data"
-                                Command="{Binding SeedDemoDataCommand}" />
+                        <Label Text="User-facing options will live here (radius, centering behavior, etc.)."
+                               FontSize="12"
+                               TextColor="Gray" />
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- CARD: Beta Reset -->
+                <!-- DEV MODE TOGGLE (TEMP for testing; can be replaced with a hidden unlock later) -->
                 <Border Stroke="{DynamicResource Gray300}"
                         StrokeThickness="1"
                         BackgroundColor="White"
@@ -125,19 +72,135 @@
                         <RoundRectangle CornerRadius="10" />
                     </Border.StrokeShape>
 
-                    <VerticalStackLayout Spacing="8">
-                        <Label Text="Beta Reset"
+                    <Grid ColumnDefinitions="*,Auto"
+                          RowDefinitions="Auto,Auto"
+                          RowSpacing="6">
+
+                        <Label Text="Developer Mode"
                                FontAttributes="Bold"
                                FontSize="18" />
-                        <Label Text="Clear the local DB to a clean slate. App will recreate schema on next run."
-                               FontSize="12" />
 
-                        <Button Text="Reset Local Database"
-                                BackgroundColor="#b00020"
-                                TextColor="White"
-                                Command="{Binding ResetAndSeedCommand}" />
-                    </VerticalStackLayout>
+                        <Switch x:Name="DevModeSwitch"
+        Grid.Column="1"
+        IsToggled="{Binding IsDeveloperMode}" />
+
+                        <Label Grid.Row="1"
+                               Grid.ColumnSpan="2"
+                               Text="Enables local DB tools (health, seed, reset). Hide this before release."
+                               FontSize="12"
+                               TextColor="Gray" />
+                    </Grid>
                 </Border>
+
+                <!-- DEV TOOLS WRAPPER
+                     EVERYTHING inside this container is hidden unless IsDeveloperMode == true -->
+                <VerticalStackLayout Spacing="18"
+                     IsVisible="{Binding IsDeveloperMode}">
+
+                    <!-- CARD: Database Health -->
+                    <Border Stroke="{DynamicResource Gray300}"
+                            StrokeThickness="1"
+                            BackgroundColor="White"
+                            Padding="12"
+                            Margin="0,6">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="10" />
+                        </Border.StrokeShape>
+
+                        <toolkit:Expander IsExpanded="{Binding HealthExpanded}">
+                            <toolkit:Expander.Header>
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <Label Text="Database Health"
+                                           FontAttributes="Bold"
+                                           FontSize="18" />
+
+                                    <!-- Collapsed: show "Show DB Health" -->
+                                    <Button Text="Show DB Health"
+                                            Command="{Binding ShowDbHealthCommand}"
+                                            Grid.Column="1">
+                                        <Button.Triggers>
+                                            <DataTrigger TargetType="Button"
+                                                         Binding="{Binding HealthExpanded}"
+                                                         Value="True">
+                                                <Setter Property="IsVisible" Value="False" />
+                                            </DataTrigger>
+                                        </Button.Triggers>
+                                    </Button>
+
+                                    <!-- Expanded: show "Hide" -->
+                                    <Button Text="Hide"
+                                            Command="{Binding HideHealthCommand}"
+                                            Grid.Column="1"
+                                            IsVisible="False">
+                                        <Button.Triggers>
+                                            <DataTrigger TargetType="Button"
+                                                         Binding="{Binding HealthExpanded}"
+                                                         Value="True">
+                                                <Setter Property="IsVisible" Value="True" />
+                                            </DataTrigger>
+                                        </Button.Triggers>
+                                    </Button>
+                                </Grid>
+                            </toolkit:Expander.Header>
+
+                            <toolkit:Expander.Content>
+                                <Editor Text="{Binding DbHealthText}"
+                                        AutoSize="TextChanges"
+                                        IsReadOnly="True"
+                                        HeightRequest="220" />
+                            </toolkit:Expander.Content>
+                        </toolkit:Expander>
+                    </Border>
+
+                    <!-- CARD: Test Data -->
+                    <Border Stroke="{DynamicResource Gray300}"
+                            StrokeThickness="1"
+                            BackgroundColor="White"
+                            Padding="12"
+                            Margin="0,6">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="10" />
+                        </Border.StrokeShape>
+
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Test Data"
+                                   FontAttributes="Bold"
+                                   FontSize="18" />
+                            <Label Text="Populate a small, deterministic set (safe to tap if empty)."
+                                   FontSize="12"
+                                   TextColor="Gray" />
+
+                            <Button Text="Re-seed Test Data"
+                                    Command="{Binding SeedDemoDataCommand}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <!-- CARD: Beta Reset -->
+                    <Border Stroke="{DynamicResource Gray300}"
+                            StrokeThickness="1"
+                            BackgroundColor="White"
+                            Padding="12"
+                            Margin="0,6">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="10" />
+                        </Border.StrokeShape>
+
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Beta Reset"
+                                   FontAttributes="Bold"
+                                   FontSize="18" />
+                            <Label Text="Clear the local DB to a clean slate. App will recreate schema on next run."
+                                   FontSize="12"
+                                   TextColor="Gray" />
+
+                            <Button Text="Reset Local Database"
+                                    BackgroundColor="#b00020"
+                                    TextColor="White"
+                                    Command="{Binding ResetAndSeedCommand}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                </VerticalStackLayout>
 
             </VerticalStackLayout>
         </ScrollView>
