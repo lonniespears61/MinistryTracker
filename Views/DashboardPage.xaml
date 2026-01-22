@@ -8,6 +8,7 @@
     x:DataType="viewmodels:DashboardViewModel"
     Title="Dashboard">
 
+    <!-- Shell header (works with Shell + TabBar) -->
     <Shell.TitleView>
         <Grid ColumnDefinitions="*,Auto"
               VerticalOptions="Center"
@@ -24,12 +25,13 @@
                                    Spacing="8"
                                    HorizontalOptions="End"
                                    VerticalOptions="Center">
+
                 <ImageButton Source="icon_settings.png"
-               WidthRequest="36"
-               HeightRequest="36"
-               BackgroundColor="Transparent"
-               Clicked="OnSettingsClicked"
-               SemanticProperties.Description="Settings" />
+                             WidthRequest="36"
+                             HeightRequest="36"
+                             BackgroundColor="Transparent"
+                             Clicked="OnSettingsClicked"
+                             SemanticProperties.Description="Settings" />
 
                 <ImageButton Source="icon_about.png"
                              WidthRequest="36"
@@ -37,13 +39,13 @@
                              BackgroundColor="Transparent"
                              Clicked="OnAboutClicked"
                              SemanticProperties.Description="About" />
-
             </HorizontalStackLayout>
         </Grid>
     </Shell.TitleView>
 
     <Grid RowDefinitions="Auto,*">
 
+        <!-- Page title -->
         <Label Grid.Row="0"
                Text="Dashboard"
                FontSize="22"
@@ -55,33 +57,8 @@
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="16" Spacing="16">
 
-                <Border BackgroundColor="PaleTurquoise"
-                        StrokeThickness="1"
-                        Padding="12">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="10" />
-                    </Border.StrokeShape>
-
-                    <Border.GestureRecognizers>
-                        <!-- <TapGestureRecognizer Tapped="OnActiveStudentsTapped" /> -->
-                    </Border.GestureRecognizers>
-
-                    <Border.Shadow>
-                        <Shadow Brush="Gray"
-                                Offset="2,2"
-                                Radius="4" />
-                    </Border.Shadow>
-
-                    <VerticalStackLayout>
-                        <Label Text="Active Students"
-                               FontAttributes="Bold"
-                               FontSize="18" />
-                        <Label Text="{Binding ActiveStudentsCount}"
-                               FontSize="24"
-                               TextColor="DarkGreen" />
-                    </VerticalStackLayout>
-                </Border>
-
+                <!-- TODAY / UPCOMING (keep existing binding to avoid breaking build)
+                     Later: swap ItemsSource to Today list when VM is ready -->
                 <Border Stroke="{AppThemeBinding Light=#e5e5e5, Dark=#333}"
                         BackgroundColor="{AppThemeBinding Light=#ffffff, Dark=#1e1e1e}"
                         StrokeThickness="1"
@@ -92,65 +69,24 @@
 
                     <VerticalStackLayout Spacing="10">
 
-                        <Grid ColumnDefinitions="*,Auto"
-                              RowDefinitions="Auto,Auto">
-
-                            <Label Text="Calls Next 7 Days"
-                                   FontSize="18"
-                                   FontAttributes="Bold" />
-
-                            <!-- Row of 3 status pills (wraps on small screens) -->
-                            <FlexLayout Grid.Row="1"
-                                        Direction="Row"
-                                        Wrap="Wrap"
-                                        Margin="0,6,0,0">
-
-                                <Border Padding="8,2"
-                                        Margin="0,0,12,10"
-                                        BackgroundColor="#2D7FF9">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="10" />
-                                    </Border.StrokeShape>
-                                    <Label Text="{Binding ThisWeekScheduledCount, StringFormat='Scheduled: {0}'}"
-                                           TextColor="White" />
-                                </Border>
-
-                                <Border Padding="8,2"
-                                        Margin="0,0,12,10"
-                                        BackgroundColor="#2E8B57">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="10" />
-                                    </Border.StrokeShape>
-                                    <Label Text="{Binding ThisWeekCompletedCount, StringFormat='Completed: {0}'}"
-                                           TextColor="White" />
-                                </Border>
-
-                                <Border Padding="8,2"
-                                        Margin="0,0,12,10"
-                                        BackgroundColor="#C94F4F">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="10" />
-                                    </Border.StrokeShape>
-                                    <Label Text="{Binding ThisWeekCanceledCount, StringFormat='Canceled: {0}'}"
-                                           TextColor="White" />
-                                </Border>
-
-                            </FlexLayout>
-                        </Grid>
+                        <Label Text="Upcoming"
+                               FontSize="18"
+                               FontAttributes="Bold" />
 
                         <CollectionView ItemsSource="{Binding ThisWeekUpcoming}"
                                         SelectionMode="None">
                             <CollectionView.EmptyView>
-                                <Label Text="No more scheduled calls this week."
+                                <Label Text="No calls planned for today."
                                        TextColor="Gray" />
                             </CollectionView.EmptyView>
 
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="dto:VisitWithStudent">
-                                    <Grid ColumnDefinitions="Auto,*" Padding="0,6">
-                                        <Label Text="{Binding ScheduledDateTime, StringFormat='{0:ddd h:mm tt}'}"
+                                    <Grid ColumnDefinitions="Auto,*"
+                                          Padding="0,6">
+                                        <Label Text="{Binding ScheduledDateTime, StringFormat='{0:h:mm tt}'}"
                                                FontAttributes="Bold"
-                                               WidthRequest="110" />
+                                               WidthRequest="90" />
                                         <Label Grid.Column="1"
                                                Text="{Binding StudentName}"
                                                LineBreakMode="TailTruncation"
@@ -160,10 +96,88 @@
                             </CollectionView.ItemTemplate>
                         </CollectionView>
 
-                        <Button Text="Test Map"
-                                Clicked="OnTestMapClicked" />
-
+                        <Label Text="(Use the My Calendar tab for full schedule.)"
+                               FontSize="12"
+                               TextColor="Gray" />
                     </VerticalStackLayout>
+                </Border>
+
+                <!-- WHO SHOULD I CHECK ON (stub card for now, no new bindings yet) -->
+                <Border Stroke="{AppThemeBinding Light=#e5e5e5, Dark=#333}"
+                        BackgroundColor="{AppThemeBinding Light=#ffffff, Dark=#1e1e1e}"
+                        StrokeThickness="1"
+                        Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10" />
+                    </Border.StrokeShape>
+
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="Let's Check On"
+                               FontSize="18"
+                               FontAttributes="Bold" />
+
+                        <Label Text="(Coming next: suggestions based on time since last visit.)"
+                               FontSize="12"
+                               TextColor="Gray" />
+
+                        <!-- Optional: later replace with a small list -->
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- QUICK ACTION: I JUST MET SOMEONE -->
+                <Border BackgroundColor="PaleTurquoise"
+                        StrokeThickness="1"
+                        Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10" />
+                    </Border.StrokeShape>
+
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="New Call?"
+                               FontAttributes="Bold"
+                               FontSize="18" />
+
+                        <Label Text="Add notes now. You can schedule the first return visit if you arranged one."
+                               FontSize="12"
+                               TextColor="Black" />
+
+                        <Button Text="Add New Call"
+                                Clicked="OnAddNewCallClicked" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- STANDALONE UTILITY: FIND NEARBY CALLS -->
+                <Border Stroke="{AppThemeBinding Light=#e5e5e5, Dark=#333}"
+                        BackgroundColor="{AppThemeBinding Light=#ffffff, Dark=#1e1e1e}"
+                        StrokeThickness="1"
+                        Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10" />
+                    </Border.StrokeShape>
+
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Find Nearby Calls"
+                               FontSize="18"
+                               FontAttributes="Bold" />
+
+                        <Label Text="Use your current location to view nearby calls on the map."
+                               FontSize="12"
+                               TextColor="Gray" />
+
+                        <Button Text="Open Map"
+                                Clicked="OnOpenMapClicked" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- OPTIONAL: Calls count (keep existing VM binding) -->
+                <Border Stroke="{AppThemeBinding Light=#e5e5e5, Dark=#333}"
+                        BackgroundColor="{AppThemeBinding Light=#ffffff, Dark=#1e1e1e}"
+                        StrokeThickness="1"
+                        Padding="16">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="10" />
+                    </Border.StrokeShape>
+
                 </Border>
 
             </VerticalStackLayout>
