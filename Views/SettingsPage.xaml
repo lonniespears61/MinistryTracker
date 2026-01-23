@@ -2,6 +2,7 @@
 <!-- SettingsPage.xaml — Settings (modal) — 2026-01-22 -->
 
 <ContentPage
+    BackgroundColor="{StaticResource Settings.BgTint}"
     x:Class="MinistryTracker.Views.SettingsPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
@@ -9,13 +10,15 @@
     xmlns:vm="clr-namespace:MinistryTracker.ViewModels"
     x:DataType="vm:SettingsViewModel"
     Title="">
-
+  
+    
     <!-- Modal Settings is opened via PushModalAsync(new NavigationPage(SettingsPage)).
          So NavigationPage.TitleView is the correct header slot. -->
     <NavigationPage.TitleView>
         <Grid ColumnDefinitions="Auto,*,Auto"
               VerticalOptions="Center"
-              Padding="0,10,0,0">
+              Padding="0,10,0,0"
+              BackgroundColor="{StaticResource Settings.Base}">
 
             <!-- Left spacer (keeps title centered) -->
             <Grid />
@@ -32,20 +35,21 @@
                     Text="Done"
                     Padding="12,6"
                     CornerRadius="12"
-                    BackgroundColor="{AppThemeBinding Light=#334155, Dark=#374151}"
+                    BackgroundColor="{StaticResource Settings.Base}"
                     TextColor="White"
                     Clicked="OnDoneClicked" />
         </Grid>
     </NavigationPage.TitleView>
 
-    <Grid BackgroundColor="{AppThemeBinding Light=#F5F6F4, Dark=#121212}">
-
+    <Grid BackgroundColor="{StaticResource Settings.BgTint}">
         <ScrollView>
             <VerticalStackLayout Padding="16" Spacing="16">
 
                 <!-- PRODUCTION: Near Me / Map Settings (placeholder for next session fields) -->
-                <Border BackgroundColor="{AppThemeBinding Light=#EEF2F6, Dark=#1C1C1C}"
-                        Padding="14">
+                <Border BackgroundColor="{StaticResource Settings.CardTint}"  
+                 Stroke="{StaticResource Settings.BorderTint}"
+                 StrokeThickness="1"
+                 Padding="14">
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>
@@ -81,9 +85,11 @@
                 </Border>
 
                 <!-- ABOUT (full) -->
-                <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
-        Padding="14"
-        Margin="0,6">
+                <Border BackgroundColor="{StaticResource Settings.CardTint}"
+                 Stroke="{StaticResource Settings.BorderTint}"
+                 StrokeThickness="1"
+                 Padding="14"
+                 Margin="0,6">
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>

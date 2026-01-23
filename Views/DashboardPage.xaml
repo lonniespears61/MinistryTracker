@@ -9,52 +9,38 @@
     xmlns:dto="clr-namespace:MinistryTracker.Models.DTOs"
     x:DataType="viewmodels:DashboardViewModel"
     Title="Dashboard"
-    BackgroundColor="{AppThemeBinding Light=#E6F6F9, Dark=#0B1B1E}">
-
-    <ContentPage.Resources>
-        <ResourceDictionary>
-
-            <!-- DASHBOARD THEME (Base = #0090A8) -->
-            <Color x:Key="DashAccent">#0090A8</Color>
-            <Color x:Key="DashAccentSoft">#CDECEF</Color>
-            <Color x:Key="DashCard">#FFFFFF</Color>
-
-            <!-- Text -->
-            <Color x:Key="TextPrimaryLight">#0F172A</Color>
-            <Color x:Key="TextSecondaryLight">#475569</Color>
-
-            <!-- Dark equivalents -->
-            <Color x:Key="DashCardDark">#122026</Color>
-            <Color x:Key="TextPrimaryDark">#E6EEF9</Color>
-            <Color x:Key="TextSecondaryDark">#9AA6B2</Color>
-
-        </ResourceDictionary>
-    </ContentPage.Resources>
+    BackgroundColor="{StaticResource Dashboard.BgTint}">
 
     <!-- Shell header (works with Shell + TabBar) -->
     <Shell.TitleView>
-        <Grid ColumnDefinitions="*,Auto"
-              VerticalOptions="Center"
-              Padding="0,20,0,0">
+        <Grid
+            ColumnDefinitions="*,Auto"
+            Padding="0,20,0,0"
+            VerticalOptions="Center"
+            BackgroundColor="{StaticResource Dashboard.Base}">
 
-            <Label Text="Ministry Tracker"
-                   FontSize="20"
-                   FontAttributes="Bold"
-                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
-                   VerticalOptions="Center"
-                   HorizontalOptions="Start" />
+            <Label
+                Text="Ministry Tracker"
+                FontSize="20"
+                FontAttributes="Bold"
+                BackgroundColor="Transparent"
+                TextColor="White"
+                VerticalOptions="Center"
+                HorizontalOptions="Center" />
 
-            <HorizontalStackLayout Grid.Column="1"
-                                   Spacing="8"
-                                   HorizontalOptions="End"
-                                   VerticalOptions="Center">
+            <HorizontalStackLayout
+                Grid.Column="1"
+                Spacing="8"
+                HorizontalOptions="End"
+                VerticalOptions="Center">
 
-                <ImageButton Source="icon_settings.png"
-                             WidthRequest="36"
-                             HeightRequest="36"
-                             BackgroundColor="Transparent"
-                             Clicked="OnSettingsClicked"
-                             SemanticProperties.Description="Settings" />
+                <ImageButton
+                    Source="icon_settings.png"
+                    WidthRequest="36"
+                    HeightRequest="36"
+                    BackgroundColor="Transparent"
+                    Clicked="OnSettingsClicked"
+                    SemanticProperties.Description="Settings" />
 
             </HorizontalStackLayout>
         </Grid>
@@ -62,164 +48,183 @@
 
     <Grid RowDefinitions="Auto,*">
 
-        <!-- Page title -->
-        <Label Grid.Row="0"
-               Text="Dashboard"
-               FontSize="22"
-               FontAttributes="Bold"
-               TextColor="{StaticResource DashAccent}"
-               HorizontalTextAlignment="Center"
-               Margin="0,10,0,0" />
+        <!-- Page title (you can remove this entirely if the Shell header is enough) -->
+        <Label
+            Grid.Row="0"
+            Text="Dashboard"
+            FontSize="22"
+            FontAttributes="Bold"
+            TextColor="Transparent"
+            HorizontalTextAlignment="Center"
+            Margin="0,10,0,0" />
 
         <ScrollView Grid.Row="1">
             <VerticalStackLayout Padding="16" Spacing="14">
 
                 <!-- UPCOMING -->
-                <Border BackgroundColor="{AppThemeBinding Light={StaticResource DashCard}, Dark={StaticResource DashCardDark}}"
-                        Padding="16"
-                        Margin="0,2">
+                <Border
+                    BackgroundColor="{StaticResource Dashboard.CardTint}"
+                    Stroke="{StaticResource Dashboard.BorderTint}"
+                    StrokeThickness="1"
+                    Padding="16"
+                    Margin="0,2">
+
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>
 
                     <Border.Shadow>
-                        <Shadow Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
-                                Offset="0,3"
-                                Radius="10" />
+                        <Shadow
+                            Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
+                            Offset="0,3"
+                            Radius="10" />
                     </Border.Shadow>
 
                     <VerticalStackLayout Spacing="10">
-                        <Label Text="Upcoming"
-                               FontSize="18"
-                               FontAttributes="Bold"
-                               TextColor="{StaticResource DashAccent}" />
+                        <Label
+                            Text="Upcoming"
+                            FontSize="18"
+                            FontAttributes="Bold"
+                            TextColor="{StaticResource Dashboard.Base}" />
 
-                        <CollectionView ItemsSource="{Binding ThisWeekUpcoming}"
-                                        SelectionMode="None">
+                        <CollectionView
+                            ItemsSource="{Binding ThisWeekUpcoming}"
+                            SelectionMode="None">
+
                             <CollectionView.EmptyView>
-                                <Label Text="No calls planned for today."
-                                       TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                                <Label
+                                    Text="No calls planned for today."
+                                    TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
                             </CollectionView.EmptyView>
 
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="dto:VisitWithStudent">
-                                    <Grid ColumnDefinitions="Auto,*"
-                                          Padding="0,6"
-                                          ColumnSpacing="12">
+                                    <Grid
+                                        ColumnDefinitions="Auto,*"
+                                        ColumnSpacing="12"
+                                        Padding="0,6">
 
-                                        <Label Text="{Binding ScheduledDateTime, StringFormat='{0:h:mm tt}'}"
-                                               FontAttributes="Bold"
-                                               WidthRequest="90"
-                                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                        <Label
+                                            Text="{Binding ScheduledDateTime, StringFormat='{0:h:mm tt}'}"
+                                            FontAttributes="Bold"
+                                            WidthRequest="90"
+                                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
 
-                                        <Label Grid.Column="1"
-                                               Text="{Binding StudentName}"
-                                               LineBreakMode="TailTruncation"
-                                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                                        <Label
+                                            Grid.Column="1"
+                                            Text="{Binding StudentName}"
+                                            LineBreakMode="TailTruncation"
+                                            TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
                                     </Grid>
                                 </DataTemplate>
                             </CollectionView.ItemTemplate>
                         </CollectionView>
 
-                        <Label Text="Use the My Calendar tab for the full schedule."
-                               FontSize="12"
-                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                        <Label
+                            Text="Use the My Calendar tab for the full schedule."
+                            FontSize="12"
+                            TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
                     </VerticalStackLayout>
                 </Border>
 
                 <!-- CHECK ON -->
-                <Border BackgroundColor="{AppThemeBinding Light={StaticResource DashAccentSoft}, Dark=#0F2A30}"
-                        Padding="16"
-                        Margin="0,2">
+                <Border
+                    BackgroundColor="{StaticResource Dashboard.CardTint}"
+                    Stroke="{StaticResource Dashboard.BorderTint}"
+                    StrokeThickness="1"
+                    Padding="16"
+                    Margin="0,2">
+
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>
 
                     <Border.Shadow>
-                        <Shadow Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
-                                Offset="0,3"
-                                Radius="10" />
+                        <Shadow
+                            Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
+                            Offset="0,3"
+                            Radius="10" />
                     </Border.Shadow>
 
                     <VerticalStackLayout Spacing="8">
-                        <Label Text="Let’s Check On"
-                               FontSize="18"
-                               FontAttributes="Bold"
-                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                        <Label
+                            Text="Let’s Check On"
+                            FontSize="18"
+                            FontAttributes="Bold"
+                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
 
-                        <Label Text="Next session: suggestions based on time since last visit."
-                               FontSize="12"
-                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                        <Label
+                            Text="Next session: suggestions based on time since last visit."
+                            FontSize="12"
+                            TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
                     </VerticalStackLayout>
                 </Border>
 
                 <!-- NEW CALL (primary action) -->
-                <Border BackgroundColor="{AppThemeBinding Light=#D9F5F7, Dark=#0D2A2F}"
-                        Padding="16"
-                        Margin="0,2">
+                <Border
+                    BackgroundColor="{StaticResource Dashboard.CardTint}"
+                    Stroke="{StaticResource Dashboard.BorderTint}"
+                    StrokeThickness="1"
+                    Padding="16"
+                    Margin="0,2"
+                    MinimumHeightRequest="84">
+
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>
 
                     <Border.Shadow>
-                        <Shadow Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
-                                Offset="0,3"
-                                Radius="10" />
+                        <Shadow
+                            Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
+                            Offset="0,3"
+                            Radius="10" />
                     </Border.Shadow>
 
                     <VerticalStackLayout Spacing="10">
-                        <Label Text="New Call"
-                               FontAttributes="Bold"
-                               FontSize="18"
-                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
-
-                        <Label Text="Capture notes and where you met. Schedule a return visit if you arranged one."
-                               FontSize="12"
-                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
-
-                        <Button Text="Add New Call"
-                                Clicked="OnAddNewCallClicked"
-                                CornerRadius="12"
-                                BackgroundColor="{StaticResource DashAccent}"
-                                TextColor="White" />
+                        <Button
+                            Text="Add New Call"
+                            Clicked="OnAddNewCallClicked"
+                            CornerRadius="12"
+                            BackgroundColor="{StaticResource Dashboard.Base}"
+                            TextColor="White" />
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- NEAR ME -->
-                <Border BackgroundColor="{AppThemeBinding Light={StaticResource DashCard}, Dark={StaticResource DashCardDark}}"
-                        Padding="16"
-                        Margin="0,2">
+                <!-- NEAR ME (less crowded) -->
+                <Border
+                    BackgroundColor="{StaticResource Dashboard.CardTint}"
+                    Stroke="{StaticResource Dashboard.BorderTint}"
+                    StrokeThickness="1"
+                    Padding="16"
+                    Margin="0,2"
+                    MinimumHeightRequest="84">
+
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>
 
                     <Border.Shadow>
-                        <Shadow Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
-                                Offset="0,3"
-                                Radius="10" />
+                        <Shadow
+                            Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
+                            Offset="0,3"
+                            Radius="10" />
                     </Border.Shadow>
 
-                    <VerticalStackLayout Spacing="10">
+                    <VerticalStackLayout Spacing="8">
 
-                        <Label Text="Find Nearby Calls"
-                               FontSize="18"
-                               FontAttributes="Bold"
-                               TextColor="{StaticResource DashAccent}" />
+                                              
+                        <Button
+                            Text="Find Nearby Calls"
+                            Clicked="OnOpenMapClicked"
+                            CornerRadius="12"
+                            BackgroundColor="{StaticResource Dashboard.Base}"
+                            TextColor="White"
+                            Margin="0,6,0,0" />
 
-                        <Label Text="Use your current location to view nearby calls on the map."
-                               FontSize="12"
-                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
-
-                        <Button Text="Find Nearby Calls"
-                                Clicked="OnOpenMapClicked"
-                                CornerRadius="12"
-                                BackgroundColor="{StaticResource DashAccent}"
-                                TextColor="White" />
                     </VerticalStackLayout>
                 </Border>
 
             </VerticalStackLayout>
         </ScrollView>
-
     </Grid>
 </ContentPage>

@@ -102,6 +102,6 @@ public partial class SettingsPage : ContentPage
 
     private async void OnDoneClicked(object sender, EventArgs e)
     {
-        await Shell.Current.Navigation.PopModalAsync();
+        await Navigation.PopModalAsync();
     }
 }
