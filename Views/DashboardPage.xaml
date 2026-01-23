@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!-- DashboardPage.xaml — Publisher Today dashboard — 2026-01-22 -->
+
 <ContentPage
     x:Class="MinistryTracker.Views.DashboardPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
@@ -6,7 +8,28 @@
     xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
     xmlns:dto="clr-namespace:MinistryTracker.Models.DTOs"
     x:DataType="viewmodels:DashboardViewModel"
-    Title="Dashboard">
+    Title="Dashboard"
+    BackgroundColor="{AppThemeBinding Light=#E6F6F9, Dark=#0B1B1E}">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+
+            <!-- DASHBOARD THEME (Base = #0090A8) -->
+            <Color x:Key="DashAccent">#0090A8</Color>
+            <Color x:Key="DashAccentSoft">#CDECEF</Color>
+            <Color x:Key="DashCard">#FFFFFF</Color>
+
+            <!-- Text -->
+            <Color x:Key="TextPrimaryLight">#0F172A</Color>
+            <Color x:Key="TextSecondaryLight">#475569</Color>
+
+            <!-- Dark equivalents -->
+            <Color x:Key="DashCardDark">#122026</Color>
+            <Color x:Key="TextPrimaryDark">#E6EEF9</Color>
+            <Color x:Key="TextSecondaryDark">#9AA6B2</Color>
+
+        </ResourceDictionary>
+    </ContentPage.Resources>
 
     <!-- Shell header (works with Shell + TabBar) -->
     <Shell.TitleView>
@@ -17,7 +40,7 @@
             <Label Text="Ministry Tracker"
                    FontSize="20"
                    FontAttributes="Bold"
-                   TextColor="Black"
+                   TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}"
                    VerticalOptions="Center"
                    HorizontalOptions="Start" />
 
@@ -33,12 +56,6 @@
                              Clicked="OnSettingsClicked"
                              SemanticProperties.Description="Settings" />
 
-                <ImageButton Source="icon_about.png"
-                             WidthRequest="36"
-                             HeightRequest="36"
-                             BackgroundColor="Transparent"
-                             Clicked="OnAboutClicked"
-                             SemanticProperties.Description="About" />
             </HorizontalStackLayout>
         </Grid>
     </Shell.TitleView>
@@ -50,134 +67,155 @@
                Text="Dashboard"
                FontSize="22"
                FontAttributes="Bold"
-               TextColor="DarkBlue"
+               TextColor="{StaticResource DashAccent}"
                HorizontalTextAlignment="Center"
-               Margin="0,8,0,0" />
+               Margin="0,10,0,0" />
 
         <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="16" Spacing="16">
+            <VerticalStackLayout Padding="16" Spacing="14">
 
-                <!-- TODAY / UPCOMING (keep existing binding to avoid breaking build)
-                     Later: swap ItemsSource to Today list when VM is ready -->
-                <Border Stroke="{AppThemeBinding Light=#e5e5e5, Dark=#333}"
-                        BackgroundColor="{AppThemeBinding Light=#ffffff, Dark=#1e1e1e}"
-                        StrokeThickness="1"
-                        Padding="16">
+                <!-- UPCOMING -->
+                <Border BackgroundColor="{AppThemeBinding Light={StaticResource DashCard}, Dark={StaticResource DashCardDark}}"
+                        Padding="16"
+                        Margin="0,2">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="10" />
+                        <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>
 
-                    <VerticalStackLayout Spacing="10">
+                    <Border.Shadow>
+                        <Shadow Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
+                                Offset="0,3"
+                                Radius="10" />
+                    </Border.Shadow>
 
+                    <VerticalStackLayout Spacing="10">
                         <Label Text="Upcoming"
                                FontSize="18"
-                               FontAttributes="Bold" />
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource DashAccent}" />
 
                         <CollectionView ItemsSource="{Binding ThisWeekUpcoming}"
                                         SelectionMode="None">
                             <CollectionView.EmptyView>
                                 <Label Text="No calls planned for today."
-                                       TextColor="Gray" />
+                                       TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
                             </CollectionView.EmptyView>
 
                             <CollectionView.ItemTemplate>
                                 <DataTemplate x:DataType="dto:VisitWithStudent">
                                     <Grid ColumnDefinitions="Auto,*"
-                                          Padding="0,6">
+                                          Padding="0,6"
+                                          ColumnSpacing="12">
+
                                         <Label Text="{Binding ScheduledDateTime, StringFormat='{0:h:mm tt}'}"
                                                FontAttributes="Bold"
-                                               WidthRequest="90" />
+                                               WidthRequest="90"
+                                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+
                                         <Label Grid.Column="1"
                                                Text="{Binding StudentName}"
                                                LineBreakMode="TailTruncation"
-                                               TextColor="{AppThemeBinding Light=#444, Dark=#ccc}" />
+                                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
                                     </Grid>
                                 </DataTemplate>
                             </CollectionView.ItemTemplate>
                         </CollectionView>
 
-                        <Label Text="(Use the My Calendar tab for full schedule.)"
+                        <Label Text="Use the My Calendar tab for the full schedule."
                                FontSize="12"
-                               TextColor="Gray" />
+                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- WHO SHOULD I CHECK ON (stub card for now, no new bindings yet) -->
-                <Border Stroke="{AppThemeBinding Light=#e5e5e5, Dark=#333}"
-                        BackgroundColor="{AppThemeBinding Light=#ffffff, Dark=#1e1e1e}"
-                        StrokeThickness="1"
-                        Padding="16">
+                <!-- CHECK ON -->
+                <Border BackgroundColor="{AppThemeBinding Light={StaticResource DashAccentSoft}, Dark=#0F2A30}"
+                        Padding="16"
+                        Margin="0,2">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="10" />
+                        <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>
+
+                    <Border.Shadow>
+                        <Shadow Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
+                                Offset="0,3"
+                                Radius="10" />
+                    </Border.Shadow>
 
                     <VerticalStackLayout Spacing="8">
-                        <Label Text="Let's Check On"
+                        <Label Text="Let’s Check On"
                                FontSize="18"
-                               FontAttributes="Bold" />
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
 
-                        <Label Text="(Coming next: suggestions based on time since last visit.)"
+                        <Label Text="Next session: suggestions based on time since last visit."
                                FontSize="12"
-                               TextColor="Gray" />
-
-                        <!-- Optional: later replace with a small list -->
+                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- QUICK ACTION: I JUST MET SOMEONE -->
-                <Border BackgroundColor="PaleTurquoise"
-                        StrokeThickness="1"
-                        Padding="16">
+                <!-- NEW CALL (primary action) -->
+                <Border BackgroundColor="{AppThemeBinding Light=#D9F5F7, Dark=#0D2A2F}"
+                        Padding="16"
+                        Margin="0,2">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="10" />
+                        <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>
 
-                    <VerticalStackLayout Spacing="10">
-                        <Label Text="New Call?"
-                               FontAttributes="Bold"
-                               FontSize="18" />
+                    <Border.Shadow>
+                        <Shadow Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
+                                Offset="0,3"
+                                Radius="10" />
+                    </Border.Shadow>
 
-                        <Label Text="Add notes now. You can schedule the first return visit if you arranged one."
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="New Call"
+                               FontAttributes="Bold"
+                               FontSize="18"
+                               TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+
+                        <Label Text="Capture notes and where you met. Schedule a return visit if you arranged one."
                                FontSize="12"
-                               TextColor="Black" />
+                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
 
                         <Button Text="Add New Call"
-                                Clicked="OnAddNewCallClicked" />
+                                Clicked="OnAddNewCallClicked"
+                                CornerRadius="12"
+                                BackgroundColor="{StaticResource DashAccent}"
+                                TextColor="White" />
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- STANDALONE UTILITY: FIND NEARBY CALLS -->
-                <Border Stroke="{AppThemeBinding Light=#e5e5e5, Dark=#333}"
-                        BackgroundColor="{AppThemeBinding Light=#ffffff, Dark=#1e1e1e}"
-                        StrokeThickness="1"
-                        Padding="16">
+                <!-- NEAR ME -->
+                <Border BackgroundColor="{AppThemeBinding Light={StaticResource DashCard}, Dark={StaticResource DashCardDark}}"
+                        Padding="16"
+                        Margin="0,2">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="10" />
+                        <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>
 
+                    <Border.Shadow>
+                        <Shadow Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
+                                Offset="0,3"
+                                Radius="10" />
+                    </Border.Shadow>
+
                     <VerticalStackLayout Spacing="10">
+
                         <Label Text="Find Nearby Calls"
                                FontSize="18"
-                               FontAttributes="Bold" />
+                               FontAttributes="Bold"
+                               TextColor="{StaticResource DashAccent}" />
 
                         <Label Text="Use your current location to view nearby calls on the map."
                                FontSize="12"
-                               TextColor="Gray" />
+                               TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
 
-                        <Button Text="Open Map"
-                                Clicked="OnOpenMapClicked" />
+                        <Button Text="Find Nearby Calls"
+                                Clicked="OnOpenMapClicked"
+                                CornerRadius="12"
+                                BackgroundColor="{StaticResource DashAccent}"
+                                TextColor="White" />
                     </VerticalStackLayout>
-                </Border>
-
-                <!-- OPTIONAL: Calls count (keep existing VM binding) -->
-                <Border Stroke="{AppThemeBinding Light=#e5e5e5, Dark=#333}"
-                        BackgroundColor="{AppThemeBinding Light=#ffffff, Dark=#1e1e1e}"
-                        StrokeThickness="1"
-                        Padding="16">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="10" />
-                    </Border.StrokeShape>
-
                 </Border>
 
             </VerticalStackLayout>

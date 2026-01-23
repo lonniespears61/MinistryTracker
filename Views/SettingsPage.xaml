@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8" ?>
+<!-- SettingsPage.xaml — Settings (modal) — 2026-01-22 -->
+
 <ContentPage
     x:Class="MinistryTracker.Views.SettingsPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
@@ -8,68 +10,160 @@
     x:DataType="vm:SettingsViewModel"
     Title="">
 
-    <!--
-        Shell.TitleView is the correct header slot for Shell + TabBar.
-        (NavigationPage.TitleView only works when wrapped in NavigationPage.)
-    -->
-    <Shell.TitleView>
-        <Grid ColumnDefinitions="*,Auto"
+    <!-- Modal Settings is opened via PushModalAsync(new NavigationPage(SettingsPage)).
+         So NavigationPage.TitleView is the correct header slot. -->
+    <NavigationPage.TitleView>
+        <Grid ColumnDefinitions="Auto,*,Auto"
               VerticalOptions="Center"
-              Padding="0,20,0,0">
+              Padding="0,10,0,0">
 
-            <Label Text="Settings"
+            <!-- Left spacer (keeps title centered) -->
+            <Grid />
+
+            <Label Grid.Column="1"
+                   Text="Settings"
                    FontSize="20"
                    FontAttributes="Bold"
-                   TextColor="Black"
+                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}"
                    VerticalOptions="Center"
-                   HorizontalOptions="Start" />
+                   HorizontalOptions="Center" />
 
-            <!-- Optional: keep Home icon if you want it (or remove later) -->
-            <ImageButton Grid.Column="1"
-                         Source="icon_home.png"
-                         WidthRequest="36"
-                         HeightRequest="36"
-                         BackgroundColor="Transparent"
-                         Clicked="OnHomeClicked"
-                         SemanticProperties.Description="Home" />
+            <Button Grid.Column="2"
+                    Text="Done"
+                    Padding="12,6"
+                    CornerRadius="12"
+                    BackgroundColor="{AppThemeBinding Light=#334155, Dark=#374151}"
+                    TextColor="White"
+                    Clicked="OnDoneClicked" />
         </Grid>
-    </Shell.TitleView>
+    </NavigationPage.TitleView>
 
-    <!-- Page layout: Content + Busy Overlay -->
-    <Grid>
+    <Grid BackgroundColor="{AppThemeBinding Light=#F5F6F4, Dark=#121212}">
 
-        <!-- MAIN CONTENT -->
         <ScrollView>
-            <VerticalStackLayout Padding="16" Spacing="18">
+            <VerticalStackLayout Padding="16" Spacing="16">
 
-                <!-- USER-FACING SETTINGS (placeholder for next session work) -->
-                <Border Stroke="{DynamicResource Gray300}"
-                        StrokeThickness="1"
-                        BackgroundColor="White"
-                        Padding="12"
-                        Margin="0,6">
+                <!-- PRODUCTION: Near Me / Map Settings (placeholder for next session fields) -->
+                <Border BackgroundColor="{AppThemeBinding Light=#EEF2F6, Dark=#1C1C1C}"
+                        Padding="14">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="10" />
+                        <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>
 
-                    <VerticalStackLayout Spacing="8">
-                        <Label Text="Map / Near Me"
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Near Me"
+                               FontSize="18"
                                FontAttributes="Bold"
-                               FontSize="18" />
-                        <Label Text="User-facing options will live here (radius, centering behavior, etc.)."
+                               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+
+                        <Label Text="Control how nearby calls are shown on the map."
                                FontSize="12"
-                               TextColor="Gray" />
+                               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+
+                        <!-- Placeholder rows (we'll wire these up next session) -->
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="10">
+
+                            <Label Text="Default radius"
+                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                            <Label Grid.Column="1"
+                                   Text="(coming)"
+                                   TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+
+                            <Label Grid.Row="1"
+                                   Text="Auto-center on my location"
+                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                            <Label Grid.Row="1"
+                                   Grid.Column="1"
+                                   Text="(coming)"
+                                   TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+                        </Grid>
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- DEV MODE TOGGLE (TEMP for testing; can be replaced with a hidden unlock later) -->
-                <Border Stroke="{DynamicResource Gray300}"
-                        StrokeThickness="1"
-                        BackgroundColor="White"
-                        Padding="12"
-                        Margin="0,6">
+                <!-- ABOUT (full) -->
+                <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
+        Padding="14"
+        Margin="0,6">
                     <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="10" />
+                        <RoundRectangle CornerRadius="16" />
+                    </Border.StrokeShape>
+
+                    <Border.Shadow>
+                        <Shadow Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
+                Offset="0,3"
+                Radius="10" />
+                    </Border.Shadow>
+
+                    <VerticalStackLayout Spacing="10">
+
+                        <!-- Header -->
+                        <Label Text="About"
+               FontSize="18"
+               FontAttributes="Bold"
+               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+
+                        <!-- App name / version -->
+                        <Label Text="{Binding AppName}"
+               FontSize="16"
+               FontAttributes="Bold"
+               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+
+                        <Label Text="{Binding VersionDisplay}"
+               FontSize="12"
+               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+
+                        <Label Text="{Binding Copyright}"
+               FontSize="12"
+               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+
+                        <!-- Short plain-language blurb -->
+                        <Label Text="Ministry Tracker helps you keep call notes and return visits."
+               FontSize="12"
+               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+
+                        <Label Text="Data is stored locally on your device unless you export or share it."
+               FontSize="12"
+               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+
+                        <!-- Legal wall behind Expander -->
+                        <toolkit:Expander>
+                            <toolkit:Expander.Header>
+                                <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
+                                    <Label Text="Legal &amp; Privacy"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                                    <Label Grid.Column="1"
+                           Text="Tap to expand"
+                           FontSize="12"
+                           TextColor="{AppThemeBinding Light=#64748B, Dark=#9CA3AF}" />
+                                </Grid>
+                            </toolkit:Expander.Header>
+
+                            <toolkit:Expander.Content>
+                                <Border BackgroundColor="{AppThemeBinding Light=#F1F5F9, Dark=#161616}"
+                        Padding="12"
+                        Margin="0,8,0,0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="12" />
+                                    </Border.StrokeShape>
+
+                                    <Label Text="{Binding LegalDisclaimers}"
+                           FontSize="12"
+                           LineBreakMode="WordWrap"
+                           TextColor="{AppThemeBinding Light=#334155, Dark=#D1D5DB}" />
+                                </Border>
+                            </toolkit:Expander.Content>
+                        </toolkit:Expander>
+
+                    </VerticalStackLayout>
+                </Border>
+
+
+                <!-- DEV MODE TOGGLE -->
+                <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
+                        Padding="14">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>
 
                     <Grid ColumnDefinitions="*,Auto"
@@ -77,45 +171,41 @@
                           RowSpacing="6">
 
                         <Label Text="Developer Mode"
+                               FontSize="18"
                                FontAttributes="Bold"
-                               FontSize="18" />
+                               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
 
-                        <Switch x:Name="DevModeSwitch"
-        Grid.Column="1"
-        IsToggled="{Binding IsDeveloperMode}" />
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding IsDeveloperMode}" />
 
                         <Label Grid.Row="1"
                                Grid.ColumnSpan="2"
-                               Text="Enables local DB tools (health, seed, reset). Hide this before release."
+                               Text="Shows local DB tools (health, seed, reset)."
                                FontSize="12"
-                               TextColor="Gray" />
+                               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
                     </Grid>
                 </Border>
 
-                <!-- DEV TOOLS WRAPPER
-                     EVERYTHING inside this container is hidden unless IsDeveloperMode == true -->
-                <VerticalStackLayout Spacing="18"
-                     IsVisible="{Binding IsDeveloperMode}">
+                <!-- DEV TOOLS (hidden unless IsDeveloperMode) -->
+                <VerticalStackLayout Spacing="16"
+                                     IsVisible="{Binding IsDeveloperMode}">
 
-                    <!-- CARD: Database Health -->
-                    <Border Stroke="{DynamicResource Gray300}"
-                            StrokeThickness="1"
-                            BackgroundColor="White"
-                            Padding="12"
-                            Margin="0,6">
+                    <!-- Database Health -->
+                    <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
+                            Padding="14">
                         <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="10" />
+                            <RoundRectangle CornerRadius="16" />
                         </Border.StrokeShape>
 
                         <toolkit:Expander IsExpanded="{Binding HealthExpanded}">
                             <toolkit:Expander.Header>
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                                     <Label Text="Database Health"
+                                           FontSize="18"
                                            FontAttributes="Bold"
-                                           FontSize="18" />
+                                           TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
 
-                                    <!-- Collapsed: show "Show DB Health" -->
-                                    <Button Text="Show DB Health"
+                                    <Button Text="Show"
                                             Command="{Binding ShowDbHealthCommand}"
                                             Grid.Column="1">
                                         <Button.Triggers>
@@ -127,7 +217,6 @@
                                         </Button.Triggers>
                                     </Button>
 
-                                    <!-- Expanded: show "Hide" -->
                                     <Button Text="Hide"
                                             Command="{Binding HideHealthCommand}"
                                             Grid.Column="1"
@@ -152,46 +241,42 @@
                         </toolkit:Expander>
                     </Border>
 
-                    <!-- CARD: Test Data -->
-                    <Border Stroke="{DynamicResource Gray300}"
-                            StrokeThickness="1"
-                            BackgroundColor="White"
-                            Padding="12"
-                            Margin="0,6">
+                    <!-- Seed Demo Data -->
+                    <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
+                            Padding="14">
                         <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="10" />
+                            <RoundRectangle CornerRadius="16" />
                         </Border.StrokeShape>
 
                         <VerticalStackLayout Spacing="8">
                             <Label Text="Test Data"
+                                   FontSize="18"
                                    FontAttributes="Bold"
-                                   FontSize="18" />
-                            <Label Text="Populate a small, deterministic set (safe to tap if empty)."
+                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                            <Label Text="Inserts a small demo set (safe if empty)."
                                    FontSize="12"
-                                   TextColor="Gray" />
+                                   TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
                             <Button Text="Re-seed Test Data"
                                     Command="{Binding SeedDemoDataCommand}" />
                         </VerticalStackLayout>
                     </Border>
 
-                    <!-- CARD: Beta Reset -->
-                    <Border Stroke="{DynamicResource Gray300}"
-                            StrokeThickness="1"
-                            BackgroundColor="White"
-                            Padding="12"
-                            Margin="0,6">
+                    <!-- Reset -->
+                    <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
+                            Padding="14">
                         <Border.StrokeShape>
-                            <RoundRectangle CornerRadius="10" />
+                            <RoundRectangle CornerRadius="16" />
                         </Border.StrokeShape>
 
                         <VerticalStackLayout Spacing="8">
                             <Label Text="Beta Reset"
+                                   FontSize="18"
                                    FontAttributes="Bold"
-                                   FontSize="18" />
-                            <Label Text="Clear the local DB to a clean slate. App will recreate schema on next run."
+                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                            <Label Text="Clears local data and rebuilds the DB."
                                    FontSize="12"
-                                   TextColor="Gray" />
+                                   TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
                             <Button Text="Reset Local Database"
                                     BackgroundColor="#b00020"
@@ -205,15 +290,14 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <!-- BUSY OVERLAY (blocks taps while an operation runs) -->
+        <!-- Busy overlay -->
         <Grid IsVisible="{Binding IsBusy}"
               BackgroundColor="#80000000">
-            <ActivityIndicator
-                IsRunning="True"
-                WidthRequest="44"
-                HeightRequest="44"
-                HorizontalOptions="Center"
-                VerticalOptions="Center" />
+            <ActivityIndicator IsRunning="True"
+                               WidthRequest="44"
+                               HeightRequest="44"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center" />
         </Grid>
 
     </Grid>

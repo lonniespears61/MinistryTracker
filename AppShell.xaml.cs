@@ -70,6 +70,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute(nameof(AddVisitPage), typeof(AddVisitPage));
         Routing.RegisterRoute(nameof(UpdateVisitPage), typeof(UpdateVisitPage));
 
-        // NOTE: Removed duplicate RegisterRoute(nameof(EditStudentPage), ...) which was redundant.
+        //Settings Page
+        Routing.RegisterRoute(nameof(SettingsPage), typeof(SettingsPage));
     }
 }

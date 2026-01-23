@@ -1,8 +1,10 @@
+// SettingsPage.xaml.cs — Settings (modal) — 2026-01-22
+
 using System;
 using System.Linq;
-using CommunityToolkit.Maui.Alerts;            // Toast, Snackbar
-using CommunityToolkit.Mvvm.Messaging;         // WeakReferenceMessenger
-using Microsoft.Maui.ApplicationModel;         // MainThread
+using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Maui.ApplicationModel;
 using Microsoft.Maui.Controls;
 using MinistryTracker.ViewModels;
 using MinistryTracker.ViewModels.Messages;
@@ -19,9 +21,6 @@ public partial class SettingsPage : ContentPage
         InitializeComponent();
         _vm = vm;
         BindingContext = _vm;
-
-        // You want Home, not the default back arrow
-        NavigationPage.SetHasBackButton(this, false);
     }
 
     private static Page? GetCurrentPage()
@@ -34,13 +33,11 @@ public partial class SettingsPage : ContentPage
         if (_messengerRegistered) return;
         _messengerRegistered = true;
 
-        // --- Toasts ---
         WeakReferenceMessenger.Default.Register<UiToastMessage>(this, async (_, msg) =>
         {
             await MainThread.InvokeOnMainThreadAsync(() => Toast.Make(msg.Value).Show());
         });
 
-        // --- Alerts ---
         WeakReferenceMessenger.Default.Register<UiAlertMessage>(this, async (_, msg) =>
         {
             var (title, message, cancel) = msg.Value;
@@ -53,7 +50,6 @@ public partial class SettingsPage : ContentPage
             });
         });
 
-        // --- Snackbars ---
         WeakReferenceMessenger.Default.Register<UiSnackbarMessage>(this, async (_, msg) =>
         {
             var (text, actionText, action) = msg.Value;
@@ -63,7 +59,7 @@ public partial class SettingsPage : ContentPage
                 UiSnackbarAction.ShowDbHealth => () =>
                 {
                     if (_vm.ShowDbHealthCommand.CanExecute(null))
-                        _ = _vm.ShowDbHealthCommand.ExecuteAsync(null); // fire-and-forget
+                        _ = _vm.ShowDbHealthCommand.ExecuteAsync(null);
                 }
                 ,
                 _ => null
@@ -76,7 +72,6 @@ public partial class SettingsPage : ContentPage
             });
         });
 
-        // --- Confirm (Yes/No) dialogs with callback to VM ---
         WeakReferenceMessenger.Default.Register<UiConfirmMessage>(this, async (_, msg) =>
         {
             var ok = await MainThread.InvokeOnMainThreadAsync(async () =>
@@ -105,8 +100,8 @@ public partial class SettingsPage : ContentPage
         _messengerRegistered = false;
     }
 
-    private async void OnHomeClicked(object sender, EventArgs e)
+    private async void OnDoneClicked(object sender, EventArgs e)
     {
-        await Navigation.PopToRootAsync(animated: true);
+        await Shell.Current.Navigation.PopModalAsync();
     }
 }
