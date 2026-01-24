@@ -1,25 +1,26 @@
-using System;
-using System.ComponentModel;
-using System.Runtime.CompilerServices;
-using System.Collections.Generic;
-using System.Linq;
-using Microsoft.Maui.Graphics;                  // Color/Colors
+// StudentViewModel.cs — Student row + detail presentation VM — 2026-01-24
+
+using Microsoft.Maui.Graphics;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Linq;
+using System.Runtime.CompilerServices;
 
 namespace MinistryTracker.ViewModels
 {
     /// <summary>
     /// ViewModel used to display student data in the UI.
-    /// Designed for use with lists, detail views, etc.
+    /// Designed for use with lists and detail views.
+    ///
+    /// List-only UI state:
+    /// - IsAlternate (row alternation for list readability)
     ///
     /// Added for "Tap = Next Visit" UX:
     /// - NextFutureVisitId
     /// - NextFutureVisitDisplay
-    ///
-    /// Populated by StudentsListViewModel so the UI can decide:
-    ///   • If a future visit exists -> open UpdateVisitPage
-    ///   • Otherwise -> open AddVisitPage
     /// </summary>
     public class StudentViewModel : INotifyPropertyChanged
     {
@@ -31,7 +32,30 @@ namespace MinistryTracker.ViewModels
         private Student _student;
 
         // ---------------------------------------------------------------------
-        // NEW: Next Visit fields (list-level UX state, not stored in DB)
+        // LIST-LEVEL UI STATE (not stored in DB)
+        // ---------------------------------------------------------------------
+
+        private bool _isAlternate;
+
+        /// <summary>
+        /// True if this row should render using the alternate background.
+        /// Set by StudentsListViewModel when building the list.
+        /// </summary>
+        public bool IsAlternate
+        {
+            get => _isAlternate;
+            set
+            {
+                if (_isAlternate != value)
+                {
+                    _isAlternate = value;
+                    OnPropertyChanged();
+                }
+            }
+        }
+
+        // ---------------------------------------------------------------------
+        // NEXT VISIT UX STATE (computed at list level)
         // ---------------------------------------------------------------------
 
         private int? _nextFutureVisitId;
@@ -70,9 +94,10 @@ namespace MinistryTracker.ViewModels
             }
         }
 
-        /// <summary>
-        /// Constructor accepts a Student model and exposes its data via bindable properties.
-        /// </summary>
+        // ---------------------------------------------------------------------
+        // CONSTRUCTION / MODEL WRAPPING
+        // ---------------------------------------------------------------------
+
         public StudentViewModel(Student student)
         {
             _student = student;
@@ -103,30 +128,33 @@ namespace MinistryTracker.ViewModels
                     OnPropertyChanged(nameof(Initials));
                     OnPropertyChanged(nameof(SubTitle));
 
-                    // Defensive refresh: not derived from the model, but safe to re-raise.
+                    // List-only derived state
                     OnPropertyChanged(nameof(NextFutureVisitId));
                     OnPropertyChanged(nameof(NextFutureVisitDisplay));
                 }
             }
         }
 
-        /// <summary>
-        /// Canonical student identifier (matches Student.StudentId exactly).
-        /// </summary>
+        // ---------------------------------------------------------------------
+        // SIMPLE MODEL PROJECTIONS
+        // ---------------------------------------------------------------------
+
         public int StudentId => _student.StudentId;
 
-        /// <summary>The student's name.</summary>
         public string Name => _student.Name;
 
-        /// <summary>Optional address for display.</summary>
         public string? StudyAddress => _student.StudyAddress;
 
-        public string FirstContactFormatted => $"Contacted: {_student.FirstContactDate:MMM dd, yyyy}";
+        public string FirstContactFormatted
+            => $"Contacted: {_student.FirstContactDate:MMM dd, yyyy}";
 
-        /// <summary>Study location as a string label.</summary>
-        public string StudyLocationLabel => _student.StudyLocationType.ToString();
+        public string StudyLocationLabel
+            => _student.StudyLocationType.ToString();
 
-        /// <summary>Border color representing the student's status.</summary>
+        // ---------------------------------------------------------------------
+        // STATUS / INTEREST VISUALS
+        // ---------------------------------------------------------------------
+
         public Color StatusBorderColor => _student.Status switch
         {
             StudentStatus.Active => Colors.ForestGreen,
@@ -135,25 +163,26 @@ namespace MinistryTracker.ViewModels
             _ => Colors.LightGray
         };
 
-        /// <summary>Background color representing the student's status.</summary>
         public Color StatusBackgroundColor => _student.Status switch
         {
-            StudentStatus.Active => Color.FromArgb("#e6ffe6"),         // Light green
-            StudentStatus.Paused => Color.FromArgb("#fffbe6"),         // Light orange
-            StudentStatus.NotInterested => Color.FromArgb("#f2f2f2"),  // Light gray
+            StudentStatus.Active => Color.FromArgb("#e6ffe6"),
+            StudentStatus.Paused => Color.FromArgb("#fffbe6"),
+            StudentStatus.NotInterested => Color.FromArgb("#f2f2f2"),
             _ => Colors.White
         };
 
-        /// <summary>Color code based on interest level (used for card styling).</summary>
         public Color InterestColor => _student.InterestLevel switch
         {
             InterestLevel.Potential => Colors.LightGray,
-            InterestLevel.Interested => Color.FromArgb("#FAFAD2"),     // LightGoldenrodYellow
+            InterestLevel.Interested => Color.FromArgb("#FAFAD2"),
             InterestLevel.Study => Colors.LightGreen,
             _ => Colors.White
         };
 
-        /// <summary>Initials derived from the student's name (used for avatar badges).</summary>
+        // ---------------------------------------------------------------------
+        // DISPLAY HELPERS
+        // ---------------------------------------------------------------------
+
         public string Initials
         {
             get
@@ -163,7 +192,6 @@ namespace MinistryTracker.ViewModels
 
                 var parts = _student.Name
                     .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .Where(p => p.Length > 0)
                     .Select(p => char.ToUpperInvariant(p[0]));
 
                 var initials = new string(parts.Take(2).ToArray());
@@ -171,7 +199,6 @@ namespace MinistryTracker.ViewModels
             }
         }
 
-        /// <summary>Supplemental text for list rows (language, first contact, etc.).</summary>
         public string SubTitle
         {
             get

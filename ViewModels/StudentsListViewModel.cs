@@ -1,14 +1,16 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿// StudentsListViewModel.cs — Students list orchestration VM — 2026-01-24
+
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Maui.ApplicationModel; // MainThread
 using Microsoft.Extensions.Logging;
+using MinistryTracker.Data;
+using MinistryTracker.Models.Enums;
+using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System;
-using System.Collections.Generic;
-using MinistryTracker.Models.Enums;   // StudentStatus
-using MinistryTracker.Data;
 
 namespace MinistryTracker.ViewModels;
 
@@ -28,7 +30,7 @@ public partial class StudentsListViewModel : ObservableObject
     [ObservableProperty]
     private string? searchText;
 
-    // ✅ default ON to mirror Dashboard behavior
+    // Default ON to mirror Dashboard behavior
     [ObservableProperty]
     private bool isActiveOnly = true;
 
@@ -44,6 +46,10 @@ public partial class StudentsListViewModel : ObservableObject
         _log = log;
     }
 
+    // ---------------------------------------------------------------------
+    // LOAD
+    // ---------------------------------------------------------------------
+
     public async Task LoadAsync()
     {
         if (IsBusy) return;
@@ -52,37 +58,22 @@ public partial class StudentsListViewModel : ObservableObject
         {
             IsBusy = true;
 
-            // ---------------------------------------------------------------------------------
-            // STEP 1: Fetch all students from DB.
-            // ---------------------------------------------------------------------------------
+            // STEP 1: Fetch all students
             var allStudents = await _data.GetStudentsAsync().ConfigureAwait(false);
 
-            // ---------------------------------------------------------------------------------
-            // STEP 2: For each student, fetch their next future visit.
-            //
-            // WHY:
-            // - UX rule: "Tap student = edit existing future visit if present; else schedule new."
-            // - We prepare that info here so the UI does NOT do DB calls on tap.
-            //
-            // PERFORMANCE:
-            // - Small dataset (<= 50 students): acceptable to prefetch.
-            // - Use Task.WhenAll so we don't await 50 calls sequentially.
-            //
-            // NOTE:
-            // - sqlite-net-pcl can handle this at your scale.
-            // - If you ever scale up, we'd switch to a single bulk query.
-            // ---------------------------------------------------------------------------------
+            // STEP 2: Fetch next future visit for each student (parallel)
             var nextVisitTasks = allStudents.Select(async s =>
             {
-                var next = await _data.GetNextFutureVisitForStudentAsync(s.StudentId).ConfigureAwait(false);
+                var next = await _data
+                    .GetNextFutureVisitForStudentAsync(s.StudentId)
+                    .ConfigureAwait(false);
+
                 return (Student: s, NextVisit: next);
             });
 
             var enriched = await Task.WhenAll(nextVisitTasks).ConfigureAwait(false);
 
-            // ---------------------------------------------------------------------------------
-            // STEP 3: Update observable collections on UI thread.
-            // ---------------------------------------------------------------------------------
+            // STEP 3: Update observable collections on UI thread
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
                 Students.Clear();
@@ -91,24 +82,11 @@ public partial class StudentsListViewModel : ObservableObject
                 {
                     var svm = new StudentViewModel(item.Student);
 
-                    // -------------------------------------------------------------------------
-                    // NEW: next-visit fields on each row VM
-                    //
-                    // StudentViewModel must expose these properties (we'll add them next if needed):
-                    //   int? NextFutureVisitId { get; set; }
-                    //   string NextFutureVisitDisplay { get; set; }
-                    //
-                    // WHY:
-                    // - Lets the Page decide navigation:
-                    //     if NextFutureVisitId != null => UpdateVisitPage?visitId=...
-                    //     else => AddVisitPage?studentId=...
-                    // - UI can also show a hint like "Next: Jan 12" right in the list.
-                    // -------------------------------------------------------------------------
-
                     if (item.NextVisit is not null)
                     {
                         svm.NextFutureVisitId = item.NextVisit.Id;
-                        svm.NextFutureVisitDisplay = $"Next: {item.NextVisit.ScheduledDateTime:g}";
+                        svm.NextFutureVisitDisplay =
+                            $"Next: {item.NextVisit.ScheduledDateTime:g}";
                     }
                     else
                     {
@@ -119,7 +97,6 @@ public partial class StudentsListViewModel : ObservableObject
                     Students.Add(svm);
                 }
 
-                // Apply current search/active filter to produce FilteredStudents.
                 ApplyFilter();
             });
         }
@@ -133,21 +110,26 @@ public partial class StudentsListViewModel : ObservableObject
         }
     }
 
-    // 🔄 Pull-to-refresh
+    // ---------------------------------------------------------------------
+    // REFRESH
+    // ---------------------------------------------------------------------
+
     [RelayCommand]
     private async Task Refresh()
     {
         await LoadAsync();
     }
 
-    // When user types or toggles Active Only, we filter locally (NO DB calls here).
+    // ---------------------------------------------------------------------
+    // FILTERING / SEARCH
+    // ---------------------------------------------------------------------
+
     partial void OnSearchTextChanged(string? value) => ApplyFilter();
     partial void OnIsActiveOnlyChanged(bool value) => ApplyFilter();
 
     private void ApplyFilter()
     {
-        // This method might be invoked from property setters on any context.
-        // Keep UI mutations on the UI thread.
+        // Ensure UI-thread mutation
         if (!MainThread.IsMainThread)
         {
             MainThread.BeginInvokeOnMainThread(ApplyFilter);
@@ -174,15 +156,20 @@ public partial class StudentsListViewModel : ObservableObject
             );
         }
 
-        // Optional: stable sort for nicer UX
+        // Stable sort for consistent UX
         query = query.OrderBy(s => s.Name ?? string.Empty);
 
-        // Replace contents without swapping the collection instance
+        // Rebuild filtered list AND assign row alternation
         FilteredStudents.Clear();
-        foreach (var s in query)
-            FilteredStudents.Add(s);
 
-        // Let the UI know counts changed
+        var index = 0;
+        foreach (var s in query)
+        {
+            s.IsAlternate = (index % 2 == 1);
+            FilteredStudents.Add(s);
+            index++;
+        }
+
         OnPropertyChanged(nameof(VisibleCount));
     }
 }

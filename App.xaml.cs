@@ -44,6 +44,12 @@ public partial class App : Application
         Resources[$"{keyPrefix}.BgTintBrush"] = new SolidColorBrush(p.BgTint);
         Resources[$"{keyPrefix}.CardTintBrush"] = new SolidColorBrush(p.CardTint);
         Resources[$"{keyPrefix}.BorderTintBrush"] = new SolidColorBrush(p.BorderTint);
+
+        // Gradients (new)
+        Resources[$"{keyPrefix}.SoftGradient"] = p.SoftGradient;
+        Resources[$"{keyPrefix}.AccentGradient"] = p.AccentGradient;
     }
+
+
 }
 

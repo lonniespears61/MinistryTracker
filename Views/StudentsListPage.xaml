@@ -1,37 +1,57 @@
-﻿<ContentPage
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<!-- StudentsListPage.xaml — Students list (Shell tab) — 2026-01-24 -->
+
+<ContentPage
     x:Class="MinistryTracker.Views.StudentsListPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
     x:DataType="viewmodels:StudentsListViewModel"
-    Title="Students">
+    Title="Students"
+    BackgroundColor="{StaticResource Students.BgTint}">
 
+    <!-- Shell header -->
     <Shell.TitleView>
-        <Grid VerticalOptions="Center" Padding="0,20,0,0">
+        <Grid VerticalOptions="Center"
+              Padding="0,20,0,0"
+              BackgroundColor="{StaticResource Students.Base}">
+
             <Label Text="Student List"
                    FontSize="18"
                    FontAttributes="Bold"
+                   TextColor="White"
                    VerticalOptions="Center" />
         </Grid>
     </Shell.TitleView>
 
-    <Grid RowDefinitions="Auto,Auto,*" Padding="16,12">
+    <Grid RowDefinitions="Auto,Auto,*"
+          Padding="16,12">
 
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,6,0,10">
+        <!-- Header row -->
+        <Grid Grid.Row="0"
+              ColumnDefinitions="*,Auto"
+              Margin="0,6,0,10">
+
             <Label Text="Students"
                    FontSize="24"
-                   VerticalOptions="Center" />
+                   VerticalOptions="Center"
+                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E6EEF9}" />
 
             <Button Text="Add"
                     Grid.Column="1"
-                    Clicked="OnAddStudentClicked" />
+                    Clicked="OnAddStudentClicked"
+                    CornerRadius="12"
+                    BackgroundColor="{StaticResource Students.Base}"
+                    TextColor="White" />
         </Grid>
 
+        <!-- Search -->
         <SearchBar Grid.Row="1"
                    Placeholder="Search students"
                    Text="{Binding SearchText}"
                    Margin="0,0,0,10" />
 
+        <!-- List -->
         <CollectionView x:Name="StudentsCollection"
                         Grid.Row="2"
                         ItemsSource="{Binding FilteredStudents}"
@@ -40,6 +60,7 @@
 
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="viewmodels:StudentViewModel">
+
                     <SwipeView>
 
                         <SwipeView.LeftItems>
@@ -60,39 +81,68 @@
                             </SwipeItems>
                         </SwipeView.RightItems>
 
-                        <Grid Padding="12,10" ColumnDefinitions="Auto,*,Auto">
+                        <!-- Soft row card with alternation -->
+                        <Border BackgroundColor="{StaticResource Students.CardTint}"
+                                Stroke="{StaticResource Students.BorderTint}"
+                                StrokeThickness="1"
+                                StrokeShape="RoundRectangle 14"
+                                Margin="0,0,0,10">
 
-                            <Border Padding="8"
-                                    WidthRequest="36"
-                                    HeightRequest="36"
-                                    VerticalOptions="Center"
-                                    BackgroundColor="#EEF2FF"
-                                    StrokeThickness="0">
-                                <Border.StrokeShape>
-                                    <RoundRectangle CornerRadius="18" />
-                                </Border.StrokeShape>
+                            <Border.Triggers>
+                                <DataTrigger TargetType="Border"
+                                             Binding="{Binding IsAlternate}"
+                                             Value="True">
+                                    <!-- alternate row background -->
+                                    <Setter Property="BackgroundColor"
+                                            Value="{StaticResource Students.BgTint}" />
+                                </DataTrigger>
+                            </Border.Triggers>
 
-                                <Label Text="{Binding Initials}"
-                                       FontAttributes="Bold"
-                                       HorizontalOptions="Center"
-                                       VerticalOptions="Center" />
-                            </Border>
+                            <Grid Padding="12,10"
+                                  ColumnDefinitions="Auto,*,Auto">
 
-                            <VerticalStackLayout Grid.Column="1" Spacing="2" Padding="12,0">
-                                <Label Text="{Binding Name}" FontSize="18" />
-                                <Label Text="{Binding SubTitle}" FontSize="12" />
-                            </VerticalStackLayout>
+                                <Border Padding="8"
+                                        WidthRequest="36"
+                                        HeightRequest="36"
+                                        VerticalOptions="Center"
+                                        BackgroundColor="#EEF2FF"
+                                        StrokeThickness="0">
+                                    <Border.StrokeShape>
+                                        <RoundRectangle CornerRadius="18" />
+                                    </Border.StrokeShape>
 
-                            <Image Grid.Column="2"
-                                   Source="chevron_right.png"
-                                   WidthRequest="16"
-                                   HeightRequest="16"
-                                   VerticalOptions="Center"
-                                   Opacity="0.5" />
+                                    <Label Text="{Binding Initials}"
+                                           FontAttributes="Bold"
+                                           HorizontalOptions="Center"
+                                           VerticalOptions="Center"
+                                           TextColor="{AppThemeBinding Light=#0F172A, Dark=#E6EEF9}" />
+                                </Border>
 
-                        </Grid>
+                                <VerticalStackLayout Grid.Column="1"
+                                                     Spacing="2"
+                                                     Padding="12,0">
+                                    <Label Text="{Binding Name}"
+                                           FontSize="18"
+                                           TextColor="{AppThemeBinding Light=#0F172A, Dark=#E6EEF9}" />
+
+                                    <Label Text="{Binding SubTitle}"
+                                           FontSize="12"
+                                           TextColor="{AppThemeBinding Light=#475569, Dark=#9AA6B2}" />
+                                </VerticalStackLayout>
+
+                                <Image Grid.Column="2"
+                                       Source="chevron_right.png"
+                                       WidthRequest="16"
+                                       HeightRequest="16"
+                                       VerticalOptions="Center"
+                                       Opacity="0.5" />
+
+                            </Grid>
+
+                        </Border>
 
                     </SwipeView>
+
                 </DataTemplate>
             </CollectionView.ItemTemplate>
 
