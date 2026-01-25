@@ -1,41 +1,28 @@
-using Microsoft.Maui.Controls;
-using MinistryTracker.Models;
-using MinistryTracker.ViewModels;
+// FileName: AddVisitPage.xaml.cs — Add visit page (cross-platform only) — 2026-01-24
 
-#if ANDROID
-using AndroidX.AppCompat.Widget;
-#endif
+using Microsoft.Maui.Controls;
+using System.Threading.Tasks;
 
 namespace MinistryTracker.Views
 {
     public partial class AddVisitPage : ContentPage
     {
-        private readonly AddVisitViewModel _vm;
-
         private bool _dateRequested;
         private bool _timeRequested;
 
-        public AddVisitPage(AddVisitViewModel vm)
+        public AddVisitPage(ViewModels.AddVisitViewModel vm)
         {
             InitializeComponent();
-            _vm = vm;
-            BindingContext = _vm;
+            BindingContext = vm;
 
-            // Try when the XAML view is loaded (layout tree ready)
             Loaded += (_, __) => TryOpenDateAsync();
-
-            // Try again as soon as a native handler exists (Android/iOS)
             VisitDatePicker.HandlerChanged += (_, __) => TryOpenDateAsync();
             VisitTimePicker.HandlerChanged += (_, __) => { if (_timeRequested) TryOpenTimeAsync(); };
         }
 
-        // Called by StudentsListPage before navigation to prefill the VM (also sets StudentName in VM)
-        public void Load(Student student) => _vm.Load(student);
-
         protected override void OnAppearing()
         {
             base.OnAppearing();
-            // Another safety net after page transition animations
             TryOpenDateAsync();
         }
 
@@ -44,48 +31,36 @@ namespace MinistryTracker.Views
             if (_dateRequested) return;
             _dateRequested = true;
 
-            // Let the page finish animating + layout settle
-            await Task.Delay(120);
+            await Task.Delay(200);
 
-            // 1) Cross-platform attempt
-            if (VisitDatePicker.Focus())
-                return;
-
-            // 2) Android: force the native click to open the picker
-#if ANDROID
-            var native = VisitDatePicker?.Handler?.PlatformView as AppCompatEditText;
-            if (native != null)
+            // Best-effort and safe: only attempt if handler exists
+            if (VisitDatePicker?.Handler is null)
             {
-                native.PerformClick();
+                _dateRequested = false;
                 return;
             }
-#endif
 
-            // If neither path worked, allow retry later (e.g., handler not ready yet)
-            _dateRequested = false;
+            VisitDatePicker.Focus();
         }
 
         private async void TryOpenTimeAsync()
         {
-            // time open only requested after date picked
-            await Task.Delay(100);
+            await Task.Delay(150);
 
-            if (VisitTimePicker.Focus())
+            if (VisitTimePicker?.Handler is null)
                 return;
 
-#if ANDROID
-            var native = VisitTimePicker?.Handler?.PlatformView as AppCompatEditText;
-            native?.PerformClick();
-#endif
+            VisitTimePicker.Focus();
         }
 
         private void OnVisitDateSelected(object sender, DateChangedEventArgs e)
         {
-            _vm.VisitDate = e.NewDate.Date;
+            if (BindingContext is not ViewModels.AddVisitViewModel vm)
+                return;
+
+            vm.VisitDate = e.NewDate.Date;
 
             VisitTimePicker.IsEnabled = true;
-
-            // Request opening time picker; HandlerChanged will re-try if not ready yet
             _timeRequested = true;
             TryOpenTimeAsync();
         }
