@@ -14,6 +14,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using SQLite;
+using MinistryTracker.Models;
 
 namespace MinistryTracker.Data
 {
@@ -37,8 +38,8 @@ namespace MinistryTracker.Data
                 ct.ThrowIfCancellationRequested();
 
                 // Delete child rows first to avoid FK issues.
-                await Db.DeleteAllAsync<Models.Visit>().ConfigureAwait(false);
-                await Db.DeleteAllAsync<Models.Student>().ConfigureAwait(false);
+                await Db.DeleteAllAsync<Visit>().ConfigureAwait(false);
+                await Db.DeleteAllAsync<Student>().ConfigureAwait(false);
 
                 // Optional: vacuum can be slow on mobile; keep it off unless needed.
                 // await Db.ExecuteAsync("VACUUM;").ConfigureAwait(false);
@@ -55,8 +56,8 @@ namespace MinistryTracker.Data
             {
                 ct.ThrowIfCancellationRequested();
 
-                var students = await Db.Table<Models.Student>().CountAsync().ConfigureAwait(false);
-                var visits = await Db.Table<Models.Visit>().CountAsync().ConfigureAwait(false);
+                var students = await Db.Table<Student>().CountAsync().ConfigureAwait(false);
+                var visits = await Db.Table<Visit>().CountAsync().ConfigureAwait(false);
 
                 return (GetDatabasePath(), students, visits);
             }, ct);

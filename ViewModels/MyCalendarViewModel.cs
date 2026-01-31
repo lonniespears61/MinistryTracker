@@ -1,5 +1,5 @@
 ﻿// ---------------------------------------------------------------------------------------------------------------------
-// MyCalendarViewModel.cs (DROP-IN - corrected)
+// MyCalendarViewModel.cs — Month calendar + agenda VM — 2026-01-30
 //
 // PURPOSE:
 // - Month-grid calendar (Sunday-first)
@@ -8,13 +8,14 @@
 // - Shows selected-day agenda list below the grid
 //
 // STANDARDS:
-// ✅ No Shell navigation in VM
+// ✅ No Shell navigation in VM (Page handles navigation)
 // ✅ One DB call for visits
 // ✅ All ObservableCollection mutations happen on UI thread
 // ✅ Small dataset => in-memory grouping is fine
 //
-// NOTE:
-// - Requires CalendarDayCellViewModel class (drop-in provided below)
+// SCHEDULING MODE:
+// - When opened from StudentsList swipe ("Schedule Visit"), the Page passes a studentId.
+// - VM stores PendingStudentId and raises ScheduleVisitRequested when user confirms a date.
 // ---------------------------------------------------------------------------------------------------------------------
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -51,6 +52,21 @@ public partial class MyCalendarViewModel : ObservableObject
     private CalendarDayCellViewModel? selectedDayCell;
 
     public ObservableCollection<VisitWithStudent> SelectedDayVisits { get; } = new();
+
+    // -------------------------------------------------------------------------------------------------------------
+    // Scheduling context (optional)
+    // -------------------------------------------------------------------------------------------------------------
+
+    // When set, the calendar is being used to pick a date for a specific student.
+    [ObservableProperty]
+    private int? pendingStudentId;
+
+    public bool IsSchedulingMode => PendingStudentId.HasValue;
+
+    // Page subscribes to this and performs navigation (keeps "no Shell nav in VM" rule).
+    public event Action<int, DateTime>? ScheduleVisitRequested;
+
+    // -------------------------------------------------------------------------------------------------------------
 
     public string MonthTitle => DisplayedMonth.ToString("MMMM yyyy");
 
@@ -146,12 +162,32 @@ public partial class MyCalendarViewModel : ObservableObject
         RaiseHeaderProps();
     }
 
-    // Optional placeholder command (no nav in VM)
+    // -----------------------------------------------------------------------------------------------------------------
+    // SCHEDULING MODE ENTRY (called by Page when navigated with studentId)
+    // -----------------------------------------------------------------------------------------------------------------
+
+    public void BeginSchedulingForStudent(int studentId)
+    {
+        PendingStudentId = studentId > 0 ? studentId : null;
+        OnPropertyChanged(nameof(IsSchedulingMode));
+    }
+
+    public void ClearSchedulingContext()
+    {
+        PendingStudentId = null;
+        OnPropertyChanged(nameof(IsSchedulingMode));
+    }
+
+    // Optional placeholder command (no nav in VM).
+    // Page subscribes to ScheduleVisitRequested and navigates accordingly.
     [RelayCommand]
     private void AddVisitForSelectedDay()
     {
-        // Intentionally empty: page will decide navigation.
-        // Later: we can raise an event/callback with the selected date.
+        if (PendingStudentId is null) return;
+        if (SelectedDayCell is null || SelectedDayCell.IsPlaceholder) return;
+
+        // Date-only; AddVisitPage will ask for time/place.
+        ScheduleVisitRequested?.Invoke(PendingStudentId.Value, SelectedDayCell.Date.Date);
     }
 
     // -----------------------------------------------------------------------------------------------------------------
@@ -264,6 +300,7 @@ public partial class MyCalendarViewModel : ObservableObject
         var key = SelectedDayCell.Date.Date;
 
         if (_visitsByDate.TryGetValue(key, out var list))
+
         {
             foreach (var v in list)
                 SelectedDayVisits.Add(v);
@@ -278,5 +315,6 @@ public partial class MyCalendarViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowTodayButton));
         OnPropertyChanged(nameof(SelectedDayTitle));
         OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
+        OnPropertyChanged(nameof(IsSchedulingMode));
     }
 }

@@ -1,9 +1,10 @@
-﻿// StudentsListViewModel.cs — Students list orchestration VM — 2026-01-24
+﻿// StudentsListViewModel.cs — Students list orchestration VM — 2026-01-24 (updated)
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Maui.ApplicationModel; // MainThread
 using Microsoft.Extensions.Logging;
+using Microsoft.Maui.ApplicationModel; // MainThread
+using Microsoft.Maui.Controls;          // Shell, DisplayActionSheet
 using MinistryTracker.Data;
 using MinistryTracker.Models.Enums;
 using System;
@@ -37,7 +38,6 @@ public partial class StudentsListViewModel : ObservableObject
     [ObservableProperty]
     private bool isBusy;
 
-    // Handy for showing counts in the UI if desired
     public int VisibleCount => FilteredStudents.Count;
 
     public StudentsListViewModel(DataService data, ILogger<StudentsListViewModel>? log = null)
@@ -85,8 +85,7 @@ public partial class StudentsListViewModel : ObservableObject
                     if (item.NextVisit is not null)
                     {
                         svm.NextFutureVisitId = item.NextVisit.Id;
-                        svm.NextFutureVisitDisplay =
-                            $"Next: {item.NextVisit.ScheduledDateTime:g}";
+                        svm.NextFutureVisitDisplay = $"Next: {item.NextVisit.ScheduledDateTime:g}";
                     }
                     else
                     {
@@ -121,6 +120,80 @@ public partial class StudentsListViewModel : ObservableObject
     }
 
     // ---------------------------------------------------------------------
+    // SWIPE ACTION: Schedule Visit (Option 1)
+    // ---------------------------------------------------------------------
+    // IMPORTANT: The list binds to StudentViewModel, so the command should too.
+    [RelayCommand]
+    private async Task ScheduleVisit(StudentViewModel? svm)
+    {
+        if (svm?.Model is null) return;
+
+        try
+        {
+            var studentId = svm.Model.StudentId;
+
+            // Always re-check the DB to avoid stale UI state
+            var existing = await _data
+                .GetNextFutureVisitForStudentAsync(studentId)
+                .ConfigureAwait(false);
+
+            if (existing is null)
+            {
+                // No existing appointment -> go straight to Add Visit
+                await MainThread.InvokeOnMainThreadAsync(async () =>
+                {
+                    // Route example. Replace with your real route names.
+                    await Shell.Current.GoToAsync($"AddVisitPage?studentId={studentId}");
+                });
+                return;
+            }
+
+            var when = existing.ScheduledDateTime;
+            var message = $"This student already has a visit scheduled for {when:ddd, MMM d, yyyy} at {when:h:mm tt}.";
+
+            // Use DisplayActionSheet for the 3-way choice.
+            // NOTE: DisplayActionSheet must run on UI thread.
+            var choice = await MainThread.InvokeOnMainThreadAsync(() =>
+                Application.Current!.MainPage!.DisplayActionSheet(
+                    "Visit already scheduled",
+                    "Cancel",
+                    null,
+                    "Edit existing",
+                    "Replace it"
+                ));
+
+            switch (choice)
+            {
+                case "Edit existing":
+                    await MainThread.InvokeOnMainThreadAsync(async () =>
+                    {
+                        await Shell.Current.GoToAsync($"EditVisitPage?visitId={existing.Id}");
+                    });
+                    break;
+
+                case "Replace it":
+                    // Prefer cancel/replace over delete (keeps history honest)
+                    await _data.CancelVisitAsync(existing.Id, reason: "Replaced by new scheduled visit")
+                              .ConfigureAwait(false);
+
+                    await MainThread.InvokeOnMainThreadAsync(async () =>
+                    {
+                        await Shell.Current.GoToAsync($"AddVisitPage?studentId={studentId}");
+                    });
+                    break;
+
+                default:
+                    // Cancel or dismissed -> do nothing
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            _log?.LogError(ex, "ScheduleVisit failed.");
+        }
+    }
+
+    // ---------------------------------------------------------------------
     // FILTERING / SEARCH
     // ---------------------------------------------------------------------
 
@@ -129,7 +202,6 @@ public partial class StudentsListViewModel : ObservableObject
 
     private void ApplyFilter()
     {
-        // Ensure UI-thread mutation
         if (!MainThread.IsMainThread)
         {
             MainThread.BeginInvokeOnMainThread(ApplyFilter);
@@ -156,10 +228,8 @@ public partial class StudentsListViewModel : ObservableObject
             );
         }
 
-        // Stable sort for consistent UX
         query = query.OrderBy(s => s.Name ?? string.Empty);
 
-        // Rebuild filtered list AND assign row alternation
         FilteredStudents.Clear();
 
         var index = 0;

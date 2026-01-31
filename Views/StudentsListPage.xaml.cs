@@ -108,37 +108,40 @@ namespace MinistryTracker.Views
         // SWIPE ACTIONS (Edit / Add Visit)
         // ------------------------------------------------------------
 
-        private static Student? TryGetStudentFromSwipeSender(object sender)
+        private Student? TryGetStudentFromSwipeSender(object sender)
         {
-            if (sender is not SwipeItem swipeItem) return null;
+            // NEW: handle SwipeItemView (what you're using now)
+            if (sender is SwipeItemView siv)
+                return siv.CommandParameter as Student;
 
-            // Prefer CommandParameter if set
-            if (swipeItem.CommandParameter is Student s1) return s1;
+            // Keep compatibility if any old SwipeItem still exists somewhere
+            if (sender is SwipeItem si)
+                return si.CommandParameter as Student;
 
-            // Otherwise BindingContext may be StudentViewModel
-            if (swipeItem.BindingContext is StudentViewModel svm) return svm.Model;
-
-            // Or BindingContext may be Student (depending on template)
-            return swipeItem.BindingContext as Student;
+            return null;
         }
 
-        private async void OnAddVisitSwipeInvoked(object sender, EventArgs e)
+        
+
+        private async void OnScheduleVisitSwipeInvoked(object sender, EventArgs e)
         {
             try
             {
                 var student = TryGetStudentFromSwipeSender(sender);
                 if (student is null) return;
 
-                // Swipe "Add Visit" always schedules a new visit (intentional override).
-                await GoToAddVisitAsync(student.StudentId);
+                // This should navigate to your Calendar tab/page.
+                // IMPORTANT: replace "MyCalendarPage" with your actual page name if different.
+                await Shell.Current.GoToAsync(
+                    $"{nameof(MyCalendarPage)}?mode=schedule&studentId={student.StudentId}");
             }
-            catch (Exception ex)
+            catch
             {
-                System.Diagnostics.Debug.WriteLine(ex);
-                await DisplayAlert("Oops", "Something went wrong. Try again.", "OK");
+                await DisplayAlert("Something Broke", "Back up and try again", "OK");
             }
         }
 
+       
         private async void OnEditSwipeInvoked(object sender, EventArgs e)
         {
             try

@@ -1,18 +1,7 @@
 ﻿// ---------------------------------------------------------------------------------------------------------------------
-// DataService.cs (base) – corrected drop-in
-//
-// Fixes / Adds:
-// ✅ PRAGMAs: foreign_keys, WAL, synchronous
-// ✅ Schema create + index
-// ✅ user_version
-// ✅ EnsureInitThen helpers (ONLY CancellationToken versions)
-// ✅ GetStudentByIdAsync(studentId, ct)
-// ✅ GetNextFutureVisitForStudentAsync(studentId, ct)
-//
-// Notes:
-// - sqlite-net-pcl uses the [Table(...)] attributes on your models.
-// - Student table name: "Students"
-// - Visit table name: "Visit"
+// DataService.cs (base)
+// Database connection + initialization + EnsureInitThen helpers.
+// Keep this file boring: no Student/Visit feature queries here.
 // ---------------------------------------------------------------------------------------------------------------------
 
 using System;
@@ -21,7 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Maui.Storage;
 using SQLite;
-using MinistryTracker.Models; // ✅ Student, Visit live here
+using MinistryTracker.Models;
 
 namespace MinistryTracker.Data
 {
@@ -33,7 +22,8 @@ namespace MinistryTracker.Data
         private readonly SemaphoreSlim _gate = new(1, 1);
         private bool _initialized;
 
-        private SQLiteAsyncConnection Db =>
+        // NOTE: other partials should use Db (not _database directly).
+        internal SQLiteAsyncConnection Db =>
             _database ?? throw new InvalidOperationException("Database not initialized. Call InitializeAsync() first.");
 
         /// <summary>
@@ -63,16 +53,13 @@ namespace MinistryTracker.Data
                     _ = await _database.ExecuteScalarAsync<long>("PRAGMA foreign_keys = ON;").ConfigureAwait(false);
                     _ = await _database.ExecuteScalarAsync<string>("PRAGMA journal_mode = WAL;").ConfigureAwait(false);
                     _ = await _database.ExecuteScalarAsync<long>("PRAGMA synchronous = NORMAL;").ConfigureAwait(false);
-
-                    // Optional (usually fine):
-                    // await _database.ExecuteAsync("PRAGMA busy_timeout = 5000;").ConfigureAwait(false);
                 }
                 catch (SQLiteException)
                 {
-                    // Don't fail startup over PRAGMAs; log if you add logging later.
+                    // Don't fail startup over PRAGMAs; add logging later if desired.
                 }
 
-                // ---- Schema: create tables & indexes -----------------------------------
+                // ---- Schema: create tables & indexes ----------------------------------
                 await Db.CreateTableAsync<Student>().ConfigureAwait(false);
                 await Db.CreateTableAsync<Visit>().ConfigureAwait(false);
 
@@ -80,7 +67,7 @@ namespace MinistryTracker.Data
                     "CREATE INDEX IF NOT EXISTS IX_Visit_StudentDate ON Visit(StudentId, ScheduledDateTime)"
                 ).ConfigureAwait(false);
 
-                // ---- Versioning hook (for future migrations) ---------------------------
+                // ---- Versioning hook (for future migrations) --------------------------
                 await _database.ExecuteAsync("PRAGMA user_version = 1;").ConfigureAwait(false);
 
                 _initialized = true;
@@ -96,54 +83,21 @@ namespace MinistryTracker.Data
             Path.Combine(FileSystem.AppDataDirectory, DbFileName);
 
         // -------------------------------------------------------------------------------------------------------------
-        // EnsureInitThen helpers (ONLY CancellationToken versions)
+        // EnsureInitThen helpers (CancellationToken versions)
         // -------------------------------------------------------------------------------------------------------------
-        private async Task<T> EnsureInitThen<T>(Func<Task<T>> work, CancellationToken ct = default)
+
+        internal async Task<T> EnsureInitThen<T>(Func<Task<T>> work, CancellationToken ct = default)
         {
             if (!_initialized) await InitializeAsync().ConfigureAwait(false);
             ct.ThrowIfCancellationRequested();
             return await work().ConfigureAwait(false);
         }
 
-        private async Task EnsureInitThen(Func<Task> work, CancellationToken ct = default)
+        internal async Task EnsureInitThen(Func<Task> work, CancellationToken ct = default)
         {
             if (!_initialized) await InitializeAsync().ConfigureAwait(false);
             ct.ThrowIfCancellationRequested();
             await work().ConfigureAwait(false);
-        }
-
-        // -------------------------------------------------------------------------------------------------------------
-        // Students
-        // -------------------------------------------------------------------------------------------------------------
-
-        /// <summary>
-        /// Load one student by ID (throws if not found).
-        /// NOTE: filters out IsDeleted = true by default.
-        /// </summary>
-      
-
-        // -------------------------------------------------------------------------------------------------------------
-        // Visits – supports "Tap student => edit existing future visit if present; else schedule new"
-        // -------------------------------------------------------------------------------------------------------------
-
-        /// <summary>
-        /// Returns the next scheduled (future) visit for a student, or null if none exist.
-        /// Efficient due to IX_Visit_StudentDate (StudentId, ScheduledDateTime).
-        /// </summary>
-        public Task<Visit?> GetNextFutureVisitForStudentAsync(int studentId, CancellationToken ct = default)
-        {
-            return EnsureInitThen(async () =>
-            {
-                ct.ThrowIfCancellationRequested();
-
-                var now = DateTime.Now;
-
-                return await Db.Table<Visit>()
-                    .Where(v => v.StudentId == studentId && v.ScheduledDateTime > now)
-                    .OrderBy(v => v.ScheduledDateTime)
-                    .FirstOrDefaultAsync()
-                    .ConfigureAwait(false);
-            }, ct);
         }
     }
 }

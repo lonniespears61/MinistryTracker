@@ -64,23 +64,42 @@
                     <SwipeView>
 
                         <SwipeView.LeftItems>
-                            <SwipeItems Mode="Execute">
-                                <SwipeItem Text="Edit"
-                                           BackgroundColor="#3B82F6"
-                                           Invoked="OnEditSwipeInvoked"
-                                           CommandParameter="{Binding Model}" />
+                            <SwipeItems Mode="Reveal">
+                                <SwipeItemView Invoked="OnEditSwipeInvoked"
+                       CommandParameter="{Binding Model}">
+                                    <Grid BackgroundColor="#3B82F6" Padding="16" WidthRequest="140">
+                                        <VerticalStackLayout Spacing="6"
+                                     HorizontalOptions="Center"
+                                     VerticalOptions="Center">
+                                            <Label Text="Edit Student"
+                           TextColor="White"
+                           FontAttributes="Bold"
+                           FontSize="12"
+                           HorizontalTextAlignment="Center" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </SwipeItemView>
                             </SwipeItems>
                         </SwipeView.LeftItems>
 
                         <SwipeView.RightItems>
-                            <SwipeItems Mode="Execute">
-                                <SwipeItem Text="Add Visit"
-                                           BackgroundColor="#10B981"
-                                           Invoked="OnAddVisitSwipeInvoked"
-                                           CommandParameter="{Binding Model}" />
+                            <SwipeItems Mode="Reveal">
+                                <SwipeItemView Invoked="OnScheduleVisitSwipeInvoked"
+                       CommandParameter="{Binding Model}">
+                                    <Grid BackgroundColor="#10B981" Padding="16" WidthRequest="140">
+                                        <VerticalStackLayout Spacing="6"
+                                     HorizontalOptions="Center"
+                                     VerticalOptions="Center">
+                                            <Label Text="Schedule Visit"
+                           TextColor="White"
+                           FontAttributes="Bold"
+                           FontSize="12"
+                           HorizontalTextAlignment="Center" />
+                                        </VerticalStackLayout>
+                                    </Grid>
+                                </SwipeItemView>
                             </SwipeItems>
                         </SwipeView.RightItems>
-
                         <!-- Soft row card with alternation -->
                         <Border BackgroundColor="{StaticResource Students.CardTint}"
                                 Stroke="{StaticResource Students.BorderTint}"
