@@ -1,21 +1,6 @@
 ﻿// ---------------------------------------------------------------------------------------------------------------------
-// MyCalendarViewModel.cs — Month calendar + agenda VM — 2026-01-30
-//
-// PURPOSE:
-// - Month-grid calendar (Sunday-first)
-// - Loads FUTURE visits across all students via DataService.GetFutureVisitsWithStudentsAsync()
-// - Builds DayCells incl. placeholder padding cells
-// - Shows selected-day agenda list below the grid
-//
-// STANDARDS:
-// ✅ No Shell navigation in VM (Page handles navigation)
-// ✅ One DB call for visits
-// ✅ All ObservableCollection mutations happen on UI thread
-// ✅ Small dataset => in-memory grouping is fine
-//
-// SCHEDULING MODE:
-// - When opened from StudentsList swipe ("Schedule Visit"), the Page passes a studentId.
-// - VM stores PendingStudentId and raises ScheduleVisitRequested when user confirms a date.
+// MyCalendarViewModel.cs — Month calendar VM — 2026-02-01
+// Purpose: Month grid + agenda + optional "schedule mode" when launched from a student.
 // ---------------------------------------------------------------------------------------------------------------------
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -40,33 +25,33 @@ public partial class MyCalendarViewModel : ObservableObject
     private List<VisitWithStudent> _allFutureVisits = new();
     private readonly Dictionary<DateTime, List<VisitWithStudent>> _visitsByDate = new();
 
-    [ObservableProperty]
-    private DateTime displayedMonth; // normalized to the 1st
+    // -------------------------
+    // Schedule Mode (context)
+    // -------------------------
 
-    [ObservableProperty]
-    private bool isBusy;
+    [ObservableProperty] private bool isSchedulingMode;
+    [ObservableProperty] private int? schedulingStudentId;
+    [ObservableProperty] private string schedulingStudentName = string.Empty;
+
+    public string SchedulingBannerText =>
+        IsSchedulingMode && SchedulingStudentId is not null
+            ? $"Scheduling a new visit for: {SchedulingStudentName}"
+            : string.Empty;
+
+    public event Action<int, DateTime>? ScheduleVisitRequested;
+
+    // -------------------------
+    // Calendar state
+    // -------------------------
+
+    [ObservableProperty] private DateTime displayedMonth; // normalized to the 1st
+    [ObservableProperty] private bool isBusy;
 
     public ObservableCollection<CalendarDayCellViewModel> DayCells { get; } = new();
 
-    [ObservableProperty]
-    private CalendarDayCellViewModel? selectedDayCell;
+    [ObservableProperty] private CalendarDayCellViewModel? selectedDayCell;
 
     public ObservableCollection<VisitWithStudent> SelectedDayVisits { get; } = new();
-
-    // -------------------------------------------------------------------------------------------------------------
-    // Scheduling context (optional)
-    // -------------------------------------------------------------------------------------------------------------
-
-    // When set, the calendar is being used to pick a date for a specific student.
-    [ObservableProperty]
-    private int? pendingStudentId;
-
-    public bool IsSchedulingMode => PendingStudentId.HasValue;
-
-    // Page subscribes to this and performs navigation (keeps "no Shell nav in VM" rule).
-    public event Action<int, DateTime>? ScheduleVisitRequested;
-
-    // -------------------------------------------------------------------------------------------------------------
 
     public string MonthTitle => DisplayedMonth.ToString("MMMM yyyy");
 
@@ -79,7 +64,10 @@ public partial class MyCalendarViewModel : ObservableObject
         DisplayedMonth.Year != DateTime.Today.Year || DisplayedMonth.Month != DateTime.Today.Month;
 
     public bool CanAddVisitForSelectedDay =>
-        SelectedDayCell is not null && !SelectedDayCell.IsPlaceholder;
+        IsSchedulingMode &&
+        SchedulingStudentId is not null &&
+        SelectedDayCell is not null &&
+        !SelectedDayCell.IsPlaceholder;
 
     public MyCalendarViewModel(DataService data, ILogger<MyCalendarViewModel>? log = null)
     {
@@ -89,9 +77,9 @@ public partial class MyCalendarViewModel : ObservableObject
         DisplayedMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
     }
 
-    // -----------------------------------------------------------------------------------------------------------------
-    // PUBLIC LOAD
-    // -----------------------------------------------------------------------------------------------------------------
+    // -------------------------
+    // Public Load
+    // -------------------------
 
     public async Task LoadAsync()
     {
@@ -101,12 +89,10 @@ public partial class MyCalendarViewModel : ObservableObject
         {
             IsBusy = true;
 
-            // DB call off UI thread is fine.
             _allFutureVisits = await _data.GetFutureVisitsWithStudentsAsync().ConfigureAwait(false);
 
             BuildVisitsLookup(_allFutureVisits);
 
-            // UI updates MUST happen on UI thread.
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
                 BuildMonthGrid();
@@ -124,79 +110,73 @@ public partial class MyCalendarViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private async Task Refresh() => await LoadAsync();
-
-    // -----------------------------------------------------------------------------------------------------------------
-    // MONTH NAVIGATION
-    // -----------------------------------------------------------------------------------------------------------------
-
-    [RelayCommand]
-    private void PrevMonth() => SetDisplayedMonth(DisplayedMonth.AddMonths(-1));
-
-    [RelayCommand]
-    private void NextMonth() => SetDisplayedMonth(DisplayedMonth.AddMonths(1));
-
-    [RelayCommand]
-    private void GoToToday() => SetDisplayedMonth(DateTime.Today);
-
-    private void SetDisplayedMonth(DateTime anyDateInMonth)
+    public async Task BeginSchedulingForStudentAsync(int studentId)
     {
-        // Normalize to the 1st of that month
-        DisplayedMonth = new DateTime(anyDateInMonth.Year, anyDateInMonth.Month, 1);
-
-        // UI collections should be touched on UI thread.
-        if (!MainThread.IsMainThread)
+        try
         {
-            MainThread.BeginInvokeOnMainThread(() =>
+            var student = await _data.GetStudentByIdAsync(studentId).ConfigureAwait(false);
+
+            await MainThread.InvokeOnMainThreadAsync(() =>
             {
-                BuildMonthGrid();
-                SyncAgendaForSelection();
-                RaiseHeaderProps();
+                IsSchedulingMode = true;
+                SchedulingStudentId = studentId;
+                SchedulingStudentName = student?.Name ?? $"Student #{studentId}";
+
+                OnPropertyChanged(nameof(SchedulingBannerText));
+                OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
             });
-            return;
         }
+        catch
+        {
+            // If lookup fails, still allow scheduling, just without a name.
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                IsSchedulingMode = true;
+                SchedulingStudentId = studentId;
+                SchedulingStudentName = $"Student #{studentId}";
 
-        BuildMonthGrid();
-        SyncAgendaForSelection();
-        RaiseHeaderProps();
-    }
-
-    // -----------------------------------------------------------------------------------------------------------------
-    // SCHEDULING MODE ENTRY (called by Page when navigated with studentId)
-    // -----------------------------------------------------------------------------------------------------------------
-
-    public void BeginSchedulingForStudent(int studentId)
-    {
-        PendingStudentId = studentId > 0 ? studentId : null;
-        OnPropertyChanged(nameof(IsSchedulingMode));
+                OnPropertyChanged(nameof(SchedulingBannerText));
+                OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
+            });
+        }
     }
 
     public void ClearSchedulingContext()
     {
-        PendingStudentId = null;
-        OnPropertyChanged(nameof(IsSchedulingMode));
+        IsSchedulingMode = false;
+        SchedulingStudentId = null;
+        SchedulingStudentName = string.Empty;
+
+        OnPropertyChanged(nameof(SchedulingBannerText));
+        OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
     }
 
-    // Optional placeholder command (no nav in VM).
-    // Page subscribes to ScheduleVisitRequested and navigates accordingly.
+    // -------------------------
+    // Commands
+    // -------------------------
+
+    [RelayCommand] private async Task Refresh() => await LoadAsync();
+
+    [RelayCommand] private void PrevMonth() => SetDisplayedMonth(DisplayedMonth.AddMonths(-1));
+    [RelayCommand] private void NextMonth() => SetDisplayedMonth(DisplayedMonth.AddMonths(1));
+    [RelayCommand] private void GoToToday() => SetDisplayedMonth(DateTime.Today);
+
     [RelayCommand]
     private void AddVisitForSelectedDay()
     {
-        if (PendingStudentId is null) return;
+        if (!CanAddVisitForSelectedDay) return;
+        if (SchedulingStudentId is null) return;
         if (SelectedDayCell is null || SelectedDayCell.IsPlaceholder) return;
 
-        // Date-only; AddVisitPage will ask for time/place.
-        ScheduleVisitRequested?.Invoke(PendingStudentId.Value, SelectedDayCell.Date.Date);
+        ScheduleVisitRequested?.Invoke(SchedulingStudentId.Value, SelectedDayCell.Date.Date);
     }
 
-    // -----------------------------------------------------------------------------------------------------------------
-    // SELECTION CHANGED
-    // -----------------------------------------------------------------------------------------------------------------
+    // -------------------------
+    // Selection changed
+    // -------------------------
 
     partial void OnSelectedDayCellChanged(CalendarDayCellViewModel? value)
     {
-        // Toggle selection visuals.
         foreach (var cell in DayCells)
             cell.IsSelected = false;
 
@@ -209,9 +189,9 @@ public partial class MyCalendarViewModel : ObservableObject
         OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
     }
 
-    // -----------------------------------------------------------------------------------------------------------------
-    // INTERNAL HELPERS
-    // -----------------------------------------------------------------------------------------------------------------
+    // -------------------------
+    // Internals
+    // -------------------------
 
     private void BuildVisitsLookup(List<VisitWithStudent> rows)
     {
@@ -241,8 +221,7 @@ public partial class MyCalendarViewModel : ObservableObject
         var first = new DateTime(DisplayedMonth.Year, DisplayedMonth.Month, 1);
         var daysInMonth = DateTime.DaysInMonth(first.Year, first.Month);
 
-        // Sunday-first offset: Sunday=0..Saturday=6
-        var leadingPlaceholders = (int)first.DayOfWeek;
+        var leadingPlaceholders = (int)first.DayOfWeek; // Sunday-first
 
         for (int i = 0; i < leadingPlaceholders; i++)
             DayCells.Add(CalendarDayCellViewModel.Placeholder());
@@ -258,33 +237,33 @@ public partial class MyCalendarViewModel : ObservableObject
             DayCells.Add(cell);
         }
 
-        // Fill last row to full week for nicer grid symmetry
         while (DayCells.Count % 7 != 0)
             DayCells.Add(CalendarDayCellViewModel.Placeholder());
 
-        // Preserve selection if still visible in this month
-        if (SelectedDayCell is not null && !SelectedDayCell.IsPlaceholder)
-        {
-            var oldDate = SelectedDayCell.Date;
-            var match = DayCells.FirstOrDefault(c => !c.IsPlaceholder && c.Date == oldDate);
-            if (match is not null)
-            {
-                SelectedDayCell = match;
-                return;
-            }
-        }
-
-        // Default selection: select today if current month
         if (DisplayedMonth.Year == DateTime.Today.Year && DisplayedMonth.Month == DateTime.Today.Month)
-            SelectTodayIfVisible();
-        else
+            SelectedDayCell = DayCells.FirstOrDefault(c => !c.IsPlaceholder && c.Date == DateTime.Today);
+        else if (SelectedDayCell is null || SelectedDayCell.IsPlaceholder)
             SelectedDayCell = null;
     }
 
-    private void SelectTodayIfVisible()
+    private void SetDisplayedMonth(DateTime anyDateInMonth)
     {
-        var today = DateTime.Today;
-        SelectedDayCell = DayCells.FirstOrDefault(c => !c.IsPlaceholder && c.Date == today);
+        DisplayedMonth = new DateTime(anyDateInMonth.Year, anyDateInMonth.Month, 1);
+
+        if (!MainThread.IsMainThread)
+        {
+            MainThread.BeginInvokeOnMainThread(() =>
+            {
+                BuildMonthGrid();
+                SyncAgendaForSelection();
+                RaiseHeaderProps();
+            });
+            return;
+        }
+
+        BuildMonthGrid();
+        SyncAgendaForSelection();
+        RaiseHeaderProps();
     }
 
     private void SyncAgendaForSelection()
@@ -300,7 +279,6 @@ public partial class MyCalendarViewModel : ObservableObject
         var key = SelectedDayCell.Date.Date;
 
         if (_visitsByDate.TryGetValue(key, out var list))
-
         {
             foreach (var v in list)
                 SelectedDayVisits.Add(v);
@@ -315,6 +293,6 @@ public partial class MyCalendarViewModel : ObservableObject
         OnPropertyChanged(nameof(ShowTodayButton));
         OnPropertyChanged(nameof(SelectedDayTitle));
         OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
-        OnPropertyChanged(nameof(IsSchedulingMode));
+        OnPropertyChanged(nameof(SchedulingBannerText));
     }
 }

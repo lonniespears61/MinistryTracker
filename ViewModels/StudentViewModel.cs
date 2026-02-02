@@ -1,221 +1,165 @@
-// StudentViewModel.cs — Student row + detail presentation VM — 2026-01-24
+// StudentViewModel.cs — Student row + detail presentation VM — 2026-02-01
+//
+// Purpose:
+// - Wraps Student model for UI binding (lists + details)
+// - Keeps UI-only state here (selection, alternation, next visit)
+//
+// Design rules:
+// - Uses CommunityToolkit ObservableObject (no manual INotifyPropertyChanged)
+// - Model is stored privately; computed properties read from it
+// - Provide a RefreshFromModel() hook for when the model is replaced/updated
 
+using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Maui.Graphics;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Runtime.CompilerServices;
 
-namespace MinistryTracker.ViewModels
+namespace MinistryTracker.ViewModels;
+
+public partial class StudentViewModel : ObservableObject
 {
-    /// <summary>
-    /// ViewModel used to display student data in the UI.
-    /// Designed for use with lists and detail views.
-    ///
-    /// List-only UI state:
-    /// - IsAlternate (row alternation for list readability)
-    ///
-    /// Added for "Tap = Next Visit" UX:
-    /// - NextFutureVisitId
-    /// - NextFutureVisitDisplay
-    /// </summary>
-    public class StudentViewModel : INotifyPropertyChanged
+    // =====================================================================
+    // 1) MODEL (DB-backed)
+    // =====================================================================
+
+    private Student _student;
+
+    public StudentViewModel(Student student)
     {
-        public event PropertyChangedEventHandler? PropertyChanged;
+        _student = student ?? throw new ArgumentNullException(nameof(student));
+    }
 
-        protected void OnPropertyChanged([CallerMemberName] string propertyName = null!)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    /// <summary>
+    /// Raw model. If you replace it, call RefreshFromModel().
+    /// (We intentionally do NOT auto-refresh on set to avoid accidental churn.)
+    /// </summary>
+    public Student Model => _student;
 
-        private Student _student;
+    /// <summary>
+    /// Use this when you re-load / update the student and want the UI to refresh
+    /// computed properties (Name, Subtitle, colors, etc.).
+    /// </summary>
+    public void RefreshFromModel(Student updated)
+    {
+        _student = updated ?? throw new ArgumentNullException(nameof(updated));
 
-        // ---------------------------------------------------------------------
-        // LIST-LEVEL UI STATE (not stored in DB)
-        // ---------------------------------------------------------------------
+        // Re-fire all computed bindings (cheap, simple, reliable)
+        OnPropertyChanged(nameof(StudentId));
+        OnPropertyChanged(nameof(Name));
+        OnPropertyChanged(nameof(StudyAddress));
+        OnPropertyChanged(nameof(FirstContactFormatted));
+        OnPropertyChanged(nameof(StudyLocationLabel));
+        OnPropertyChanged(nameof(StatusBorderColor));
+        OnPropertyChanged(nameof(StatusBackgroundColor));
+        OnPropertyChanged(nameof(InterestColor));
+        OnPropertyChanged(nameof(Initials));
+        OnPropertyChanged(nameof(SubTitle));
+    }
 
-        private bool _isAlternate;
+    // =====================================================================
+    // 2) LIST UI STATE (NOT stored in DB)
+    // =====================================================================
 
-        /// <summary>
-        /// True if this row should render using the alternate background.
-        /// Set by StudentsListViewModel when building the list.
-        /// </summary>
-        public bool IsAlternate
+    [ObservableProperty]
+    private bool isAlternate;
+
+    [ObservableProperty]
+    private bool isSelected;
+
+    // =====================================================================
+    // 3) NEXT VISIT UI STATE (computed outside and assigned here)
+    // =====================================================================
+
+    [ObservableProperty]
+    private int? nextFutureVisitId;
+
+    [ObservableProperty]
+    private string nextFutureVisitDisplay = "No visit scheduled";
+
+    // =====================================================================
+    // 4) SIMPLE MODEL PROJECTIONS (safe bind targets)
+    // =====================================================================
+
+    public int StudentId => _student.StudentId;
+
+    public string Name => _student.Name ?? string.Empty;
+
+    public string? StudyAddress => _student.StudyAddress;
+
+    public string FirstContactFormatted =>
+        _student.FirstContactDate == default
+            ? "Contacted: —"
+            : $"Contacted: {_student.FirstContactDate:MMM dd, yyyy}";
+
+    public string StudyLocationLabel => _student.StudyLocationType.ToString();
+
+    // =====================================================================
+    // 5) STATUS / INTEREST VISUALS
+    // =====================================================================
+
+    public Color StatusBorderColor => _student.Status switch
+    {
+        StudentStatus.Active => Colors.ForestGreen,
+        StudentStatus.Paused => Colors.DarkOrange,
+        StudentStatus.NotInterested => Colors.Gray,
+        _ => Colors.LightGray
+    };
+
+    public Color StatusBackgroundColor => _student.Status switch
+    {
+        StudentStatus.Active => Color.FromArgb("#e6ffe6"),
+        StudentStatus.Paused => Color.FromArgb("#fffbe6"),
+        StudentStatus.NotInterested => Color.FromArgb("#f2f2f2"),
+        _ => Colors.White
+    };
+
+    public Color InterestColor => _student.InterestLevel switch
+    {
+        InterestLevel.Potential => Colors.LightGray,
+        InterestLevel.Interested => Color.FromArgb("#FAFAD2"),
+        InterestLevel.Study => Colors.LightGreen,
+        _ => Colors.White
+    };
+
+    // =====================================================================
+    // 6) DISPLAY HELPERS (computed strings)
+    // =====================================================================
+
+    public string Initials
+    {
+        get
         {
-            get => _isAlternate;
-            set
-            {
-                if (_isAlternate != value)
-                {
-                    _isAlternate = value;
-                    OnPropertyChanged();
-                }
-            }
+            if (string.IsNullOrWhiteSpace(_student.Name))
+                return "?";
+
+            var parts = _student.Name
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(p => char.ToUpperInvariant(p[0]));
+
+            var initials = new string(parts.Take(2).ToArray());
+            return string.IsNullOrWhiteSpace(initials) ? "?" : initials;
         }
+    }
 
-        // ---------------------------------------------------------------------
-        // NEXT VISIT UX STATE (computed at list level)
-        // ---------------------------------------------------------------------
-
-        private int? _nextFutureVisitId;
-
-        /// <summary>
-        /// Visit.Id of the student's next FUTURE scheduled visit (null if none).
-        /// </summary>
-        public int? NextFutureVisitId
+    public string SubTitle
+    {
+        get
         {
-            get => _nextFutureVisitId;
-            set
-            {
-                if (_nextFutureVisitId != value)
-                {
-                    _nextFutureVisitId = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
+            var segments = new List<string>();
 
-        private string _nextFutureVisitDisplay = "No visit scheduled";
+            if (!string.IsNullOrWhiteSpace(_student.PreferredLanguage))
+                segments.Add($"Language: {_student.PreferredLanguage}");
 
-        /// <summary>
-        /// Human-friendly label ("Next: Jan 12, 6:30 PM") or "No visit scheduled".
-        /// </summary>
-        public string NextFutureVisitDisplay
-        {
-            get => _nextFutureVisitDisplay;
-            set
-            {
-                if (_nextFutureVisitDisplay != value)
-                {
-                    _nextFutureVisitDisplay = value;
-                    OnPropertyChanged();
-                }
-            }
-        }
+            if (_student.FirstContactDate != default)
+                segments.Add($"First contact: {_student.FirstContactDate:MMM dd, yyyy}");
 
-        // ---------------------------------------------------------------------
-        // CONSTRUCTION / MODEL WRAPPING
-        // ---------------------------------------------------------------------
+            if (segments.Count == 0)
+                segments.Add(_student.CallType.ToString());
 
-        public StudentViewModel(Student student)
-        {
-            _student = student;
-        }
-
-        /// <summary>
-        /// Expose the raw model (get/set triggers change notifications).
-        /// </summary>
-        public Student Model
-        {
-            get => _student;
-            set
-            {
-                if (!ReferenceEquals(_student, value))
-                {
-                    _student = value;
-
-                    // Notify the UI that the model and computed properties changed.
-                    OnPropertyChanged();
-                    OnPropertyChanged(nameof(StudentId));
-                    OnPropertyChanged(nameof(Name));
-                    OnPropertyChanged(nameof(StudyAddress));
-                    OnPropertyChanged(nameof(FirstContactFormatted));
-                    OnPropertyChanged(nameof(StudyLocationLabel));
-                    OnPropertyChanged(nameof(StatusBorderColor));
-                    OnPropertyChanged(nameof(StatusBackgroundColor));
-                    OnPropertyChanged(nameof(InterestColor));
-                    OnPropertyChanged(nameof(Initials));
-                    OnPropertyChanged(nameof(SubTitle));
-
-                    // List-only derived state
-                    OnPropertyChanged(nameof(NextFutureVisitId));
-                    OnPropertyChanged(nameof(NextFutureVisitDisplay));
-                }
-            }
-        }
-
-        // ---------------------------------------------------------------------
-        // SIMPLE MODEL PROJECTIONS
-        // ---------------------------------------------------------------------
-
-        public int StudentId => _student.StudentId;
-
-        public string Name => _student.Name;
-
-        public string? StudyAddress => _student.StudyAddress;
-
-        public string FirstContactFormatted
-            => $"Contacted: {_student.FirstContactDate:MMM dd, yyyy}";
-
-        public string StudyLocationLabel
-            => _student.StudyLocationType.ToString();
-
-        // ---------------------------------------------------------------------
-        // STATUS / INTEREST VISUALS
-        // ---------------------------------------------------------------------
-
-        public Color StatusBorderColor => _student.Status switch
-        {
-            StudentStatus.Active => Colors.ForestGreen,
-            StudentStatus.Paused => Colors.DarkOrange,
-            StudentStatus.NotInterested => Colors.Gray,
-            _ => Colors.LightGray
-        };
-
-        public Color StatusBackgroundColor => _student.Status switch
-        {
-            StudentStatus.Active => Color.FromArgb("#e6ffe6"),
-            StudentStatus.Paused => Color.FromArgb("#fffbe6"),
-            StudentStatus.NotInterested => Color.FromArgb("#f2f2f2"),
-            _ => Colors.White
-        };
-
-        public Color InterestColor => _student.InterestLevel switch
-        {
-            InterestLevel.Potential => Colors.LightGray,
-            InterestLevel.Interested => Color.FromArgb("#FAFAD2"),
-            InterestLevel.Study => Colors.LightGreen,
-            _ => Colors.White
-        };
-
-        // ---------------------------------------------------------------------
-        // DISPLAY HELPERS
-        // ---------------------------------------------------------------------
-
-        public string Initials
-        {
-            get
-            {
-                if (string.IsNullOrWhiteSpace(_student.Name))
-                    return "?";
-
-                var parts = _student.Name
-                    .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                    .Select(p => char.ToUpperInvariant(p[0]));
-
-                var initials = new string(parts.Take(2).ToArray());
-                return string.IsNullOrWhiteSpace(initials) ? "?" : initials;
-            }
-        }
-
-        public string SubTitle
-        {
-            get
-            {
-                var segments = new List<string>();
-
-                if (!string.IsNullOrWhiteSpace(_student.PreferredLanguage))
-                    segments.Add($"Language: {_student.PreferredLanguage}");
-
-                if (_student.FirstContactDate != default)
-                    segments.Add($"First contact: {_student.FirstContactDate:MMM dd, yyyy}");
-
-                if (segments.Count == 0)
-                    segments.Add(_student.CallType.ToString());
-
-                return string.Join(" • ", segments);
-            }
+            return string.Join(" • ", segments);
         }
     }
 }

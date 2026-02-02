@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8" ?>
-<!-- StudentsListPage.xaml — Students list (Shell tab) — 2026-01-24 -->
+<!-- StudentsListPage.xaml — Students list (Shell tab) — 2026-02-01 -->
 
 <ContentPage
     x:Class="MinistryTracker.Views.StudentsListPage"
@@ -10,12 +10,10 @@
     Title="Students"
     BackgroundColor="{StaticResource Students.BgTint}">
 
-    <!-- Shell header -->
     <Shell.TitleView>
         <Grid VerticalOptions="Center"
               Padding="0,20,0,0"
               BackgroundColor="{StaticResource Students.Base}">
-
             <Label Text="Student List"
                    FontSize="18"
                    FontAttributes="Bold"
@@ -27,7 +25,6 @@
     <Grid RowDefinitions="Auto,Auto,*"
           Padding="16,12">
 
-        <!-- Header row -->
         <Grid Grid.Row="0"
               ColumnDefinitions="*,Auto"
               Margin="0,6,0,10">
@@ -45,62 +42,41 @@
                     TextColor="White" />
         </Grid>
 
-        <!-- Search -->
         <SearchBar Grid.Row="1"
                    Placeholder="Search students"
                    Text="{Binding SearchText}"
                    Margin="0,0,0,10" />
 
-        <!-- List -->
         <CollectionView x:Name="StudentsCollection"
                         Grid.Row="2"
                         ItemsSource="{Binding FilteredStudents}"
-                        SelectionMode="Single"
-                        SelectionChanged="OnStudentSelectionChanged">
+                        SelectionMode="None">
 
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="viewmodels:StudentViewModel">
 
                     <SwipeView>
 
+                        <!-- Swipe RIGHT (left-to-right) executes LEFT items -->
                         <SwipeView.LeftItems>
-                            <SwipeItems Mode="Reveal">
-                                <SwipeItemView Invoked="OnEditSwipeInvoked"
-                       CommandParameter="{Binding Model}">
-                                    <Grid BackgroundColor="#3B82F6" Padding="16" WidthRequest="140">
-                                        <VerticalStackLayout Spacing="6"
-                                     HorizontalOptions="Center"
-                                     VerticalOptions="Center">
-                                            <Label Text="Edit Student"
-                           TextColor="White"
-                           FontAttributes="Bold"
-                           FontSize="12"
-                           HorizontalTextAlignment="Center" />
-                                        </VerticalStackLayout>
-                                    </Grid>
-                                </SwipeItemView>
+                            <SwipeItems Mode="Execute">
+                                <SwipeItem Text="Edit Student"
+                                           BackgroundColor="#3B82F6"
+                                           Invoked="OnEditSwipeInvoked"
+                                           CommandParameter="{Binding Model}" />
                             </SwipeItems>
                         </SwipeView.LeftItems>
 
+                        <!-- Swipe LEFT (right-to-left) executes RIGHT items -->
                         <SwipeView.RightItems>
-                            <SwipeItems Mode="Reveal">
-                                <SwipeItemView Invoked="OnScheduleVisitSwipeInvoked"
-                       CommandParameter="{Binding Model}">
-                                    <Grid BackgroundColor="#10B981" Padding="16" WidthRequest="140">
-                                        <VerticalStackLayout Spacing="6"
-                                     HorizontalOptions="Center"
-                                     VerticalOptions="Center">
-                                            <Label Text="Schedule Visit"
-                           TextColor="White"
-                           FontAttributes="Bold"
-                           FontSize="12"
-                           HorizontalTextAlignment="Center" />
-                                        </VerticalStackLayout>
-                                    </Grid>
-                                </SwipeItemView>
+                            <SwipeItems Mode="Execute">
+                                <SwipeItem Text="Schedule Visit"
+                                           BackgroundColor="#10B981"
+                                           Invoked="OnScheduleVisitSwipeInvoked"
+                                           CommandParameter="{Binding Model}" />
                             </SwipeItems>
                         </SwipeView.RightItems>
-                        <!-- Soft row card with alternation -->
+
                         <Border BackgroundColor="{StaticResource Students.CardTint}"
                                 Stroke="{StaticResource Students.BorderTint}"
                                 StrokeThickness="1"
@@ -111,7 +87,6 @@
                                 <DataTrigger TargetType="Border"
                                              Binding="{Binding IsAlternate}"
                                              Value="True">
-                                    <!-- alternate row background -->
                                     <Setter Property="BackgroundColor"
                                             Value="{StaticResource Students.BgTint}" />
                                 </DataTrigger>
@@ -157,7 +132,6 @@
                                        Opacity="0.5" />
 
                             </Grid>
-
                         </Border>
 
                     </SwipeView>

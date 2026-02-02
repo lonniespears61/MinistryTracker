@@ -31,11 +31,17 @@ using System.Threading.Tasks;
 namespace MinistryTracker.ViewModels
 {
     public partial class SettingsViewModel : ObservableObject
+
+
     {
+       
+
         private readonly DataService _data;
 
         // Single active operation CTS; new operation cancels the previous one
         private CancellationTokenSource? _activeCts;
+
+       
 
         // Bindables (XAML)
         [ObservableProperty] private bool isBusy;
