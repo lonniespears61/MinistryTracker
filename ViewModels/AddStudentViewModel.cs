@@ -8,6 +8,7 @@ using MinistryTracker.Data;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
 using MinistryTracker.Utilities;
+using System.Globalization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,6 +29,11 @@ namespace MinistryTracker.ViewModels
 
             // Optional: set a reasonable default so the Picker isn't blank
             CallType = CallTypeValues.FirstOrDefault();
+
+            // Device / app UI language (e.g., "en", "es")
+            var uiLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+            PreferredLanguage = uiLang == "es" ? "Español" : "English";
+                     
         }
 
         // --------------------------------------------------------------------
@@ -136,8 +142,8 @@ namespace MinistryTracker.ViewModels
         {
             if (string.IsNullOrWhiteSpace(Name))
             {
-                await Application.Current.MainPage.DisplayAlert("Missing Info", "Name is required.", "OK");
-                return;
+                var uiLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+                Name = uiLang == "es" ? "Desconocido" : "Unknown";
             }
 
             var student = new Student

@@ -1,18 +1,18 @@
 ﻿// ---------------------------------------------------------------------------------------------------------------------
-// StudentsListPage.xaml.cs — Students list interactions (Shell tab) — 2026-02-01
+// StudentsListPage.xaml.cs — Students list interactions (Shell tab) — 2026-02-03
 // Purpose:
-//   • Handle swipe-only actions for student rows
-//   • Swipe right  → Edit Student
-//   • Swipe left   → Schedule Visit
-//   • Tap does NOT navigate (visual focus only)
+//   • Handle swipe-only actions for student rows (Edit / Schedule)
+//   • Show an in-page swipe hint banner on every visit until user dismisses it
 // Notes:
-//   • Navigation is handled via Shell routes
-//   • No database calls are made from this view
+//   • No database calls in the View
+//   • Dismissal state stored via Preferences (local key/value)
 // ---------------------------------------------------------------------------------------------------------------------
 
 using System;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Microsoft.Maui.Controls;
+using Microsoft.Maui.Storage;
 using MinistryTracker.Models;
 using MinistryTracker.ViewModels;
 
@@ -20,9 +20,7 @@ namespace MinistryTracker.Views;
 
 public partial class StudentsListPage : ContentPage
 {
-    // ------------------------------------------------------------
-    // Construction
-    // ------------------------------------------------------------
+    private const string PrefKey_SwipeHintDismissed = "StudentsList.SwipeHintDismissed";
 
     public StudentsListPage(StudentsListViewModel vm)
     {
@@ -31,7 +29,7 @@ public partial class StudentsListPage : ContentPage
     }
 
     // ------------------------------------------------------------
-    // Navigation helpers (centralized for clarity)
+    // Navigation helpers
     // ------------------------------------------------------------
 
     private static Task GoToEditStudentAsync(int studentId) =>
@@ -47,21 +45,9 @@ public partial class StudentsListPage : ContentPage
     // Swipe helpers
     // ------------------------------------------------------------
 
-    /// <summary>
-    /// Extracts the Student model from a SwipeItem sender.
-    /// MAUI uses SwipeItem (not SwipeItemView).
-    /// </summary>
     private static Student? TryGetStudentFromSwipeSender(object sender)
-    {
-        return sender is SwipeItem swipeItem
-            ? swipeItem.CommandParameter as Student
-            : null;
-    }
+        => sender is SwipeItem swipeItem ? swipeItem.CommandParameter as Student : null;
 
-    /// <summary>
-    /// Walks up the visual tree and closes the containing SwipeView.
-    /// MAUI does not auto-close on execute.
-    /// </summary>
     private static void CloseContainingSwipeView(Element element)
     {
         Element? current = element;
@@ -83,8 +69,7 @@ public partial class StudentsListPage : ContentPage
             Debug.WriteLine("EDIT SWIPE FIRED");
 
             var student = TryGetStudentFromSwipeSender(sender);
-            if (student is null)
-                return;
+            if (student is null) return;
 
             CloseContainingSwipeView((Element)sender);
 
@@ -104,8 +89,7 @@ public partial class StudentsListPage : ContentPage
             Debug.WriteLine("SCHEDULE SWIPE FIRED");
 
             var student = TryGetStudentFromSwipeSender(sender);
-            if (student is null)
-                return;
+            if (student is null) return;
 
             CloseContainingSwipeView((Element)sender);
 
@@ -128,6 +112,25 @@ public partial class StudentsListPage : ContentPage
 
         if (BindingContext is StudentsListViewModel vm)
             await vm.LoadAsync();
+
+        // Show tip banner on every visit until dismissed.
+        UpdateSwipeHintBannerVisibility();
+    }
+
+    // ------------------------------------------------------------
+    // Swipe hint banner
+    // ------------------------------------------------------------
+
+    private void UpdateSwipeHintBannerVisibility()
+    {
+        var dismissed = Preferences.Default.Get(PrefKey_SwipeHintDismissed, false);
+        SwipeHintBanner.IsVisible = !dismissed;
+    }
+
+    private void OnDismissSwipeHintClicked(object sender, EventArgs e)
+    {
+        Preferences.Default.Set(PrefKey_SwipeHintDismissed, true);
+        SwipeHintBanner.IsVisible = false;
     }
 
     // ------------------------------------------------------------
