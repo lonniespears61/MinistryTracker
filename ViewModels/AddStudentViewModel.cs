@@ -156,12 +156,13 @@ namespace MinistryTracker.ViewModels
                 PreferredLanguage = PreferredLanguage,
                 Status = StudentStatus.Active,
                 IsDeleted = false,
+                Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes.Trim(),
 
                 // Persist GPS if captured (otherwise nulls)
                 StudyLatitude = StudyLatitude,
-                StudyLongitude = StudyLongitude,
-                Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes.Trim()
-            }; 
+                StudyLongitude = StudyLongitude
+
+            };
 
             var rows = await _data.AddStudentAsync(student);
 

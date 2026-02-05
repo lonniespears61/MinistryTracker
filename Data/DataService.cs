@@ -68,7 +68,7 @@ namespace MinistryTracker.Data
                 ).ConfigureAwait(false);
 
                 // ---- Versioning hook (for future migrations) --------------------------
-                await _database.ExecuteAsync("PRAGMA user_version = 1;").ConfigureAwait(false);
+                await ApplyMigrationsAsync(_database).ConfigureAwait(false);
 
                 _initialized = true;
             }
@@ -76,6 +76,39 @@ namespace MinistryTracker.Data
             {
                 _gate.Release();
             }
+        }
+
+        private const int CurrentSchemaVersion = 1;
+
+        private static async Task ApplyMigrationsAsync(SQLiteAsyncConnection db)
+        {
+            // 0 means "no version set yet" (often a fresh DB)
+            var version = await db.ExecuteScalarAsync<int>("PRAGMA user_version;").ConfigureAwait(false);
+
+            // Fresh install path: tables already created above.
+            // Set version once so future migrations have a baseline.
+            if (version == 0)
+            {
+                await db.ExecuteAsync($"PRAGMA user_version = {CurrentSchemaVersion};").ConfigureAwait(false);
+                return;
+            }
+
+            // Future upgrade path: migrate incrementally.
+            // Keep this structure even while we're on v1.
+            if (version < 1)
+            {
+                // In practice you won't see this (SQLite user_version starts at 0),
+                // but keeping the shape makes future diffs clean.
+                await db.ExecuteAsync("PRAGMA user_version = 1;").ConfigureAwait(false);
+                version = 1;
+            }
+
+            // Example future slots (DO NOT implement yet)
+            // if (version < 2) { await MigrateToV2Async(db).ConfigureAwait(false); await db.ExecuteAsync("PRAGMA user_version = 2;"); version = 2; }
+            // if (version < 3) { await MigrateToV3Async(db).ConfigureAwait(false); await db.ExecuteAsync("PRAGMA user_version = 3;"); version = 3; }
+
+            // Optional: sanity check (useful later)
+            // if (version > CurrentSchemaVersion) { /* app older than DB; decide what to do */ }
         }
 
         /// <summary>Returns the fully-qualified path to the database file (useful for logs/support).</summary>
