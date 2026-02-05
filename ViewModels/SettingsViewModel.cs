@@ -209,23 +209,19 @@ namespace MinistryTracker.ViewModels
 
                 // ✅ Use a real diagnostics method name.
                 // If your DataService uses a different name, rename *this one call* accordingly.
-                var health = await _data.GetDatabaseHealthAsync(linked.Token).ConfigureAwait(false);
+                var schema = await _data.GetDatabaseSchemaHealthAsync(linked.Token).ConfigureAwait(false);
 
-                // "health" is a tuple in my recommended diagnostics drop-in:
-                // (DbPath, StudentCount, VisitCount)
-                DbHealthText =
-                    $"DB Path: {health.DbPath}\n" +
-                    $"Students: {health.StudentCount}\n" +
-                    $"Visits: {health.VisitCount}\n";
+                // Dump the full report (tables + columns + counts + user_version)
+                DbHealthText = schema.ReportText;
 
                 HealthExpanded = true;
-                WeakReferenceMessenger.Default.Send(new UiToastMessage("DB health updated"));
+                WeakReferenceMessenger.Default.Send(new UiToastMessage("DB schema health updated"));
             }
             catch (OperationCanceledException)
             {
                 if (!ct.IsCancellationRequested)
                 {
-                    DbHealthText = "DB health timed out. Try again.";
+                    DbHealthText = "DB Schema timed out. Try again.";
                     WeakReferenceMessenger.Default.Send(new UiToastMessage("Health check timed out"));
                 }
             }

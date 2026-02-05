@@ -43,7 +43,8 @@ namespace MinistryTracker.ViewModels
         [ObservableProperty] private string name = string.Empty;                // Required
         [ObservableProperty] private InitialCallType callType;                  // Required
         [ObservableProperty] private DateTime firstContactDate = DateTime.Today; // Required
-        [ObservableProperty] private string? preferredLanguage;                 // Optional
+        [ObservableProperty] private string? preferredLanguage;
+        [ObservableProperty] private string? notes; // Optional free text (no indexing)// Optional
 
         // Location fields (optional)
         [ObservableProperty] private double? studyLatitude;
@@ -85,13 +86,14 @@ namespace MinistryTracker.ViewModels
         {
             Name = string.Empty;
             PreferredLanguage = null;
-            FirstContactDate = DateTime.Today;
+            FirstContactDate = DateTime.Now; 
 
             // Pick a sensible default (or replace with InitialCallType.HouseToHouse if preferred)
             CallType = CallTypeValues.FirstOrDefault();
 
             StudyLatitude = null;
             StudyLongitude = null;
+            Notes = null;
         }
 
         private async Task UseCurrentLocationAsync()
@@ -157,8 +159,9 @@ namespace MinistryTracker.ViewModels
 
                 // Persist GPS if captured (otherwise nulls)
                 StudyLatitude = StudyLatitude,
-                StudyLongitude = StudyLongitude
-            };
+                StudyLongitude = StudyLongitude,
+                Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes.Trim()
+            }; 
 
             var rows = await _data.AddStudentAsync(student);
 

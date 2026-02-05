@@ -10,8 +10,7 @@
     xmlns:vm="clr-namespace:MinistryTracker.ViewModels"
     x:DataType="vm:SettingsViewModel"
     Title="">
-  
-    
+
     <!-- Modal Settings is opened via PushModalAsync(new NavigationPage(SettingsPage)).
          So NavigationPage.TitleView is the correct header slot. -->
     <NavigationPage.TitleView>
@@ -46,10 +45,10 @@
             <VerticalStackLayout Padding="16" Spacing="16">
 
                 <!-- PRODUCTION: Near Me / Map Settings (placeholder for next session fields) -->
-                <Border BackgroundColor="{StaticResource Settings.CardTint}"  
-                 Stroke="{StaticResource Settings.BorderTint}"
-                 StrokeThickness="1"
-                 Padding="14">
+                <Border BackgroundColor="{StaticResource Settings.CardTint}"
+                        Stroke="{StaticResource Settings.BorderTint}"
+                        StrokeThickness="1"
+                        Padding="14">
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>
@@ -86,84 +85,83 @@
 
                 <!-- ABOUT (full) -->
                 <Border BackgroundColor="{StaticResource Settings.CardTint}"
-                 Stroke="{StaticResource Settings.BorderTint}"
-                 StrokeThickness="1"
-                 Padding="14"
-                 Margin="0,6">
+                        Stroke="{StaticResource Settings.BorderTint}"
+                        StrokeThickness="1"
+                        Padding="14"
+                        Margin="0,6">
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="16" />
                     </Border.StrokeShape>
 
                     <Border.Shadow>
                         <Shadow Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
-                Offset="0,3"
-                Radius="10" />
+                                Offset="0,3"
+                                Radius="10" />
                     </Border.Shadow>
 
                     <VerticalStackLayout Spacing="10">
 
                         <!-- Header -->
                         <Label Text="About"
-               FontSize="18"
-               FontAttributes="Bold"
-               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
 
                         <!-- App name / version -->
                         <Label Text="{Binding AppName}"
-               FontSize="16"
-               FontAttributes="Bold"
-               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                               FontSize="16"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
 
                         <Label Text="{Binding VersionDisplay}"
-               FontSize="12"
-               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
                         <Label Text="{Binding Copyright}"
-               FontSize="12"
-               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
                         <!-- Short plain-language blurb -->
                         <Label Text="Ministry Tracker helps you keep call notes and return visits."
-               FontSize="12"
-               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
                         <Label Text="Data is stored locally on your device unless you export or share it."
-               FontSize="12"
-               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
                         <!-- Legal wall behind Expander -->
                         <toolkit:Expander>
                             <toolkit:Expander.Header>
                                 <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
                                     <Label Text="Legal &amp; Privacy"
-                           FontAttributes="Bold"
-                           TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                                           FontAttributes="Bold"
+                                           TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
                                     <Label Grid.Column="1"
-                           Text="Tap to expand"
-                           FontSize="12"
-                           TextColor="{AppThemeBinding Light=#64748B, Dark=#9CA3AF}" />
+                                           Text="Tap to expand"
+                                           FontSize="12"
+                                           TextColor="{AppThemeBinding Light=#64748B, Dark=#9CA3AF}" />
                                 </Grid>
                             </toolkit:Expander.Header>
 
                             <toolkit:Expander.Content>
                                 <Border BackgroundColor="{AppThemeBinding Light=#F1F5F9, Dark=#161616}"
-                        Padding="12"
-                        Margin="0,8,0,0">
+                                        Padding="12"
+                                        Margin="0,8,0,0">
                                     <Border.StrokeShape>
                                         <RoundRectangle CornerRadius="12" />
                                     </Border.StrokeShape>
 
                                     <Label Text="{Binding LegalDisclaimers}"
-                           FontSize="12"
-                           LineBreakMode="WordWrap"
-                           TextColor="{AppThemeBinding Light=#334155, Dark=#D1D5DB}" />
+                                           FontSize="12"
+                                           LineBreakMode="WordWrap"
+                                           TextColor="{AppThemeBinding Light=#334155, Dark=#D1D5DB}" />
                                 </Border>
                             </toolkit:Expander.Content>
                         </toolkit:Expander>
 
                     </VerticalStackLayout>
                 </Border>
-
 
                 <!-- DEV MODE TOGGLE -->
                 <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
@@ -238,11 +236,15 @@
                                 </Grid>
                             </toolkit:Expander.Header>
 
+                            <!-- ✅ FIX: reliable scrolling for long diagnostic output -->
                             <toolkit:Expander.Content>
-                                <Editor Text="{Binding DbHealthText}"
-                                        AutoSize="TextChanges"
-                                        IsReadOnly="True"
-                                        HeightRequest="220" />
+                                <ScrollView HeightRequest="260">
+                                    <Label Text="{Binding DbHealthText}"
+                                           FontSize="12"
+                                           LineBreakMode="WordWrap"
+                                           Margin="0"
+                                           Padding="0" />
+                                </ScrollView>
                             </toolkit:Expander.Content>
                         </toolkit:Expander>
                     </Border>
