@@ -3,7 +3,6 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Devices.Sensors;
 using MinistryTracker.Data;
-using MinistryTracker.Models;
 using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
@@ -17,7 +16,6 @@ namespace MinistryTracker.ViewModels
         public StudentsMapViewModel(DataService data)
         {
             _data = data;
-
             RefreshPinsCommand = new AsyncRelayCommand(RefreshPinsAsync);
         }
 
@@ -28,9 +26,13 @@ namespace MinistryTracker.ViewModels
 
         public IAsyncRelayCommand RefreshPinsCommand { get; }
 
+        /// <summary>
+        /// Loads students with valid GPS coordinates and creates map pins.
+        /// </summary>
         private async Task RefreshPinsAsync()
         {
-            if (IsBusy) return;
+            if (IsBusy)
+                return;
 
             try
             {
@@ -43,14 +45,14 @@ namespace MinistryTracker.ViewModels
 
                 foreach (var s in students)
                 {
-                    // Safety: should already be non-null based on query, but keep it defensive.
+                    // Safety: the query should already filter these out, but guard against bad or stale data.
                     if (s.StudyLatitude is null || s.StudyLongitude is null)
                         continue;
 
                     var pin = new Pin
                     {
                         Label = s.Name,
-                        Address = s.StudyAddress,
+                        Address = s.StudyAddress ?? string.Empty, // Map pin address should not be null.
                         Type = PinType.Place,
                         Location = new Location(s.StudyLatitude.Value, s.StudyLongitude.Value)
                     };

@@ -41,13 +41,12 @@ public partial class StudentProfilePage : ContentPage
     // In a Shell + TabBar app, "Home" is simply the Dashboard tab.
     // If your XAML still has a Home button wired to this, either remove the button,
     // or switch tabs via an absolute Shell route (example commented below).
-    private async void OnHomeClicked(object sender, EventArgs e)
+    private void OnHomeClicked(object sender, EventArgs e)
     {
         // OPTION A (Recommended): remove the home button from this page entirely.
         // Tabs already provide home navigation.
 
         // OPTION B: if you *must* keep a home button, navigate to the dashboard tab route.
-        // You need a route name for the dashboard tab (see note below).
         // await Shell.Current.GoToAsync("//dashboard");
     }
 

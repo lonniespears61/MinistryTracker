@@ -2,29 +2,38 @@
 using Android.Content.PM;
 using Android.OS;
 
-namespace MinistryTracker
+namespace MinistryTracker.Platforms.Android;
+
+[Activity(
+    Theme = "@style/Maui.SplashTheme",
+    MainLauncher = true,
+    LaunchMode = LaunchMode.SingleTop,
+    ConfigurationChanges = ConfigChanges.ScreenSize |
+                           ConfigChanges.Orientation |
+                           ConfigChanges.UiMode |
+                           ConfigChanges.ScreenLayout |
+                           ConfigChanges.SmallestScreenSize |
+                           ConfigChanges.Density)]
+public class MainActivity : MauiAppCompatActivity
 {
-    [Activity(Theme = "@style/Maui.SplashTheme",
-        MainLauncher = true, 
-        LaunchMode = LaunchMode.SingleTop, 
-        ConfigurationChanges = ConfigChanges.ScreenSize | 
-        ConfigChanges.Orientation | ConfigChanges.UiMode | 
-        ConfigChanges.ScreenLayout | ConfigChanges.SmallestScreenSize |
-        ConfigChanges.Density)]
-    public class MainActivity : MauiAppCompatActivity
+    protected override void OnCreate(Bundle? savedInstanceState)
     {
-        protected override void OnCreate(Bundle? savedInstanceState)
+        base.OnCreate(savedInstanceState);
+
+        if (Window is null)
+            return;
+
+        // Edge-to-edge is only supported on Android 11 / API 30+
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.R)
         {
-            base.OnCreate(savedInstanceState);
+            Window.SetDecorFitsSystemWindows(false);
+        }
 
-            // ✅ Allows your UI to draw behind the system status bar (edge-to-edge)
-            Window?.SetDecorFitsSystemWindows(false);
-
-            // ✅ Optional: make the status bar transparent so your page background shows through
-            if (Build.VERSION.SdkInt >= BuildVersionCodes.Lollipop)
-            {
-                Window?.SetStatusBarColor(Android.Graphics.Color.Transparent);
-            }
+        // SetStatusBarColor is obsolete on newer Android versions, so only use it below API 35
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.Lollipop &&
+            Build.VERSION.SdkInt < BuildVersionCodes.VanillaIceCream)
+        {
+            Window.SetStatusBarColor(global::Android.Graphics.Color.Transparent);
         }
     }
 }

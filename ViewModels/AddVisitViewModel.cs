@@ -24,7 +24,9 @@ namespace MinistryTracker.ViewModels
             // Sensible defaults
             VisitDate = DateTime.Today;
             VisitTime = DateTime.Now.TimeOfDay;
+
         }
+
 
         // --------------------------------------------------------------------
         // Shell Query (required)
@@ -55,7 +57,8 @@ namespace MinistryTracker.ViewModels
         [ObservableProperty] private DateTime visitDate;   // Required (default today)
         [ObservableProperty] private TimeSpan visitTime;   // Required (default now)
         [ObservableProperty] private string? notes;        // Optional
-
+        [ObservableProperty]
+        private string studentName = "Adding Visit";
         [ObservableProperty] private bool isBusy;
 
         // Commands

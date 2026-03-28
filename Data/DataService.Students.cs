@@ -42,8 +42,11 @@ namespace MinistryTracker.Data
 
         /// <summary>Find a student by primary key.</summary>
         public Task<Student?> GetStudentByIdAsync(int studentId, CancellationToken ct = default)
-            => EnsureInitThen(() => Db.FindAsync<Student>(studentId), ct);
-
+     => EnsureInitThen<Student?>(async () =>
+     {
+         var student = await Db.FindAsync<Student>(studentId).ConfigureAwait(false);
+         return student;
+     }, ct);
         /// <summary>Count active (not soft-deleted) students.</summary>
         public Task<int> GetActiveStudentsCountAsync(CancellationToken ct = default)
             => EnsureInitThen(() =>
@@ -68,7 +71,7 @@ namespace MinistryTracker.Data
         /// Returns true if it's reasonable to attempt geocoding for this student now.
         /// Prevents repeated API calls.
         /// </summary>
-        public bool ShouldAttemptGeocode(Student s, TimeSpan? retryAfter = null)
+        public static bool ShouldAttemptGeocode(Student s, TimeSpan? retryAfter = null)
         {
             if (s is null) return false;
 

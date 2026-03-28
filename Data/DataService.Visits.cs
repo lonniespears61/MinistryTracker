@@ -45,8 +45,7 @@ namespace MinistryTracker.Data
 
         public Task<int> AddVisitAsync(Visit visit, CancellationToken ct = default)
         {
-            if (visit is null)
-                throw new ArgumentNullException(nameof(visit));
+            ArgumentNullException.ThrowIfNull(visit);
 
             if (visit.StudentId <= 0)
                 throw new InvalidOperationException("Visit.StudentId must be set before inserting a visit.");
@@ -65,8 +64,7 @@ namespace MinistryTracker.Data
         /// </summary>
         public Task<int> UpdateVisitAsync(Visit visit, CancellationToken ct = default)
         {
-            if (visit is null)
-                throw new ArgumentNullException(nameof(visit));
+            ArgumentNullException.ThrowIfNull(visit);
 
             if (visit.Id <= 0)
                 throw new InvalidOperationException("Visit.Id must be set before updating a visit.");
@@ -83,18 +81,11 @@ namespace MinistryTracker.Data
         /// Returns null if not found.
         /// </summary>
         public Task<Visit?> GetVisitByIdAsync(int visitId, CancellationToken ct = default)
-        {
-            if (visitId <= 0)
-                return Task.FromResult<Visit?>(null);
-
-            // Db.FindAsync is fine here because it queries by PK.
-            // NOTE: This does not filter by Status; caller decides what "visible" means.
-            return EnsureInitThen(() =>
+            => EnsureInitThen<Visit?>(async () =>
             {
-                ct.ThrowIfCancellationRequested();
-                return Db.FindAsync<Visit>(visitId);
+                var visit = await Db.FindAsync<Visit>(visitId).ConfigureAwait(false);
+                return visit;
             }, ct);
-        }
 
         /// <summary>
         /// Delete a visit row (hard delete).
@@ -113,7 +104,6 @@ namespace MinistryTracker.Data
             }, ct);
         }
 
-
         /// <summary>
         /// Today’s visits: midnight → midnight (inclusive start, exclusive end).
         /// </summary>
@@ -122,6 +112,7 @@ namespace MinistryTracker.Data
             {
                 var start = DateTime.Today;
                 var end = start.AddDays(1);
+
                 return Db.Table<Visit>()
                          .Where(v => v.ScheduledDateTime >= start && v.ScheduledDateTime < end)
                          .OrderBy(v => v.ScheduledDateTime)
@@ -136,6 +127,7 @@ namespace MinistryTracker.Data
             {
                 var start = DateTime.Now;
                 var end = start.AddDays(days);
+
                 return Db.Table<Visit>()
                          .Where(v => v.Status == VisitStatus.Scheduled &&
                                      v.ScheduledDateTime >= start &&
@@ -151,6 +143,7 @@ namespace MinistryTracker.Data
             => EnsureInitThen(() =>
             {
                 var (start, end) = DateRanges.GetThisWeekRange();
+
                 var query = Db.Table<Visit>()
                               .Where(v => v.ScheduledDateTime >= start && v.ScheduledDateTime < end);
 
@@ -159,8 +152,6 @@ namespace MinistryTracker.Data
 
                 return query.OrderBy(v => v.ScheduledDateTime).ToListAsync();
             }, ct);
-
-       
 
         /// <summary>
         /// Cancels a visit (keeps history; does not delete). Safe no-op if not found.
@@ -191,26 +182,24 @@ namespace MinistryTracker.Data
                 await Db.UpdateAsync(visit).ConfigureAwait(false);
             }, ct);
 
-
         /// <summary>
         /// Next future scheduled visit for a student (Scheduled only).
         /// Returns null if none exists.
         /// </summary>
         public Task<Visit?> GetNextFutureVisitForStudentAsync(int studentId, CancellationToken ct = default)
-            => EnsureInitThen(() =>
+            => EnsureInitThen<Visit?>(async () =>
             {
                 var now = DateTime.Now;
 
-                return Db.Table<Visit>()
-                         .Where(v => v.StudentId == studentId &&
-                                     v.Status == VisitStatus.Scheduled &&
-                                     v.ScheduledDateTime >= now)
-                         .OrderBy(v => v.ScheduledDateTime)
-                         .FirstOrDefaultAsync();
+                var visit = await Db.Table<Visit>()
+                                    .Where(v => v.StudentId == studentId &&
+                                                v.Status == VisitStatus.Scheduled &&
+                                                v.ScheduledDateTime >= now)
+                                    .OrderBy(v => v.ScheduledDateTime)
+                                    .FirstOrDefaultAsync()
+                                    .ConfigureAwait(false);
+
+                return visit;
             }, ct);
-
-       
-       
     }
-
 }

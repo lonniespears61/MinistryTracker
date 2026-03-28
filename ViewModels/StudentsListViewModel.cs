@@ -4,14 +4,14 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel; // MainThread
-using Microsoft.Maui.Controls;          // Shell, DisplayActionSheet
+using Microsoft.Maui.Controls;          // Shell
 using MinistryTracker.Data;
-using MinistryTracker.Models.Enums;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
+using MinistryTracker.Models.Enums;
 
 namespace MinistryTracker.ViewModels;
 
@@ -153,14 +153,20 @@ public partial class StudentsListViewModel : ObservableObject
 
             // Use DisplayActionSheet for the 3-way choice.
             // NOTE: DisplayActionSheet must run on UI thread.
-            var choice = await MainThread.InvokeOnMainThreadAsync(() =>
-                Application.Current!.MainPage!.DisplayActionSheet(
+            var choice = await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                var page = Application.Current?.Windows.FirstOrDefault()?.Page;
+                if (page is null)
+                    return "Cancel";
+
+                return await page.DisplayActionSheet(
                     "Visit already scheduled",
                     "Cancel",
                     null,
                     "Edit existing",
                     "Replace it"
-                ));
+                );
+            });
 
             switch (choice)
             {

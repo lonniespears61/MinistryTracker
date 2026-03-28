@@ -2,8 +2,8 @@
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Maui.Controls;           // Application, etc.
-using Microsoft.Maui.Devices.Sensors;    // Geolocation, Location
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Devices.Sensors;
 using MinistryTracker.Data;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
@@ -33,26 +33,37 @@ namespace MinistryTracker.ViewModels
             // Device / app UI language (e.g., "en", "es")
             var uiLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
             PreferredLanguage = uiLang == "es" ? "Español" : "English";
-                     
         }
 
         // --------------------------------------------------------------------
         // Properties bound from XAML
         // --------------------------------------------------------------------
 
-        [ObservableProperty] private string name = string.Empty;                // Required
-        [ObservableProperty] private InitialCallType callType;                  // Required
-        [ObservableProperty] private DateTime firstContactDate = DateTime.Today; // Required
-        [ObservableProperty] private string? preferredLanguage;
-        [ObservableProperty] private string? notes; // Optional free text (no indexing)// Optional
+        [ObservableProperty]
+        public partial string Name { get; set; } = string.Empty;                 // Required
+
+        [ObservableProperty]
+        public partial InitialCallType CallType { get; set; }                    // Required
+
+        [ObservableProperty]
+        public partial DateTime FirstContactDate { get; set; } = DateTime.Today; // Required
+
+        [ObservableProperty]
+        public partial string? PreferredLanguage { get; set; }
+
+        [ObservableProperty]
+        public partial string? Notes { get; set; } // Optional free text (no indexing)
 
         // Location fields (optional)
-        [ObservableProperty] private double? studyLatitude;
-        [ObservableProperty] private double? studyLongitude;
+        [ObservableProperty]
+        public partial double? StudyLatitude { get; set; }
+
+        [ObservableProperty]
+        public partial double? StudyLongitude { get; set; }
 
         // Picker ItemsSource
         public List<InitialCallType> CallTypeValues =>
-            Enum.GetValues(typeof(InitialCallType)).Cast<InitialCallType>().ToList();
+            Enum.GetValues<InitialCallType>().ToList();
 
         // Commands
         public IAsyncRelayCommand SaveCommand { get; }
@@ -60,8 +71,12 @@ namespace MinistryTracker.ViewModels
 
         // UI helpers (for your label)
         public bool IsLocationCaptured => StudyLatitude.HasValue && StudyLongitude.HasValue;
-        [ObservableProperty] private bool isLocating;
-        [ObservableProperty] private string? locationStatus;
+
+        [ObservableProperty]
+        public partial bool IsLocating { get; set; }
+
+        [ObservableProperty]
+        public partial string? LocationStatus { get; set; }
 
         public string LocationDisplay =>
             IsLocationCaptured
@@ -86,7 +101,7 @@ namespace MinistryTracker.ViewModels
         {
             Name = string.Empty;
             PreferredLanguage = null;
-            FirstContactDate = DateTime.Now; 
+            FirstContactDate = DateTime.Now;
 
             // Pick a sensible default (or replace with InitialCallType.HouseToHouse if preferred)
             CallType = CallTypeValues.FirstOrDefault();
@@ -103,7 +118,7 @@ namespace MinistryTracker.ViewModels
 
             try
             {
-                // ✅ Ask for permission first
+                // Ask for permission first
                 var granted = await LocationPermissionHelper.EnsureLocationPermissionAsync();
                 if (!granted)
                 {
@@ -139,7 +154,6 @@ namespace MinistryTracker.ViewModels
             }
         }
 
-
         private async Task SaveStudentAsync()
         {
             if (string.IsNullOrWhiteSpace(Name))
@@ -161,18 +175,25 @@ namespace MinistryTracker.ViewModels
                 // Persist GPS if captured (otherwise nulls)
                 StudyLatitude = StudyLatitude,
                 StudyLongitude = StudyLongitude
-
             };
 
             var rows = await _data.AddStudentAsync(student);
 
+            // Use the current window page instead of obsolete Application.MainPage.
+            var app = Application.Current;
+            var page = app is not null && app.Windows.Count > 0
+                ? app.Windows[0].Page
+                : null;
+
             if (rows > 0)
             {
-                await Application.Current.MainPage.Navigation.PopAsync();
+                if (page != null)
+                    await page.Navigation.PopAsync();
             }
             else
             {
-                await Application.Current.MainPage.DisplayAlert("Error", "Failed to add student. Please try again.", "OK");
+                if (page != null)
+                    await page.DisplayAlert("Error", "Failed to add student. Please try again.", "OK");
             }
         }
     }

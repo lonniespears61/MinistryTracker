@@ -2,8 +2,10 @@
 <ContentPage
     x:Class="MinistryTracker.Views.AddStudentPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
-
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:MinistryTracker.ViewModels"
+    x:DataType="vm:AddStudentViewModel">
+    
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="14">
 
