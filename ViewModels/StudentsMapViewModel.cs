@@ -9,6 +9,14 @@ using System.Threading.Tasks;
 
 namespace MinistryTracker.ViewModels
 {
+    /// <summary>
+    /// ViewModel for the student/visit map.
+    ///
+    /// DESIGN RULES
+    /// - Student no longer owns interaction location
+    /// - Visit owns meeting address / coordinates
+    /// - Map pins are created from visits that have valid meeting coordinates
+    /// </summary>
     public partial class StudentsMapViewModel : ObservableObject
     {
         private readonly DataService _data;
@@ -19,6 +27,9 @@ namespace MinistryTracker.ViewModels
             RefreshPinsCommand = new AsyncRelayCommand(RefreshPinsAsync);
         }
 
+        /// <summary>
+        /// Pins shown on the map.
+        /// </summary>
         public ObservableCollection<Pin> Pins { get; } = new();
 
         [ObservableProperty] private bool isBusy;
@@ -27,7 +38,7 @@ namespace MinistryTracker.ViewModels
         public IAsyncRelayCommand RefreshPinsCommand { get; }
 
         /// <summary>
-        /// Loads students with valid GPS coordinates and creates map pins.
+        /// Loads upcoming visits with meeting coordinates and creates map pins.
         /// </summary>
         private async Task RefreshPinsAsync()
         {
@@ -37,24 +48,26 @@ namespace MinistryTracker.ViewModels
             try
             {
                 IsBusy = true;
-                Status = "Loading students with locations…";
+                Status = "Loading visit locations…";
 
                 Pins.Clear();
 
-                var students = await _data.GetStudentsWithLocationAsync(includeDeleted: false);
+                // Pull upcoming visits, then pin only the ones with coordinates.
+                var visits = await _data.GetUpcomingVisitsAsync();
 
-                foreach (var s in students)
+                foreach (var v in visits)
                 {
-                    // Safety: the query should already filter these out, but guard against bad or stale data.
-                    if (s.StudyLatitude is null || s.StudyLongitude is null)
+                    if (v.MeetingLatitude is null || v.MeetingLongitude is null)
                         continue;
+
+                    var student = await _data.GetStudentByIdAsync(v.StudentId);
 
                     var pin = new Pin
                     {
-                        Label = s.Name,
-                        Address = s.StudyAddress ?? string.Empty, // Map pin address should not be null.
+                        Label = student?.Name ?? "Unknown",
+                        Address = v.MeetingAddress ?? string.Empty,
                         Type = PinType.Place,
-                        Location = new Location(s.StudyLatitude.Value, s.StudyLongitude.Value)
+                        Location = new Location(v.MeetingLatitude.Value, v.MeetingLongitude.Value)
                     };
 
                     Pins.Add(pin);

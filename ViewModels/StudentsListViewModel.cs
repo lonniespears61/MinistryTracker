@@ -1,10 +1,10 @@
-﻿// StudentsListViewModel.cs — Students list orchestration VM — 2026-01-24 (updated)
+﻿// StudentsListViewModel.cs — Students list orchestration VM — 2026-03-28
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
-using Microsoft.Maui.ApplicationModel; // MainThread
-using Microsoft.Maui.Controls;          // Shell
+using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.Controls;
 using MinistryTracker.Data;
 using System;
 using System.Collections.Generic;
@@ -20,18 +20,14 @@ public partial class StudentsListViewModel : ObservableObject
     private readonly DataService _data;
     private readonly ILogger<StudentsListViewModel>? _log;
 
-    // Master list (unfiltered). We never query the DB during search/filter.
     public ObservableCollection<StudentViewModel> Students { get; } = new();
 
-    // The list the UI binds to (filtered view).
     [ObservableProperty]
     private ObservableCollection<StudentViewModel> filteredStudents = new();
 
-    // Bound to the SearchBar
     [ObservableProperty]
     private string? searchText;
 
-    // Default ON to mirror Dashboard behavior
     [ObservableProperty]
     private bool isActiveOnly = true;
 
@@ -58,10 +54,8 @@ public partial class StudentsListViewModel : ObservableObject
         {
             IsBusy = true;
 
-            // STEP 1: Fetch all students
             var allStudents = await _data.GetStudentsAsync().ConfigureAwait(false);
 
-            // STEP 2: Fetch next future visit for each student (parallel)
             var nextVisitTasks = allStudents.Select(async s =>
             {
                 var next = await _data
@@ -73,7 +67,6 @@ public partial class StudentsListViewModel : ObservableObject
 
             var enriched = await Task.WhenAll(nextVisitTasks).ConfigureAwait(false);
 
-            // STEP 3: Update observable collections on UI thread
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
                 Students.Clear();
@@ -120,9 +113,9 @@ public partial class StudentsListViewModel : ObservableObject
     }
 
     // ---------------------------------------------------------------------
-    // SWIPE ACTION: Schedule Visit (Option 1)
+    // SCHEDULE VISIT
     // ---------------------------------------------------------------------
-    // IMPORTANT: The list binds to StudentViewModel, so the command should too.
+
     [RelayCommand]
     private async Task ScheduleVisit(StudentViewModel? svm)
     {
@@ -132,17 +125,14 @@ public partial class StudentsListViewModel : ObservableObject
         {
             var studentId = svm.Model.StudentId;
 
-            // Always re-check the DB to avoid stale UI state
             var existing = await _data
                 .GetNextFutureVisitForStudentAsync(studentId)
                 .ConfigureAwait(false);
 
             if (existing is null)
             {
-                // No existing appointment -> go straight to Add Visit
                 await MainThread.InvokeOnMainThreadAsync(async () =>
                 {
-                    // Route example. Replace with your real route names.
                     await Shell.Current.GoToAsync($"AddVisitPage?studentId={studentId}");
                 });
                 return;
@@ -151,13 +141,10 @@ public partial class StudentsListViewModel : ObservableObject
             var when = existing.ScheduledDateTime;
             var message = $"This student already has a visit scheduled for {when:ddd, MMM d, yyyy} at {when:h:mm tt}.";
 
-            // Use DisplayActionSheet for the 3-way choice.
-            // NOTE: DisplayActionSheet must run on UI thread.
             var choice = await MainThread.InvokeOnMainThreadAsync(async () =>
             {
                 var page = Application.Current?.Windows.FirstOrDefault()?.Page;
-                if (page is null)
-                    return "Cancel";
+                if (page is null) return "Cancel";
 
                 return await page.DisplayActionSheet(
                     "Visit already scheduled",
@@ -178,18 +165,13 @@ public partial class StudentsListViewModel : ObservableObject
                     break;
 
                 case "Replace it":
-                    // Prefer cancel/replace over delete (keeps history honest)
-                    await _data.CancelVisitAsync(existing.Id, reason: "Replaced by new scheduled visit")
-                              .ConfigureAwait(false);
+                    await _data.CancelVisitAsync(existing.Id, "Replaced by new visit")
+                               .ConfigureAwait(false);
 
                     await MainThread.InvokeOnMainThreadAsync(async () =>
                     {
                         await Shell.Current.GoToAsync($"AddVisitPage?studentId={studentId}");
                     });
-                    break;
-
-                default:
-                    // Cancel or dismissed -> do nothing
                     break;
             }
         }
@@ -200,7 +182,7 @@ public partial class StudentsListViewModel : ObservableObject
     }
 
     // ---------------------------------------------------------------------
-    // FILTERING / SEARCH
+    // FILTERING
     // ---------------------------------------------------------------------
 
     partial void OnSearchTextChanged(string? value) => ApplyFilter();
@@ -229,8 +211,8 @@ public partial class StudentsListViewModel : ObservableObject
                 (!string.IsNullOrEmpty(s.Name) &&
                  s.Name.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
 
-                (!string.IsNullOrEmpty(s.Model.PreferredLanguage) &&
-                 s.Model.PreferredLanguage.Contains(term, StringComparison.OrdinalIgnoreCase))
+                (!string.IsNullOrEmpty(s.PhoneNumber) &&
+                 s.PhoneNumber.Contains(term, StringComparison.OrdinalIgnoreCase))
             );
         }
 

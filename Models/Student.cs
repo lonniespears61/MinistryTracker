@@ -1,95 +1,93 @@
+// ---------------------------------------------------------------------------------------------------------------------
+// Student.cs
+// Domain model representing an individual being contacted in the ministry.
+//
+// DESIGN NOTES
+// - Student holds identity, contact info, and overall relationship state.
+// - Visit records hold interaction history (what happened, when, where).
+// - Household (if used) holds shared address/region data.
+// - This model uses sqlite-net-pcl attributes.
+//
+// ---------------------------------------------------------------------------------------------------------------------
+
 using SQLite;
 using MinistryTracker.Models.Enums;
 
 namespace MinistryTracker.Models
 {
-    /// <summary>
-    /// Represents a Bible student with optional household linkage and contact metadata.
-    /// </summary>
     [Table("Students")]
     public class Student
     {
+        /// <summary>
+        /// Primary key for this student record.
+        /// </summary>
         [PrimaryKey, AutoIncrement]
         public int StudentId { get; set; }
 
         /// <summary>
-        /// Student's full name.
+        /// Full name of the individual.
         /// </summary>
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// Type of initial contact (e.g., House to House, Phone, etc.)
+        /// How the first contact with this individual was made.
+        /// This is a historical value and does not change.
         /// </summary>
-        public InitialCallType CallType { get; set; }
+        public InitialContactType InitialContactType { get; set; }
 
         /// <summary>
-        /// When the first contact occurred.
+        /// Date of first contact.
         /// </summary>
         public DateTime FirstContactDate { get; set; }
 
         /// <summary>
-        /// Physical address where the study is conducted.
+        /// Primary phone number or contact number for the individual.
+        /// Used for calls or texting.
         /// </summary>
-        public string? StudyAddress { get; set; }
+        public string? PhoneNumber { get; set; }
 
         /// <summary>
-        /// Geolocation data for "near me" or mapping features.
+        /// Preferred or most commonly used method of communication.
+        /// This is a default/memory aid and may change over time.
         /// </summary>
-        public double? StudyLatitude { get; set; }
-        public double? StudyLongitude { get; set; }
-        // Geocoding bookkeeping (helps us avoid retrying too often)
-        public GeocodeStatus GeocodeStatus { get; set; } = GeocodeStatus.None;
-
-        // Last time we attempted forward/reverse geocoding (UTC)
-        public DateTime? LastGeocodeAttemptUtc { get; set; }
-
-        public Gender? Gender { get; set; }
-        public int? Age { get; set; }
+        public ContactMethod? DefaultContactMethod { get; set; }
 
         /// <summary>
-        /// Preferred spoken or written language of the student.
-        /// </summary>
-        public string? PreferredLanguage { get; set; }
-
-        public ContactMethod? ContactMethod { get; set; }
-
-        /// <summary>
-        /// Level of spiritual interest at time of entry.
+        /// Current ministry standing / progression of the individual.
+        /// (Promising, Interested, Return Visit, Study)
         /// </summary>
         public InterestLevel InterestLevel { get; set; }
 
-        public StudyLocationType StudyLocationType { get; set; } = StudyLocationType.Home;
-
         /// <summary>
-        /// ID of the household this student is linked to.
+        /// Indicates this individual should not be contacted again.
+        /// Used as a hard filter in most queries.
         /// </summary>
-        public int? HouseholdId { get; set; }
+        public bool IsDoNotCall { get; set; } = false;
 
         /// <summary>
-        /// Region, territory, or local area reference.
-        /// </summary>
-        public string? Region { get; set; }
-
-        /// <summary>
-        /// Notes about background, needs, or spiritual progress.
-        /// </summary>
-        public string? Notes { get; set; }
-
-        /// <summary>
-        /// Indicates whether this student is actively being visited.
+        /// General status of the student relationship.
         /// </summary>
         public StudentStatus Status { get; set; } = StudentStatus.Active;
 
         /// <summary>
-        /// If true, this student is logically deleted (but still in the DB).
+        /// Optional link to a household for shared address and region.
         /// </summary>
-        public bool IsDeleted { get; set; } = false;
+        public int? HouseholdId { get; set; }
 
         /// <summary>
-        /// [Ignored] In-memory reference to a related household object (not stored in DB).
+        /// Navigation property for convenience (not stored).
         /// </summary>
         [Ignore]
         public Household? Household { get; set; }
 
+        /// <summary>
+        /// General notes about the individual (background, needs, personality, etc.).
+        /// </summary>
+        public string? Notes { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Soft delete flag. Record remains in DB but is hidden from normal use.
+        /// </summary>
+        public bool IsDeleted { get; set; } = false;
     }
 }

@@ -1,57 +1,111 @@
 ﻿// ---------------------------------------------------------------------------------------------------------------------
 // Visit.cs
-// Domain model for a scheduled/recorded visit in the MinistryTracker app.
+// Domain model for a single planned or recorded ministry contact attempt in the MinistryTracker app.
 //
-// IMPORTANT: This model uses the attributes from **sqlite-net-pcl**, not Entity Framework.
-// - sqlite-net maps simple CLR properties (int, string, DateTime, enums) to columns
-// - Complex navigation properties (like Student) must be marked [Ignore]
-// - Enums are stored as integers automatically
+// DESIGN NOTES
+// - One Visit record = one attempt.
+// - If a visit is rescheduled, this record is marked Rescheduled and a NEW Visit record is created.
+// - If a visit is canceled and a later appointment is made, that later appointment starts a NEW chain.
+// - Visit-level location is important because a meeting place may differ from a student's home address,
+//   may only be known by geolocation, and may need to be handed off to another publisher.
+// - This model uses sqlite-net-pcl attributes, not Entity Framework.
 //
 // ---------------------------------------------------------------------------------------------------------------------
 
-using SQLite;                          // ✅ sqlite-net attributes (PrimaryKey, AutoIncrement, Table, Ignore)
-using MinistryTracker.Models.Enums;    // ✅ VisitType, VisitStatus enums live here
+using SQLite;
+using MinistryTracker.Models.Enums;
 
 namespace MinistryTracker.Models
 {
-    // Pin the table name explicitly. This protects you from accidental renames or pluralization drift later.
-    [Table("Visit")]
+    [Table("Visits")]
     public class Visit
     {
-        // Primary key with auto-increment identity. sqlite-net handles this pattern nicely.
+        /// <summary>
+        /// Primary key for this visit record.
+        /// </summary>
         [PrimaryKey, AutoIncrement]
         public int Id { get; set; }
 
-        // Foreign key to the Student table by integer ID.
-        // Note: sqlite-net does NOT enforce foreign keys or relationships for you.
-        //       We keep the FK field and perform any "joins" in memory at the DataService layer.
+        /// <summary>
+        /// Foreign key to the Student this visit is associated with.
+        /// </summary>
         public int StudentId { get; set; }
 
-        // Navigation property: useful in app code, but NOT storable by sqlite-net. Must be ignored.
-        // We'll populate this manually when assembling view models (see DataService join helpers).
+        /// <summary>
+        /// Navigation property for convenience in app code.
+        /// Not stored by sqlite-net.
+        /// </summary>
         [Ignore]
         public Student? Student { get; set; }
 
-        // When this visit is/was scheduled to happen.
-        // Stored in local time for simplicity; if you need robust TZ handling, consider UTC + conversion at the edges.
+        /// <summary>
+        /// The ministry stage represented by this contact attempt
+        /// (for example: Initial Contact, Return Visit, Bible Study).
+        /// </summary>
+        public VisitStage Stage { get; set; }
+
+        /// <summary>
+        /// How this interaction is or was conducted
+        /// (for example: InPerson, Text, Phone, VideoCall, Cart, Informal).
+        /// </summary>
+        public ContactMethod Method { get; set; }
+
+        /// <summary>
+        /// When this visit is scheduled to occur.
+        /// For completed visits, this remains the originally scheduled date/time.
+        /// </summary>
         public DateTime ScheduledDateTime { get; set; }
 
-        // Current state of the visit. sqlite-net stores enums as ints automatically.
+        /// <summary>
+        /// Current status of this single visit attempt.
+        /// </summary>
         public VisitStatus Status { get; set; } = VisitStatus.Scheduled;
 
-        // Free-form notes about what was discussed, follow-ups, etc.
-        // Using nullable string with an empty-string default to avoid null checks in UI bindings.
+        /// <summary>
+        /// When the visit actually occurred, if completed.
+        /// </summary>
+        public DateTime? CompletedDateTime { get; set; }
+
+        /// <summary>
+        /// Optional human-readable meeting address or description for this visit.
+        /// This may be a full address, partial description, or simple meeting label.
+        /// Examples:
+        /// "123 Main St"
+        /// "Porch by red barn"
+        /// "Meet in field at lunch"
+        /// "The Grind"
+        /// </summary>
+        public string? MeetingAddress { get; set; }
+
+        /// <summary>
+        /// Latitude for the meeting location, if captured.
+        /// Useful when no reliable address is available or when returning to a pinned rural location.
+        /// </summary>
+        public double? MeetingLatitude { get; set; }
+
+        /// <summary>
+        /// Longitude for the meeting location, if captured.
+        /// Useful when no reliable address is available or when returning to a pinned rural location.
+        /// </summary>
+        public double? MeetingLongitude { get; set; }
+
+        /// <summary>
+        /// If this visit was created because another visit was rescheduled,
+        /// this links back to the prior visit in that same chain.
+        /// This should only be used for true reschedules, not for a brand-new appointment
+        /// made after a cancellation.
+        /// </summary>
+        public int? RescheduledFromVisitId { get; set; }
+
+        /// <summary>
+        /// Free-form notes used as a memory aid.
+        /// Examples:
+        /// what was discussed,
+        /// why a change happened,
+        /// what question was asked,
+        /// observations that may help with future visits,
+        /// or details needed for a handoff to another publisher.
+        /// </summary>
         public string? Notes { get; set; } = string.Empty;
-
-        // If a visit is canceled, we can capture why for later review.
-        public string? CancellationReason { get; set; }
-
-        // What kind of visit this is (return visit, study, letter writing, etc.).
-        public VisitType VisitType { get; set; } = VisitType.ReturnVisit;
-        public string? LocationAddressOverride { get; set; }
-
-        public double? LocationLatitudeOverride { get; set; }
-
-        public double? LocationLongitudeOverride { get; set; }
     }
 }

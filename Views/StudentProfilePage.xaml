@@ -7,7 +7,6 @@
     x:DataType="vm:StudentProfileViewModel"
     Title="">
 
-    <!-- Top bar: Home + Title (shows only if inside NavigationPage) -->
     <NavigationPage.TitleView>
         <Grid ColumnDefinitions="Auto,*"
               VerticalOptions="Center"
@@ -18,8 +17,7 @@
                 WidthRequest="28"
                 HeightRequest="28"
                 BackgroundColor="Transparent"
-                Clicked="OnHomeClicked"
-                SemanticProperties.Description="Home" />
+                Clicked="OnHomeClicked" />
 
             <Label Grid.Column="1"
                    Text="Student"
@@ -33,12 +31,12 @@
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="16">
 
-            <!-- Header -->
+            <!-- HEADER -->
             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="16">
+
                 <Border WidthRequest="60" HeightRequest="60"
                         BackgroundColor="#E8F0FE"
-                        StrokeThickness="0"
-                        VerticalOptions="Center">
+                        StrokeThickness="0">
                     <Border.StrokeShape>
                         <RoundRectangle CornerRadius="30" />
                     </Border.StrokeShape>
@@ -52,6 +50,7 @@
                 </Border>
 
                 <VerticalStackLayout Grid.Column="1" Spacing="4">
+
                     <Label Text="{Binding Name}"
                            FontSize="24"
                            FontAttributes="Bold" />
@@ -62,30 +61,26 @@
 
                     <HorizontalStackLayout Spacing="8">
 
-                        <!-- Status pill -->
+                        <!-- STATUS -->
                         <Border Padding="8,3"
-                                BackgroundColor="{Binding StatusColor}"
-                                StrokeThickness="0">
+                                BackgroundColor="{Binding StatusColor}">
                             <Border.StrokeShape>
                                 <RoundRectangle CornerRadius="12" />
                             </Border.StrokeShape>
 
-                            <!-- Bind directly to the Student model -->
-                            <Label Text="{Binding Model.Status}"
+                            <Label Text="{Binding StatusLabel}"
                                    FontSize="12"
                                    TextColor="White" />
                         </Border>
 
-                        <!-- Interest pill -->
+                        <!-- INTEREST -->
                         <Border Padding="8,3"
-                                BackgroundColor="{Binding InterestColor}"
-                                StrokeThickness="0">
+                                BackgroundColor="{Binding InterestColor}">
                             <Border.StrokeShape>
                                 <RoundRectangle CornerRadius="12" />
                             </Border.StrokeShape>
 
-                            <!-- Bind directly to the Student model -->
-                            <Label Text="{Binding Model.InterestLevel}"
+                            <Label Text="{Binding InterestLabel}"
                                    FontSize="12"
                                    TextColor="Black" />
                         </Border>
@@ -95,7 +90,7 @@
                 </VerticalStackLayout>
             </Grid>
 
-            <!-- Details -->
+            <!-- DETAILS -->
             <Border BackgroundColor="White"
                     Stroke="{AppThemeBinding Light=#E5E7EB, Dark=#333}"
                     StrokeThickness="1"
@@ -105,22 +100,26 @@
                 </Border.StrokeShape>
 
                 <VerticalStackLayout Spacing="10">
-                    <Label Text="Details" FontAttributes="Bold" FontSize="16" />
+
+                    <Label Text="Details"
+                           FontAttributes="Bold"
+                           FontSize="16" />
 
                     <Label Text="{Binding FirstContactFormatted}" />
 
-                    <Label Text="{Binding PreferredLanguage, StringFormat='Language: {0}'}"
-                           IsVisible="{Binding PreferredLanguage, Converter={StaticResource StringNotNullOrEmptyConverter}}" />
+                    <!-- PHONE -->
+                    <Label Text="{Binding PhoneNumber, StringFormat='Phone: {0}'}"
+                           IsVisible="{Binding PhoneNumber}" />
 
-                    <Label Text="{Binding StudyLocationLabel, StringFormat='Location: {0}'}" />
-
-                    <Label Text="{Binding StudyAddress, StringFormat='Address: {0}'}"
-                           LineBreakMode="WordWrap" />
+                    <!-- NOTES -->
+                    <Label Text="{Binding Notes}"
+                           LineBreakMode="WordWrap"
+                           IsVisible="{Binding HasNotes}" />
 
                 </VerticalStackLayout>
             </Border>
 
-            <!-- Actions -->
+            <!-- ACTION -->
             <Button Text="Edit Student"
                     Clicked="OnEditStudentClicked"
                     BackgroundColor="#1A73E8"

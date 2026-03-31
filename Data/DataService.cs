@@ -1,7 +1,17 @@
 ﻿// ---------------------------------------------------------------------------------------------------------------------
 // DataService.cs (base)
-// Database connection + initialization + EnsureInitThen helpers.
-// Keep this file boring: no Student/Visit feature queries here.
+//
+// PURPOSE
+// - Own the SQLite connection
+// - Create tables
+// - Apply migrations
+// - Provide EnsureInitThen helpers used by the partial DataService files
+//
+// DESIGN RULES
+// - Keep this file boring
+// - No Student/Visit feature queries here
+// - All table names must match the model [Table(...)] attributes
+//
 // ---------------------------------------------------------------------------------------------------------------------
 
 using System;
@@ -22,13 +32,15 @@ namespace MinistryTracker.Data
         private readonly SemaphoreSlim _gate = new(1, 1);
         private bool _initialized;
 
-        // NOTE: other partials should use Db (not _database directly).
+        /// <summary>
+        /// Other partial classes should use Db, not _database directly.
+        /// </summary>
         internal SQLiteAsyncConnection Db =>
             _database ?? throw new InvalidOperationException("Database not initialized. Call InitializeAsync() first.");
 
         /// <summary>
-        /// Create the SQLite connection and the database tables once.
-        /// Safe to call multiple times; subsequent calls return immediately.
+        /// Create the SQLite connection and schema once.
+        /// Safe to call multiple times.
         /// </summary>
         public async Task InitializeAsync()
         {
@@ -47,7 +59,9 @@ namespace MinistryTracker.Data
                     SQLiteOpenFlags.Create |
                     SQLiteOpenFlags.SharedCache);
 
-                // ---- PRAGMAs: do once per connection ----------------------------------
+                // -----------------------------------------------------------------
+                // PRAGMAs
+                // -----------------------------------------------------------------
                 try
                 {
                     _ = await _database.ExecuteScalarAsync<long>("PRAGMA foreign_keys = ON;").ConfigureAwait(false);
@@ -56,18 +70,21 @@ namespace MinistryTracker.Data
                 }
                 catch (SQLiteException)
                 {
-                    // Don't fail startup over PRAGMAs; add logging later if desired.
+                    // Do not fail startup over PRAGMA support differences.
                 }
 
-                // ---- Schema: create tables & indexes ----------------------------------
+                // -----------------------------------------------------------------
+                // Schema
+                // -----------------------------------------------------------------
                 await Db.CreateTableAsync<Student>().ConfigureAwait(false);
                 await Db.CreateTableAsync<Visit>().ConfigureAwait(false);
 
+                // Visit table is now [Table("Visits")] in Visit.cs
                 await Db.ExecuteAsync(
-                    "CREATE INDEX IF NOT EXISTS IX_Visit_StudentDate ON Visit(StudentId, ScheduledDateTime)"
+                    "CREATE INDEX IF NOT EXISTS IX_Visits_StudentDate ON Visits(StudentId, ScheduledDateTime)"
                 ).ConfigureAwait(false);
 
-                // ---- Versioning hook (for future migrations) --------------------------
+                // Optional future migrations
                 await ApplyMigrationsAsync(_database).ConfigureAwait(false);
 
                 _initialized = true;
@@ -82,53 +99,49 @@ namespace MinistryTracker.Data
 
         private static async Task ApplyMigrationsAsync(SQLiteAsyncConnection db)
         {
-            // 0 means "no version set yet" (often a fresh DB)
             var version = await db.ExecuteScalarAsync<int>("PRAGMA user_version;").ConfigureAwait(false);
 
-            // Fresh install path: tables already created above.
-            // Set version once so future migrations have a baseline.
             if (version == 0)
             {
                 await db.ExecuteAsync($"PRAGMA user_version = {CurrentSchemaVersion};").ConfigureAwait(false);
                 return;
             }
 
-            // Future upgrade path: migrate incrementally.
-            // Keep this structure even while we're on v1.
             if (version < 1)
             {
-                // In practice you won't see this (SQLite user_version starts at 0),
-                // but keeping the shape makes future diffs clean.
                 await db.ExecuteAsync("PRAGMA user_version = 1;").ConfigureAwait(false);
                 version = 1;
             }
 
-            // Example future slots (DO NOT implement yet)
-            // if (version < 2) { await MigrateToV2Async(db).ConfigureAwait(false); await db.ExecuteAsync("PRAGMA user_version = 2;"); version = 2; }
-            // if (version < 3) { await MigrateToV3Async(db).ConfigureAwait(false); await db.ExecuteAsync("PRAGMA user_version = 3;"); version = 3; }
-
-            // Optional: sanity check (useful later)
-            // if (version > CurrentSchemaVersion) { /* app older than DB; decide what to do */ }
+            // Future migration slots:
+            // if (version < 2) { ... }
+            // if (version < 3) { ... }
         }
 
-        /// <summary>Returns the fully-qualified path to the database file (useful for logs/support).</summary>
+        /// <summary>
+        /// Fully-qualified database path (useful for diagnostics).
+        /// </summary>
         public string GetDatabasePath() =>
             Path.Combine(FileSystem.AppDataDirectory, DbFileName);
 
         // -------------------------------------------------------------------------------------------------------------
-        // EnsureInitThen helpers (CancellationToken versions)
+        // EnsureInitThen helpers
         // -------------------------------------------------------------------------------------------------------------
 
         internal async Task<T> EnsureInitThen<T>(Func<Task<T>> work, CancellationToken ct = default)
         {
-            if (!_initialized) await InitializeAsync().ConfigureAwait(false);
+            if (!_initialized)
+                await InitializeAsync().ConfigureAwait(false);
+
             ct.ThrowIfCancellationRequested();
             return await work().ConfigureAwait(false);
         }
 
         internal async Task EnsureInitThen(Func<Task> work, CancellationToken ct = default)
         {
-            if (!_initialized) await InitializeAsync().ConfigureAwait(false);
+            if (!_initialized)
+                await InitializeAsync().ConfigureAwait(false);
+
             ct.ThrowIfCancellationRequested();
             await work().ConfigureAwait(false);
         }

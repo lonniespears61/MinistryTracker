@@ -1,7 +1,16 @@
 // ---------------------------------------------------------------------------------------------------------------------
 // VisitWithStudent.cs (DTO)
-// A view-optimized "shape" for list/detail UI that needs Visit data plus a few Student fields.
-// We DO NOT store this in the database; it's purely for transport/binding in the UI layer.
+//
+// PURPOSE
+// - UI-friendly projection combining Visit + basic Student info
+// - Used for lists, calendar, and lightweight display scenarios
+// - NOT stored in database
+//
+// DESIGN RULES
+// - Keep it small (only what UI needs)
+// - VisitStage replaces old VisitType
+// - One Visit = one attempt (status reflects outcome)
+//
 // ---------------------------------------------------------------------------------------------------------------------
 
 using MinistryTracker.Models.Enums;
@@ -10,23 +19,39 @@ namespace MinistryTracker.Models.DTOs
 {
     public class VisitWithStudent
     {
-        // Identity: still handy for commands like "open visit" or "mark complete"
+        /// <summary>
+        /// Visit identity (used for navigation/actions).
+        /// </summary>
         public int VisitId { get; set; }
 
-        // The foreign key for linking back to Student if needed
+        /// <summary>
+        /// Student foreign key.
+        /// </summary>
         public int StudentId { get; set; }
 
-        // UI-friendly student info (no need to drag the full Student object)
+        /// <summary>
+        /// Student display name (no full Student object needed).
+        /// </summary>
         public string StudentName { get; set; } = string.Empty;
 
-        // The scheduled date/time for this visit (local time for display)
+        /// <summary>
+        /// Scheduled date/time for the visit (local time).
+        /// </summary>
         public DateTime ScheduledDateTime { get; set; }
 
-        // Enum fields are great in the ViewModel/UI for switch/case or converters
+        /// <summary>
+        /// Current state of the visit (Scheduled, Completed, etc.).
+        /// </summary>
         public VisitStatus Status { get; set; }
-        public VisitType VisitType { get; set; }
 
-        // Optional small preview for list cards; full notes can be loaded on demand
+        /// <summary>
+        /// Stage of the interaction (Initial Contact, Return Visit, Bible Study).
+        /// </summary>
+        public VisitStage Stage { get; set; }
+
+        /// <summary>
+        /// Short preview of notes for list display.
+        /// </summary>
         public string NotesPreview { get; set; } = string.Empty;
     }
 }

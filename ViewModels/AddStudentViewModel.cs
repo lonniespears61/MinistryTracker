@@ -1,185 +1,194 @@
-﻿// AddStudentViewModel.cs
+﻿// ---------------------------------------------------------------------------------------------------------------------
+// AddStudentViewModel.cs
+//
+// PURPOSE
+// - Handles creation of a new Student record
+// - Collects only STUDENT-level data (identity, contact, relationship state)
+// - DOES NOT handle visit-specific data (that belongs in Visit)
+//
+// DESIGN RULES
+// - Student = who the person is
+// - Visit = what happened and when
+// - Household = where they live (shared)
+// - Keep this ViewModel focused and simple
+//
+// ---------------------------------------------------------------------------------------------------------------------
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Maui.Controls;
-using Microsoft.Maui.Devices.Sensors;
 using MinistryTracker.Data;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
-using MinistryTracker.Utilities;
 using System.Globalization;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace MinistryTracker.ViewModels
 {
     public partial class AddStudentViewModel : ObservableObject
     {
+        // Data access layer
         private readonly DataService _data;
 
         public AddStudentViewModel(DataService data)
         {
             _data = data ?? throw new ArgumentNullException(nameof(data));
 
+            // Command wiring
             SaveCommand = new AsyncRelayCommand(SaveStudentAsync);
-            UseCurrentLocationCommand = new AsyncRelayCommand(UseCurrentLocationAsync);
 
-            // Optional: set a reasonable default so the Picker isn't blank
-            CallType = CallTypeValues.FirstOrDefault();
-
-            // Device / app UI language (e.g., "en", "es")
-            var uiLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-            PreferredLanguage = uiLang == "es" ? "Español" : "English";
+            // Sensible defaults so UI isn't blank
+            InitialContactType = InitialContactTypeValues.FirstOrDefault();
+            FirstContactDate = DateTime.Now;
+            Status = StudentStatus.Active;
+            InterestLevel = InterestLevel.Promising;
         }
 
-        // --------------------------------------------------------------------
-        // Properties bound from XAML
-        // --------------------------------------------------------------------
+        // =====================================================================
+        // 1) CORE STUDENT INPUT FIELDS (BOUND FROM UI)
+        // =====================================================================
 
+        /// <summary>
+        /// Full name of the individual.
+        /// Required (fallback handled at save).
+        /// </summary>
         [ObservableProperty]
-        public partial string Name { get; set; } = string.Empty;                 // Required
+        public partial string Name { get; set; } = string.Empty;
 
+        /// <summary>
+        /// How the FIRST contact was made (historical, does not change).
+        /// </summary>
         [ObservableProperty]
-        public partial InitialCallType CallType { get; set; }                    // Required
+        public partial InitialContactType InitialContactType { get; set; }
 
+        /// <summary>
+        /// Date of first contact.
+        /// </summary>
         [ObservableProperty]
-        public partial DateTime FirstContactDate { get; set; } = DateTime.Today; // Required
+        public partial DateTime FirstContactDate { get; set; } = DateTime.Now;
 
+        /// <summary>
+        /// Phone number used for calling/texting.
+        /// </summary>
         [ObservableProperty]
-        public partial string? PreferredLanguage { get; set; }
+        public partial string? PhoneNumber { get; set; }
 
+        /// <summary>
+        /// Default/typical way we communicate with this person.
+        /// (Memory aid only, not enforced.)
+        /// </summary>
         [ObservableProperty]
-        public partial string? Notes { get; set; } // Optional free text (no indexing)
+        public partial ContactMethod? DefaultContactMethod { get; set; }
 
-        // Location fields (optional)
+        /// <summary>
+        /// Current ministry standing (progression).
+        /// </summary>
         [ObservableProperty]
-        public partial double? StudyLatitude { get; set; }
+        public partial InterestLevel InterestLevel { get; set; } = InterestLevel.Promising;
 
+        /// <summary>
+        /// Overall relationship status.
+        /// </summary>
         [ObservableProperty]
-        public partial double? StudyLongitude { get; set; }
+        public partial StudentStatus Status { get; set; } = StudentStatus.Active;
 
-        // Picker ItemsSource
-        public List<InitialCallType> CallTypeValues =>
-            Enum.GetValues<InitialCallType>().ToList();
+        /// <summary>
+        /// Hard stop flag — should not be contacted again.
+        /// </summary>
+        [ObservableProperty]
+        public partial bool IsDoNotCall { get; set; }
 
-        // Commands
+        /// <summary>
+        /// Free-form notes about the individual.
+        /// (Background, personality, important context.)
+        /// </summary>
+        [ObservableProperty]
+        public partial string? Notes { get; set; }
+
+        /// <summary>
+        /// Optional link to a household (shared address/region).
+        /// </summary>
+        [ObservableProperty]
+        public partial int? HouseholdId { get; set; }
+
+        // =====================================================================
+        // 2) PICKER SOURCES (ENUM → UI)
+        // =====================================================================
+
+        public List<InitialContactType> InitialContactTypeValues =>
+            Enum.GetValues<InitialContactType>().ToList();
+
+        public List<ContactMethod> ContactMethodValues =>
+            Enum.GetValues<ContactMethod>().ToList();
+
+        public List<InterestLevel> InterestLevelValues =>
+            Enum.GetValues<InterestLevel>().ToList();
+
+        public List<StudentStatus> StudentStatusValues =>
+            Enum.GetValues<StudentStatus>().ToList();
+
+        // =====================================================================
+        // 3) COMMANDS
+        // =====================================================================
+
+        /// <summary>
+        /// Saves the student to the database.
+        /// </summary>
         public IAsyncRelayCommand SaveCommand { get; }
-        public IAsyncRelayCommand UseCurrentLocationCommand { get; }
 
-        // UI helpers (for your label)
-        public bool IsLocationCaptured => StudyLatitude.HasValue && StudyLongitude.HasValue;
+        // =====================================================================
+        // 4) RESET (USED WHEN PAGE OPENS)
+        // =====================================================================
 
-        [ObservableProperty]
-        public partial bool IsLocating { get; set; }
-
-        [ObservableProperty]
-        public partial string? LocationStatus { get; set; }
-
-        public string LocationDisplay =>
-            IsLocationCaptured
-                ? $"Location captured ✓ ({StudyLatitude!.Value:F6}, {StudyLongitude!.Value:F6})"
-                : string.Empty;
-
-        // Keep computed properties updated when lat/lon changes
-        partial void OnStudyLatitudeChanged(double? value)
-        {
-            OnPropertyChanged(nameof(IsLocationCaptured));
-            OnPropertyChanged(nameof(LocationDisplay));
-        }
-
-        partial void OnStudyLongitudeChanged(double? value)
-        {
-            OnPropertyChanged(nameof(IsLocationCaptured));
-            OnPropertyChanged(nameof(LocationDisplay));
-        }
-
-        // Called by page OnAppearing() to ensure clean slate
+        /// <summary>
+        /// Resets form fields to a clean state.
+        /// </summary>
         public void Reset()
         {
             Name = string.Empty;
-            PreferredLanguage = null;
+            PhoneNumber = null;
             FirstContactDate = DateTime.Now;
-
-            // Pick a sensible default (or replace with InitialCallType.HouseToHouse if preferred)
-            CallType = CallTypeValues.FirstOrDefault();
-
-            StudyLatitude = null;
-            StudyLongitude = null;
+            InitialContactType = InitialContactTypeValues.FirstOrDefault();
+            DefaultContactMethod = null;
+            InterestLevel = InterestLevel.Promising;
+            Status = StudentStatus.Active;
+            IsDoNotCall = false;
             Notes = null;
+            HouseholdId = null;
         }
 
-        private async Task UseCurrentLocationAsync()
-        {
-            IsLocating = true;
-            LocationStatus = "Getting location...";
-
-            try
-            {
-                // Ask for permission first
-                var granted = await LocationPermissionHelper.EnsureLocationPermissionAsync();
-                if (!granted)
-                {
-                    LocationStatus = "Location failed: permission not granted.";
-                    return;
-                }
-
-                var request = new GeolocationRequest(
-                    GeolocationAccuracy.Medium,
-                    TimeSpan.FromSeconds(10));
-
-                var loc = await Geolocation.Default.GetLocationAsync(request);
-
-                if (loc is null)
-                {
-                    LocationStatus = "Location failed: GPS unavailable (emulator location not set?).";
-                    return;
-                }
-
-                StudyLatitude = loc.Latitude;
-                StudyLongitude = loc.Longitude;
-
-                LocationStatus = $"Captured ✓ ({StudyLatitude.Value:F6}, {StudyLongitude.Value:F6})";
-            }
-            catch (Exception ex)
-            {
-                // Helpful for now; we can soften later
-                LocationStatus = $"Location failed: {ex.Message}";
-            }
-            finally
-            {
-                IsLocating = false;
-            }
-        }
+        // =====================================================================
+        // 5) SAVE LOGIC
+        // =====================================================================
 
         private async Task SaveStudentAsync()
         {
+            // Fallback name if user leaves it blank
             if (string.IsNullOrWhiteSpace(Name))
             {
                 var uiLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
                 Name = uiLang == "es" ? "Desconocido" : "Unknown";
             }
 
+            // Build Student model (IMPORTANT: only student-level data here)
             var student = new Student
             {
                 Name = Name.Trim(),
-                CallType = CallType,
+                InitialContactType = InitialContactType,
                 FirstContactDate = FirstContactDate,
-                PreferredLanguage = PreferredLanguage,
-                Status = StudentStatus.Active,
-                IsDeleted = false,
+                PhoneNumber = string.IsNullOrWhiteSpace(PhoneNumber) ? null : PhoneNumber.Trim(),
+                DefaultContactMethod = DefaultContactMethod,
+                InterestLevel = InterestLevel,
+                Status = Status,
+                IsDoNotCall = IsDoNotCall,
                 Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes.Trim(),
-
-                // Persist GPS if captured (otherwise nulls)
-                StudyLatitude = StudyLatitude,
-                StudyLongitude = StudyLongitude
+                HouseholdId = HouseholdId,
+                IsDeleted = false
             };
 
+            // Save to database
             var rows = await _data.AddStudentAsync(student);
 
-            // Use the current window page instead of obsolete Application.MainPage.
+            // Navigate back if successful
             var app = Application.Current;
             var page = app is not null && app.Windows.Count > 0
                 ? app.Windows[0].Page
