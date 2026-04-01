@@ -1,12 +1,26 @@
-﻿// AddVisitViewModel.cs
+﻿// ---------------------------------------------------------------------------------------------------------------------
+// AddVisitViewModel.cs
+//
+// PURPOSE
+// - Handles creation of a new Visit record.
+// - Receives studentId and optional date from Shell query params.
+// - Captures the minimum visit data needed for the current Visit model.
+//
+// DESIGN RULES
+// - ViewModel owns data/state/save logic
+// - View owns navigation and picker UX
+// - Visit must be saved with meaningful Stage + Method, not just date/time
+//
+// ---------------------------------------------------------------------------------------------------------------------
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Maui.Controls;           // Application, etc.
 using MinistryTracker.Data;
 using MinistryTracker.Models;
+using MinistryTracker.Models.Enums;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace MinistryTracker.ViewModels
@@ -19,82 +33,146 @@ namespace MinistryTracker.ViewModels
         {
             _data = data ?? throw new ArgumentNullException(nameof(data));
 
-            SaveCommand = new AsyncRelayCommand(SaveVisitAsync);
-
-            // Sensible defaults
             VisitDate = DateTime.Today;
             VisitTime = DateTime.Now.TimeOfDay;
 
+            // Sensible defaults
+            Stage = VisitStage.ReturnVisit;
+            Method = ContactMethod.InPerson;
         }
 
+        // =====================================================================
+        // EVENTS
+        // =====================================================================
 
-        // --------------------------------------------------------------------
-        // Shell Query (required)
-        // --------------------------------------------------------------------
+        /// <summary>
+        /// Fired when the visit saves successfully.
+        /// The View responds by navigating back.
+        /// </summary>
+        public event Action? SaveCompleted;
 
-        [ObservableProperty] private int studentId; // REQUIRED
+        /// <summary>
+        /// Fired when save fails.
+        /// The View can show an alert.
+        /// </summary>
+        public event Action<string>? SaveFailed;
+
+        // =====================================================================
+        // SHELL QUERY INPUTS
+        // =====================================================================
+
+        [ObservableProperty]
+        private int studentId;
 
         public void ApplyQueryAttributes(IDictionary<string, object> query)
         {
-            // Handles both "?studentId=123" (string) and int forms.
-            if (query.TryGetValue("studentId", out var raw) && raw is not null)
+            if (query.TryGetValue("studentId", out var rawId) && rawId is not null)
             {
-                if (raw is int id)
-                {
+                if (rawId is int id)
                     StudentId = id;
-                }
-                else if (raw is string s && int.TryParse(s, out var parsed))
-                {
+                else if (rawId is string s && int.TryParse(s, out var parsed))
                     StudentId = parsed;
-                }
+            }
+
+            if (query.TryGetValue("date", out var rawDate) && rawDate is string dateStr)
+            {
+                if (DateTime.TryParse(dateStr, out var parsedDate))
+                    VisitDate = parsedDate.Date;
             }
         }
 
-        // --------------------------------------------------------------------
-        // Properties bound from XAML
-        // --------------------------------------------------------------------
+        // =====================================================================
+        // FORM FIELDS
+        // =====================================================================
 
-        [ObservableProperty] private DateTime visitDate;   // Required (default today)
-        [ObservableProperty] private TimeSpan visitTime;   // Required (default now)
-        [ObservableProperty] private string? notes;        // Optional
         [ObservableProperty]
-        private string studentName = "Adding Visit";
-        [ObservableProperty] private bool isBusy;
+        private DateTime visitDate;
 
-        // Commands
-        public IAsyncRelayCommand SaveCommand { get; }
+        [ObservableProperty]
+        private TimeSpan visitTime;
 
-        // Called by page OnAppearing() if you want a clean slate for fields
+        [ObservableProperty]
+        private VisitStage stage = VisitStage.ReturnVisit;
+
+        [ObservableProperty]
+        private ContactMethod method = ContactMethod.InPerson;
+
+        [ObservableProperty]
+        private string? meetingAddress;
+
+        [ObservableProperty]
+        private string? notes;
+
+        [ObservableProperty]
+        private string studentName = "Add Visit";
+
+        [ObservableProperty]
+        private bool isBusy;
+
+        // =====================================================================
+        // PICKER SOURCES
+        // =====================================================================
+
+        public List<VisitStage> VisitStageValues =>
+            Enum.GetValues<VisitStage>().ToList();
+
+        public List<ContactMethod> ContactMethodValues =>
+            Enum.GetValues<ContactMethod>().ToList();
+
+        // =====================================================================
+        // RESET
+        // =====================================================================
+
+        /// <summary>
+        /// Reset visit-entry fields.
+        /// Does not reset StudentId because that is provided by Shell navigation.
+        /// </summary>
         public void Reset()
         {
             VisitDate = DateTime.Today;
             VisitTime = DateTime.Now.TimeOfDay;
+            Stage = VisitStage.ReturnVisit;
+            Method = ContactMethod.InPerson;
+            MeetingAddress = null;
             Notes = null;
+            IsBusy = false;
         }
 
+        // =====================================================================
+        // SAVE
+        // =====================================================================
+
+        [RelayCommand]
         private async Task SaveVisitAsync()
         {
-            if (IsBusy) return;
+            if (IsBusy)
+                return;
 
             try
             {
                 IsBusy = true;
 
-                // This matches your exception and prevents silent bad inserts
                 if (StudentId <= 0)
-                    throw new InvalidOperationException("Visit.StudentId must be set before inserting a visit.");
+                    throw new InvalidOperationException("StudentId must be set before saving a visit.");
 
                 var visit = new Visit
                 {
-                    StudentId = StudentId, // ✅ critical
+                    StudentId = StudentId,
+                    Stage = Stage,
+                    Method = Method,
                     ScheduledDateTime = VisitDate.Date + VisitTime,
-                    Notes = Notes
+                    MeetingAddress = string.IsNullOrWhiteSpace(MeetingAddress) ? null : MeetingAddress.Trim(),
+                    Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes.Trim(),
+                    Status = VisitStatus.Scheduled
                 };
 
-                await _data.AddVisitAsync(visit);
+                await _data.AddVisitAsync(visit).ConfigureAwait(false);
 
-                // If this page is opened via Shell route, pop via Shell navigation
-                await Shell.Current.GoToAsync("..");
+                SaveCompleted?.Invoke();
+            }
+            catch (Exception ex)
+            {
+                SaveFailed?.Invoke(ex.Message);
             }
             finally
             {

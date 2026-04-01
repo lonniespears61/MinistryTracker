@@ -7,6 +7,7 @@ using MinistryTracker.Views;
 using Microsoft.Maui.Controls.Maps;
 
 
+
 namespace MinistryTracker;
 
 public static class MauiProgram
