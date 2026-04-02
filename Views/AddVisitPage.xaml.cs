@@ -97,4 +97,8 @@ public partial class AddVisitPage : ContentPage
         _timeRequested = true;
         TryOpenTimeAsync();
     }
+    private async void OnCancelClicked(object sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync("..");
+    }
 }
