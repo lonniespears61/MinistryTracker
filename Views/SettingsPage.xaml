@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- SettingsPage.xaml — Settings (modal) — 2026-01-22 -->
+<!-- SettingsPage.xaml — Settings (modal) -->
 
 <ContentPage
     BackgroundColor="{StaticResource Settings.BgTint}"
@@ -11,15 +11,12 @@
     x:DataType="vm:SettingsViewModel"
     Title="">
 
-    <!-- Modal Settings is opened via PushModalAsync(new NavigationPage(SettingsPage)).
-         So NavigationPage.TitleView is the correct header slot. -->
     <NavigationPage.TitleView>
         <Grid ColumnDefinitions="Auto,*,Auto"
               VerticalOptions="Center"
               Padding="0,10,0,0"
               BackgroundColor="{StaticResource Settings.Base}">
 
-            <!-- Left spacer (keeps title centered) -->
             <Grid />
 
             <Label Grid.Column="1"
@@ -44,7 +41,108 @@
         <ScrollView>
             <VerticalStackLayout Padding="16" Spacing="16">
 
-                <!-- PRODUCTION: Near Me / Map Settings (placeholder for next session fields) -->
+                <!-- NORMAL SERVICE DAYS -->
+                <Border BackgroundColor="{StaticResource Settings.CardTint}"
+                        Stroke="{StaticResource Settings.BorderTint}"
+                        StrokeThickness="1"
+                        Padding="14">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16" />
+                    </Border.StrokeShape>
+
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Normal Service Days"
+                               FontSize="18"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+
+                        <Label Text="Choose the usual ministry period for each day. These defaults are used when scheduling new visits."
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+
+                        <Grid ColumnDefinitions="*,Auto"
+                              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
+                              RowSpacing="10"
+                              ColumnSpacing="12">
+
+                            <Label Text="Sunday"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                            <Picker Grid.Column="1"
+                                    ItemsSource="{Binding ServicePeriodValues}"
+                                    SelectedItem="{Binding ServiceDays.Sunday}"
+                                    WidthRequest="160" />
+
+                            <Label Grid.Row="1"
+                                   Text="Monday"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                            <Picker Grid.Row="1"
+                                    Grid.Column="1"
+                                    ItemsSource="{Binding ServicePeriodValues}"
+                                    SelectedItem="{Binding ServiceDays.Monday}"
+                                    WidthRequest="160" />
+
+                            <Label Grid.Row="2"
+                                   Text="Tuesday"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                            <Picker Grid.Row="2"
+                                    Grid.Column="1"
+                                    ItemsSource="{Binding ServicePeriodValues}"
+                                    SelectedItem="{Binding ServiceDays.Tuesday}"
+                                    WidthRequest="160" />
+
+                            <Label Grid.Row="3"
+                                   Text="Wednesday"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                            <Picker Grid.Row="3"
+                                    Grid.Column="1"
+                                    ItemsSource="{Binding ServicePeriodValues}"
+                                    SelectedItem="{Binding ServiceDays.Wednesday}"
+                                    WidthRequest="160" />
+
+                            <Label Grid.Row="4"
+                                   Text="Thursday"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                            <Picker Grid.Row="4"
+                                    Grid.Column="1"
+                                    ItemsSource="{Binding ServicePeriodValues}"
+                                    SelectedItem="{Binding ServiceDays.Thursday}"
+                                    WidthRequest="160" />
+
+                            <Label Grid.Row="5"
+                                   Text="Friday"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                            <Picker Grid.Row="5"
+                                    Grid.Column="1"
+                                    ItemsSource="{Binding ServicePeriodValues}"
+                                    SelectedItem="{Binding ServiceDays.Friday}"
+                                    WidthRequest="160" />
+
+                            <Label Grid.Row="6"
+                                   Text="Saturday"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                            <Picker Grid.Row="6"
+                                    Grid.Column="1"
+                                    ItemsSource="{Binding ServicePeriodValues}"
+                                    SelectedItem="{Binding ServiceDays.Saturday}"
+                                    WidthRequest="160" />
+                        </Grid>
+
+                        <Button Text="Save Service Day Settings"
+                                Command="{Binding SaveServiceDaySettingsCommand}"
+                                BackgroundColor="{StaticResource Settings.Base}"
+                                TextColor="White"
+                                CornerRadius="12" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <!-- PRODUCTION: Near Me / Map Settings -->
                 <Border BackgroundColor="{StaticResource Settings.CardTint}"
                         Stroke="{StaticResource Settings.BorderTint}"
                         StrokeThickness="1"
@@ -63,7 +161,6 @@
                                FontSize="12"
                                TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
-                        <!-- Placeholder rows (we'll wire these up next session) -->
                         <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="10">
 
                             <Label Text="Default radius"
@@ -83,7 +180,7 @@
                     </VerticalStackLayout>
                 </Border>
 
-                <!-- ABOUT (full) -->
+                <!-- ABOUT -->
                 <Border BackgroundColor="{StaticResource Settings.CardTint}"
                         Stroke="{StaticResource Settings.BorderTint}"
                         StrokeThickness="1"
@@ -100,14 +197,11 @@
                     </Border.Shadow>
 
                     <VerticalStackLayout Spacing="10">
-
-                        <!-- Header -->
                         <Label Text="About"
                                FontSize="18"
                                FontAttributes="Bold"
                                TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
 
-                        <!-- App name / version -->
                         <Label Text="{Binding AppName}"
                                FontSize="16"
                                FontAttributes="Bold"
@@ -121,7 +215,6 @@
                                FontSize="12"
                                TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
-                        <!-- Short plain-language blurb -->
                         <Label Text="Ministry Tracker helps you keep call notes and return visits."
                                FontSize="12"
                                TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
@@ -130,7 +223,6 @@
                                FontSize="12"
                                TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
-                        <!-- Legal wall behind Expander -->
                         <toolkit:Expander>
                             <toolkit:Expander.Header>
                                 <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
@@ -159,7 +251,6 @@
                                 </Border>
                             </toolkit:Expander.Content>
                         </toolkit:Expander>
-
                     </VerticalStackLayout>
                 </Border>
 
@@ -190,11 +281,10 @@
                     </Grid>
                 </Border>
 
-                <!-- DEV TOOLS (hidden unless IsDeveloperMode) -->
+                <!-- DEV TOOLS -->
                 <VerticalStackLayout Spacing="16"
                                      IsVisible="{Binding IsDeveloperMode}">
 
-                    <!-- Database Health -->
                     <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
                             Padding="14">
                         <Border.StrokeShape>
@@ -236,7 +326,6 @@
                                 </Grid>
                             </toolkit:Expander.Header>
 
-                            <!-- ✅ FIX: reliable scrolling for long diagnostic output -->
                             <toolkit:Expander.Content>
                                 <ScrollView HeightRequest="260">
                                     <Label Text="{Binding DbHealthText}"
@@ -249,7 +338,6 @@
                         </toolkit:Expander>
                     </Border>
 
-                    <!-- Seed Demo Data -->
                     <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
                             Padding="14">
                         <Border.StrokeShape>
@@ -270,7 +358,6 @@
                         </VerticalStackLayout>
                     </Border>
 
-                    <!-- Reset -->
                     <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
                             Padding="14">
                         <Border.StrokeShape>
@@ -298,7 +385,6 @@
             </VerticalStackLayout>
         </ScrollView>
 
-        <!-- Busy overlay -->
         <Grid IsVisible="{Binding IsBusy}"
               BackgroundColor="#80000000">
             <ActivityIndicator IsRunning="True"

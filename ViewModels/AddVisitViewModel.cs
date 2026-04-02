@@ -4,12 +4,13 @@
 // PURPOSE
 // - Handles creation of a new Visit record.
 // - Receives studentId and optional date from Shell query params.
-// - Captures the minimum visit data needed for the current Visit model.
+// - Applies Normal Service Days settings to default visit date/time.
 //
 // DESIGN RULES
 // - ViewModel owns data/state/save logic
 // - View owns navigation and picker UX
 // - Visit must be saved with meaningful Stage + Method, not just date/time
+// - Default visit date/time should follow the user's configured Normal Service Days
 //
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -18,6 +19,8 @@ using CommunityToolkit.Mvvm.Input;
 using MinistryTracker.Data;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
+using MinistryTracker.Services;
+using MinistryTracker.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,13 +31,14 @@ namespace MinistryTracker.ViewModels
     public partial class AddVisitViewModel : ObservableObject, IQueryAttributable
     {
         private readonly DataService _data;
+        private readonly SettingsService _settingsService;
 
-        public AddVisitViewModel(DataService data)
+        public AddVisitViewModel(DataService data, SettingsService settingsService)
         {
             _data = data ?? throw new ArgumentNullException(nameof(data));
+            _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
 
-            VisitDate = DateTime.Today;
-            VisitTime = DateTime.Now.TimeOfDay;
+            ApplyDefaultVisitDateTime();
 
             // Sensible defaults
             Stage = VisitStage.ReturnVisit;
@@ -53,7 +57,7 @@ namespace MinistryTracker.ViewModels
 
         /// <summary>
         /// Fired when save fails.
-        /// The View can show an alert.
+        /// The View responds by showing an alert.
         /// </summary>
         public event Action<string>? SaveFailed;
 
@@ -74,10 +78,18 @@ namespace MinistryTracker.ViewModels
                     StudentId = parsed;
             }
 
+            // If a date is explicitly passed in, keep that date
+            // but apply that day's configured default time.
             if (query.TryGetValue("date", out var rawDate) && rawDate is string dateStr)
             {
                 if (DateTime.TryParse(dateStr, out var parsedDate))
-                    VisitDate = parsedDate.Date;
+                {
+                    var settings = _settingsService.GetServiceDaySettings();
+                    var defaultDateTime = VisitSchedulingHelper.GetDefaultVisitDateTime(settings, parsedDate.Date);
+
+                    VisitDate = defaultDateTime.Date;
+                    VisitTime = defaultDateTime.TimeOfDay;
+                }
             }
         }
 
@@ -126,16 +138,33 @@ namespace MinistryTracker.ViewModels
         /// <summary>
         /// Reset visit-entry fields.
         /// Does not reset StudentId because that is provided by Shell navigation.
+        /// Applies the current Normal Service Days settings.
         /// </summary>
         public void Reset()
         {
-            VisitDate = DateTime.Today;
-            VisitTime = DateTime.Now.TimeOfDay;
+            ApplyDefaultVisitDateTime();
+
             Stage = VisitStage.ReturnVisit;
             Method = ContactMethod.InPerson;
             MeetingAddress = null;
             Notes = null;
             IsBusy = false;
+        }
+
+        // =====================================================================
+        // DEFAULT DATE/TIME HELPERS
+        // =====================================================================
+
+        /// <summary>
+        /// Applies the user's configured default Normal Service Day / period.
+        /// </summary>
+        private void ApplyDefaultVisitDateTime()
+        {
+            var settings = _settingsService.GetServiceDaySettings();
+            var defaultDateTime = VisitSchedulingHelper.GetDefaultVisitDateTime(settings);
+
+            VisitDate = defaultDateTime.Date;
+            VisitTime = defaultDateTime.TimeOfDay;
         }
 
         // =====================================================================

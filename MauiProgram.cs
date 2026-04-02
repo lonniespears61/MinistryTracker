@@ -5,6 +5,7 @@ using MinistryTracker.Data;
 using MinistryTracker.ViewModels;
 using MinistryTracker.Views;
 using Microsoft.Maui.Controls.Maps;
+using MinistryTracker.Services;
 
 
 
@@ -37,6 +38,7 @@ public static class MauiProgram
         // ===== Services =====
         builder.Services.AddSingleton<DataService>(); // SQLite wrapper / repo
         builder.Services.AddSingleton<AppShell>();    // ✅ Shell root for DI
+        builder.Services.AddSingleton<SettingsService>(); // User preferences (Normal Service Days, etc.)   
 
         // ===== ViewModels =====
         builder.Services.AddTransient<DashboardViewModel>();
