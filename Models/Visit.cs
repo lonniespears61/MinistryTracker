@@ -6,10 +6,11 @@
 // - One Visit record = one attempt.
 // - If a visit is rescheduled, this record is marked Rescheduled and a NEW Visit record is created.
 // - If a visit is canceled and a later appointment is made, that later appointment starts a NEW chain.
-// - Visit-level location is important because a meeting place may differ from a student's home address,
-//   may only be known by geolocation, and may need to be handed off to another publisher.
+// - Visit-level location is important because a meeting place may differ from the student's primary location.
+// - New visits may default MeetingAddress / MeetingLatitude / MeetingLongitude
+//   from the student's PrimaryAddress / PrimaryLatitude / PrimaryLongitude,
+//   but each Visit remains independently editable.
 // - This model uses sqlite-net-pcl attributes, not Entity Framework.
-//
 // ---------------------------------------------------------------------------------------------------------------------
 
 using SQLite;
@@ -46,7 +47,7 @@ namespace MinistryTracker.Models
 
         /// <summary>
         /// How this interaction is or was conducted
-        /// (for example: InPerson, Text, Phone, VideoCall, Cart, Informal).
+        /// (for example: InPerson, Text, Phone, WhatsApp, Email).
         /// </summary>
         public ContactMethod Method { get; set; }
 
@@ -68,12 +69,8 @@ namespace MinistryTracker.Models
 
         /// <summary>
         /// Optional human-readable meeting address or description for this visit.
-        /// This may be a full address, partial description, or simple meeting label.
-        /// Examples:
-        /// "123 Main St"
-        /// "Porch by red barn"
-        /// "Meet in field at lunch"
-        /// "The Grind"
+        /// This may be copied from the student's primary location when creating a new visit,
+        /// but it can differ for any specific appointment.
         /// </summary>
         public string? MeetingAddress { get; set; }
 

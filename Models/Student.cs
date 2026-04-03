@@ -3,11 +3,12 @@
 // Domain model representing an individual being contacted in the ministry.
 //
 // DESIGN NOTES
-// - Student holds identity, contact info, and overall relationship state.
+// - Student holds identity, contact info, overall relationship state,
+//   and the person's primary known location.
+// - "PrimaryAddress" may be a home address or another usual meeting location.
+// - "IsHomeAddress" tells us whether the primary address is actually the person's home.
 // - Visit records hold interaction history (what happened, when, where).
-// - Household (if used) holds shared address/region data.
 // - This model uses sqlite-net-pcl attributes.
-//
 // ---------------------------------------------------------------------------------------------------------------------
 
 using SQLite;
@@ -47,6 +48,38 @@ namespace MinistryTracker.Models
         public string? PhoneNumber { get; set; }
 
         /// <summary>
+        /// Main known address or usual location associated with this person.
+        /// In most cases this will also be the default starting point for new visit locations.
+        /// </summary>
+        public string? PrimaryAddress { get; set; }
+
+        /// <summary>
+        /// True when the primary address is the person's home address.
+        /// False when it is another meeting location.
+        /// </summary>
+        public bool IsHomeAddress { get; set; } = false;
+
+        /// <summary>
+        /// Optional latitude for the primary location.
+        /// </summary>
+        public double? PrimaryLatitude { get; set; }
+
+        /// <summary>
+        /// Optional longitude for the primary location.
+        /// </summary>
+        public double? PrimaryLongitude { get; set; }
+
+        /// <summary>
+        /// Tracks whether location capture / geocoding has succeeded for the primary location.
+        /// </summary>
+        public GeocodeStatus PrimaryGeocodeStatus { get; set; } = GeocodeStatus.None;
+
+        /// <summary>
+        /// Preferred language for communication or study.
+        /// </summary>
+        public string? PreferredLanguage { get; set; }
+
+        /// <summary>
         /// Preferred or most commonly used method of communication.
         /// This is a default/memory aid and may change over time.
         /// </summary>
@@ -66,8 +99,21 @@ namespace MinistryTracker.Models
 
         /// <summary>
         /// General status of the student relationship.
+        /// Does not replace Do Not Call.
         /// </summary>
         public StudentStatus Status { get; set; } = StudentStatus.Active;
+
+        /// <summary>
+        /// Optional demographic field.
+        /// Usually not required on first entry.
+        /// </summary>
+        public Gender? Gender { get; set; }
+
+        /// <summary>
+        /// Optional demographic field.
+        /// Usually not required on first entry.
+        /// </summary>
+        public int? Age { get; set; }
 
         /// <summary>
         /// Optional link to a household for shared address and region.

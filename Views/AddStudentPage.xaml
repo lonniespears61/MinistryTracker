@@ -65,7 +65,7 @@
                     <Label Text="Status" />
                     <Picker ItemsSource="{Binding StudentStatusValues}"
                             SelectedItem="{Binding Status}" />
-
+ 
                     <HorizontalStackLayout Spacing="10">
                         <CheckBox IsChecked="{Binding IsDoNotCall}" />
                         <Label Text="Do Not Call"
