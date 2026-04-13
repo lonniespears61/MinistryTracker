@@ -291,6 +291,55 @@
                             <RoundRectangle CornerRadius="16" />
                         </Border.StrokeShape>
 
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Database Schema"
+                                   FontSize="18"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+
+                            <Grid ColumnDefinitions="*,Auto"
+                                  RowDefinitions="Auto,Auto,Auto"
+                                  RowSpacing="6">
+
+                                <Label Text="Current Schema"
+                                       TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                                <Label Grid.Column="1"
+                                       Text="{Binding CurrentSchemaVersion}" />
+
+                                <Label Grid.Row="1"
+                                       Text="App Schema"
+                                       TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                                <Label Grid.Row="1"
+                                       Grid.Column="1"
+                                       Text="{Binding AppSchemaVersion}" />
+
+                                <Label Grid.Row="2"
+                                       Text="Migration Needed"
+                                       TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                                <Label Grid.Row="2"
+                                       Grid.Column="1"
+                                       Text="{Binding IsMigrationRequired}" />
+                            </Grid>
+
+                            <Button Text="Apply Database Update"
+                                    Command="{Binding ApplyMigrationCommand}">
+                                <Button.Triggers>
+                                    <DataTrigger TargetType="Button"
+                                                 Binding="{Binding IsMigrationRequired}"
+                                                 Value="False">
+                                        <Setter Property="IsVisible" Value="False" />
+                                    </DataTrigger>
+                                </Button.Triggers>
+                            </Button>
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
+                            Padding="14">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="16" />
+                        </Border.StrokeShape>
+
                         <toolkit:Expander IsExpanded="{Binding HealthExpanded}">
                             <toolkit:Expander.Header>
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
@@ -349,12 +398,12 @@
                                    FontSize="18"
                                    FontAttributes="Bold"
                                    TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
-                            <Label Text="Inserts a small demo set (safe if empty)."
+                            <Label Text="Delete local rows and rebuild test data using the current schema."
                                    FontSize="12"
                                    TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
-                            <Button Text="Re-seed Test Data"
-                                    Command="{Binding SeedDemoDataCommand}" />
+                            <Button Text="Delete &amp; Reseed Test Data"
+                                    Command="{Binding DeleteAndReseedTestDataCommand}" />
                         </VerticalStackLayout>
                     </Border>
 
@@ -365,18 +414,40 @@
                         </Border.StrokeShape>
 
                         <VerticalStackLayout Spacing="8">
-                            <Label Text="Beta Reset"
+                            <Label Text="Reset DB (Schema + Data)"
                                    FontSize="18"
                                    FontAttributes="Bold"
                                    TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
-                            <Label Text="Clears local data and rebuilds the DB."
+                            <Label Text="Delete the local database file, rebuild the schema, then seed test data."
                                    FontSize="12"
                                    TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
-                            <Button Text="Reset Local Database"
+                            <Button Text="Reset DB (Schema + Data)"
                                     BackgroundColor="#b00020"
                                     TextColor="White"
-                                    Command="{Binding ResetAndSeedCommand}" />
+                                    Command="{Binding ResetDbSchemaAndDataCommand}" />
+                        </VerticalStackLayout>
+                    </Border>
+
+                    <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
+                            Padding="14">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="16" />
+                        </Border.StrokeShape>
+
+                        <VerticalStackLayout Spacing="8">
+                            <Label Text="Reset DB (Schema Only)"
+                                   FontSize="18"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                            <Label Text="Delete the local database file and rebuild the schema without seeding test data."
+                                   FontSize="12"
+                                   TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+
+                            <Button Text="Reset DB (Schema Only)"
+                                    BackgroundColor="#7f1d1d"
+                                    TextColor="White"
+                                    Command="{Binding ResetDbSchemaOnlyCommand}" />
                         </VerticalStackLayout>
                     </Border>
 

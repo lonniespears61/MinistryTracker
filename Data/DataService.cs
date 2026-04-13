@@ -12,6 +12,12 @@
 // - No Student/Visit feature queries here
 // - All table names must match the model [Table(...)] attributes
 //
+// CHANGE NOTES (2026-XX-XX)
+// - Added schema version tracking (PRAGMA user_version)
+// - Added helpers to compare DB version vs app version
+// - Structured migration pipeline for future updates
+// - No migrations implemented yet (this is baseline version 1)
+//
 // ---------------------------------------------------------------------------------------------------------------------
 
 using System;
@@ -31,6 +37,15 @@ namespace MinistryTracker.Data
         private SQLiteAsyncConnection? _database;
         private readonly SemaphoreSlim _gate = new(1, 1);
         private bool _initialized;
+
+        // -----------------------------------------------------------------------------------------------------------------
+        // SCHEMA VERSION (SOURCE OF TRUTH FOR THIS BUILD)
+        // -----------------------------------------------------------------------------------------------------------------
+        // WHY:
+        // - This represents what the app expects the DB structure to be
+        // - We compare this against PRAGMA user_version to detect drift
+        // - For now, this is our baseline (fresh DB = version 1)
+        private const int CurrentSchemaVersion = 1;
 
         /// <summary>
         /// Other partial classes should use Db, not _database directly.
@@ -74,17 +89,21 @@ namespace MinistryTracker.Data
                 }
 
                 // -----------------------------------------------------------------
-                // Schema
+                // SCHEMA CREATION
                 // -----------------------------------------------------------------
                 await Db.CreateTableAsync<Student>().ConfigureAwait(false);
                 await Db.CreateTableAsync<Visit>().ConfigureAwait(false);
 
-                // Visit table is now [Table("Visits")] in Visit.cs
                 await Db.ExecuteAsync(
                     "CREATE INDEX IF NOT EXISTS IX_Visits_StudentDate ON Visits(StudentId, ScheduledDateTime)"
                 ).ConfigureAwait(false);
 
-                // Optional future migrations
+                // -----------------------------------------------------------------
+                // SCHEMA VERSION + MIGRATIONS
+                // -----------------------------------------------------------------
+                // WHY:
+                // - Ensures DB structure matches what this build expects
+                // - Right now this just sets baseline version (no migrations yet)
                 await ApplyMigrationsAsync(_database).ConfigureAwait(false);
 
                 _initialized = true;
@@ -95,27 +114,75 @@ namespace MinistryTracker.Data
             }
         }
 
-        private const int CurrentSchemaVersion = 1;
+        // -----------------------------------------------------------------------------------------------------------------
+        // SCHEMA VERSION HELPERS
+        // -----------------------------------------------------------------------------------------------------------------
+
+        /// <summary>
+        /// Returns the schema version stored in SQLite.
+        /// </summary>
+        public Task<int> GetDatabaseSchemaVersionAsync()
+        {
+            return EnsureInitThen(() =>
+                Db.ExecuteScalarAsync<int>("PRAGMA user_version;"));
+        }
+
+        /// <summary>
+        /// Returns the schema version expected by this app build.
+        /// </summary>
+        public int GetAppSchemaVersion() => CurrentSchemaVersion;
+
+        /// <summary>
+        /// True when DB is behind current app schema.
+        /// </summary>
+        public async Task<bool> IsMigrationRequiredAsync()
+        {
+            var dbVersion = await GetDatabaseSchemaVersionAsync().ConfigureAwait(false);
+            return dbVersion < CurrentSchemaVersion;
+        }
+
+        // -----------------------------------------------------------------------------------------------------------------
+        // MIGRATION PIPELINE
+        // -----------------------------------------------------------------------------------------------------------------
+        // WHY:
+        // - Keeps DB evolution controlled as app grows
+        // - Prevents silent schema drift between versions
+        // - Allows future upgrades without forcing resets
 
         private static async Task ApplyMigrationsAsync(SQLiteAsyncConnection db)
         {
             var version = await db.ExecuteScalarAsync<int>("PRAGMA user_version;").ConfigureAwait(false);
 
+            // -----------------------------------------------------------------
+            // BASELINE (VERSION 1)
+            // -----------------------------------------------------------------
+            // WHY:
+            // - Fresh DB starts at version 0
+            // - We explicitly set version so future migrations have a reference point
             if (version == 0)
             {
                 await db.ExecuteAsync($"PRAGMA user_version = {CurrentSchemaVersion};").ConfigureAwait(false);
                 return;
             }
 
-            if (version < 1)
-            {
-                await db.ExecuteAsync("PRAGMA user_version = 1;").ConfigureAwait(false);
-                version = 1;
-            }
+            // -----------------------------------------------------------------
+            // FUTURE MIGRATIONS (DO NOT REMOVE - expand when needed)
+            // -----------------------------------------------------------------
 
-            // Future migration slots:
-            // if (version < 2) { ... }
-            // if (version < 3) { ... }
+            // if (version < 2)
+            // {
+            //     // Example:
+            //     // await db.ExecuteAsync("ALTER TABLE Students ADD COLUMN Example TEXT;");
+            //
+            //     await db.ExecuteAsync("PRAGMA user_version = 2;").ConfigureAwait(false);
+            //     version = 2;
+            // }
+
+            // if (version < 3)
+            // {
+            //     await db.ExecuteAsync("PRAGMA user_version = 3;").ConfigureAwait(false);
+            //     version = 3;
+            // }
         }
 
         /// <summary>

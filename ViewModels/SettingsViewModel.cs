@@ -8,14 +8,14 @@
 //   2. Database health display
 //   3. Normal Service Days settings
 //
-// DESIGN RULES
-// - Keep diagnostics/dev tools working
-// - Keep settings persistence simple
-// - Service-day preferences are user settings, not database entities
-//
-// NOTES
-// - Uses WeakReferenceMessenger for UI messages already established in this page flow
-// - Uses SettingsService for normal service day preferences
+// CHANGE NOTES (04/12/2026)
+// - Added schema version visibility (DB vs App)
+// - Added migration detection flag
+// - Added ApplyMigrationCommand (stub for future use)
+// - Split dev reset actions into:
+//   * Delete & Reseed Test Data
+//   * Reset DB (Schema + Data)
+//   * Reset DB (Schema Only)
 //
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -42,7 +42,6 @@ namespace MinistryTracker.ViewModels
         private readonly DataService _data;
         private readonly SettingsService _settingsService;
 
-        // Single active operation CTS; new operation cancels the previous one
         private CancellationTokenSource? _activeCts;
 
         private const string DevModeKey = "IsDeveloperMode";
@@ -51,36 +50,33 @@ namespace MinistryTracker.ViewModels
         // SETTINGS BINDABLES
         // =====================================================================
 
-        /// <summary>
-        /// Per-day normal service preferences.
-        /// Each day can be None / Morning / Afternoon / Evening.
-        /// </summary>
         [ObservableProperty]
         private ServiceDaySettings serviceDays = new();
 
-        /// <summary>
-        /// Busy flag for diagnostics/dev operations.
-        /// </summary>
         [ObservableProperty]
         private bool isBusy;
 
-        /// <summary>
-        /// Database health report text shown in Settings UI.
-        /// </summary>
         [ObservableProperty]
         private string dbHealthText = string.Empty;
 
-        /// <summary>
-        /// Controls whether the DB health section is expanded.
-        /// </summary>
         [ObservableProperty]
         private bool healthExpanded;
 
-        /// <summary>
-        /// Toggles developer-mode UI visibility.
-        /// </summary>
         [ObservableProperty]
         private bool isDeveloperMode;
+
+        // =====================================================================
+        // SCHEMA VERSION DISPLAY
+        // =====================================================================
+
+        [ObservableProperty]
+        private int currentSchemaVersion;
+
+        [ObservableProperty]
+        private int appSchemaVersion;
+
+        [ObservableProperty]
+        private bool isMigrationRequired;
 
         // =====================================================================
         // CONSTRUCTOR
@@ -105,12 +101,27 @@ namespace MinistryTracker.ViewModels
         }
 
         // =====================================================================
+        // INITIALIZATION
+        // =====================================================================
+
+        public async Task InitializeSchemaInfoAsync()
+        {
+            try
+            {
+                CurrentSchemaVersion = await _data.GetDatabaseSchemaVersionAsync().ConfigureAwait(false);
+                AppSchemaVersion = _data.GetAppSchemaVersion();
+                IsMigrationRequired = await _data.IsMigrationRequiredAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("Schema info load failed: " + ex);
+            }
+        }
+
+        // =====================================================================
         // PICKER SOURCES
         // =====================================================================
 
-        /// <summary>
-        /// Picker source for normal service day period selection.
-        /// </summary>
         public List<ServicePeriod> ServicePeriodValues =>
             Enum.GetValues<ServicePeriod>().ToList();
 
@@ -118,17 +129,11 @@ namespace MinistryTracker.ViewModels
         // SETTINGS LOAD / SAVE
         // =====================================================================
 
-        /// <summary>
-        /// Load persisted service-day settings.
-        /// </summary>
         public void LoadServiceDaySettings()
         {
             ServiceDays = _settingsService.GetServiceDaySettings();
         }
 
-        /// <summary>
-        /// Save persisted service-day settings.
-        /// </summary>
         [RelayCommand]
         private void SaveServiceDaySettings()
         {
@@ -180,9 +185,6 @@ namespace MinistryTracker.ViewModels
         // DEV / DIAGNOSTICS COMMANDS
         // =====================================================================
 
-        /// <summary>
-        /// Insert demo data if DB is effectively empty.
-        /// </summary>
         [RelayCommand(AllowConcurrentExecutions = false)]
         private async Task SeedDemoData()
         {
@@ -199,6 +201,8 @@ namespace MinistryTracker.ViewModels
 
                 WeakReferenceMessenger.Default.Send(
                     new DataSeededMessage(DateTime.UtcNow));
+
+                await InitializeSchemaInfoAsync().ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -216,21 +220,22 @@ namespace MinistryTracker.ViewModels
         }
 
         /// <summary>
-        /// Reset local DB, then seed demo data again.
+        /// Delete rows and reseed test data.
+        /// Keeps current schema intact.
         /// </summary>
         [RelayCommand(AllowConcurrentExecutions = false)]
-        private async Task ResetAndSeed()
+        private async Task DeleteAndReseedTestData()
         {
             if (IsBusy) return;
 
             var tcs = new TaskCompletionSource<bool>();
 
             WeakReferenceMessenger.Default.Send(new UiConfirmMessage(
-                title: "Reset Database",
-                message: "This will wipe local data and recreate the DB, then seed demo data.\nContinue?",
-                setResult: confirmed => tcs.TrySetResult(confirmed),
-                accept: "Yes",
-                cancel: "No"));
+                "Delete & Reseed Test Data",
+                "This will delete all students and visits, then reseed test data.\nContinue?",
+                confirmed => tcs.TrySetResult(confirmed),
+                "Yes",
+                "No"));
 
             var proceed = await tcs.Task.ConfigureAwait(false);
             if (!proceed) return;
@@ -243,16 +248,18 @@ namespace MinistryTracker.ViewModels
                 await _data.SeedDemoDataAsync(ct).ConfigureAwait(false);
 
                 WeakReferenceMessenger.Default.Send(
-                    new UiToastMessage("Reset + seed complete"));
+                    new UiToastMessage("Delete + reseed complete"));
 
                 WeakReferenceMessenger.Default.Send(
-                    new UiSnackbarMessage("🧹 Reset + Seed complete.", "View health", UiSnackbarAction.ShowDbHealth));
+                    new UiSnackbarMessage("🧹 Delete + Reseed complete.", "View health", UiSnackbarAction.ShowDbHealth));
 
                 WeakReferenceMessenger.Default.Send(
                     new DatabaseResetMessage(DateTime.UtcNow));
 
                 WeakReferenceMessenger.Default.Send(
                     new DataSeededMessage(DateTime.UtcNow));
+
+                await InitializeSchemaInfoAsync().ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -261,7 +268,7 @@ namespace MinistryTracker.ViewModels
             catch (Exception ex)
             {
                 WeakReferenceMessenger.Default.Send(
-                    new UiAlertMessage("Reset failed", ex.Message));
+                    new UiAlertMessage("Delete + reseed failed", ex.Message));
             }
             finally
             {
@@ -270,8 +277,123 @@ namespace MinistryTracker.ViewModels
         }
 
         /// <summary>
-        /// Load authoritative DB schema/health report.
+        /// Delete DB file, rebuild schema, then reseed.
         /// </summary>
+        [RelayCommand(AllowConcurrentExecutions = false)]
+        private async Task ResetDbSchemaAndData()
+        {
+            if (IsBusy) return;
+
+            var tcs = new TaskCompletionSource<bool>();
+
+            WeakReferenceMessenger.Default.Send(new UiConfirmMessage(
+                "Reset DB (Schema + Data)",
+                "This will delete the local database, rebuild the schema, and reseed test data.\nContinue?",
+                confirmed => tcs.TrySetResult(confirmed),
+                "Yes",
+                "No"));
+
+            var proceed = await tcs.Task.ConfigureAwait(false);
+            if (!proceed) return;
+
+            var ct = StartOperation();
+
+            try
+            {
+                await _data.FullResetDatabaseAndSeedAsync(ct).ConfigureAwait(false);
+
+                WeakReferenceMessenger.Default.Send(
+                    new UiToastMessage("Schema reset + seed complete"));
+
+                WeakReferenceMessenger.Default.Send(
+                    new UiSnackbarMessage("🧱 Reset DB (Schema + Data) complete.", "View health", UiSnackbarAction.ShowDbHealth));
+
+                WeakReferenceMessenger.Default.Send(
+                    new DatabaseResetMessage(DateTime.UtcNow));
+
+                WeakReferenceMessenger.Default.Send(
+                    new DataSeededMessage(DateTime.UtcNow));
+
+                await InitializeSchemaInfoAsync().ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Ignore
+            }
+            catch (Exception ex)
+            {
+                WeakReferenceMessenger.Default.Send(
+                    new UiAlertMessage("Schema reset failed", ex.Message));
+            }
+            finally
+            {
+                EndOperation();
+            }
+        }
+
+        /// <summary>
+        /// Delete DB file and rebuild schema only.
+        /// No seed data is inserted.
+        /// </summary>
+        [RelayCommand(AllowConcurrentExecutions = false)]
+        private async Task ResetDbSchemaOnly()
+        {
+            if (IsBusy) return;
+
+            var tcs = new TaskCompletionSource<bool>();
+
+            WeakReferenceMessenger.Default.Send(new UiConfirmMessage(
+                "Reset DB (Schema Only)",
+                "This will delete the local database and rebuild the schema without inserting test data.\nContinue?",
+                confirmed => tcs.TrySetResult(confirmed),
+                "Yes",
+                "No"));
+
+            var proceed = await tcs.Task.ConfigureAwait(false);
+            if (!proceed) return;
+
+            var ct = StartOperation();
+
+            try
+            {
+                await _data.FullResetDatabaseAsync(ct).ConfigureAwait(false);
+
+                WeakReferenceMessenger.Default.Send(
+                    new UiToastMessage("Schema-only reset complete"));
+
+                WeakReferenceMessenger.Default.Send(
+                    new UiSnackbarMessage("🧱 Reset DB (Schema Only) complete.", "View health", UiSnackbarAction.ShowDbHealth));
+
+                WeakReferenceMessenger.Default.Send(
+                    new DatabaseResetMessage(DateTime.UtcNow));
+
+                await InitializeSchemaInfoAsync().ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // Ignore
+            }
+            catch (Exception ex)
+            {
+                WeakReferenceMessenger.Default.Send(
+                    new UiAlertMessage("Schema-only reset failed", ex.Message));
+            }
+            finally
+            {
+                EndOperation();
+            }
+        }
+
+        /// <summary>
+        /// Kept for compatibility while old button bindings still exist.
+        /// Current behavior matches the old intent: clear rows, then seed.
+        /// </summary>
+        [RelayCommand(AllowConcurrentExecutions = false)]
+        private async Task ResetAndSeed()
+        {
+            await DeleteAndReseedTestData().ConfigureAwait(false);
+        }
+
         [RelayCommand(AllowConcurrentExecutions = false)]
         private async Task ShowDbHealth()
         {
@@ -291,6 +413,8 @@ namespace MinistryTracker.ViewModels
 
                 WeakReferenceMessenger.Default.Send(
                     new UiToastMessage("DB schema health updated"));
+
+                await InitializeSchemaInfoAsync().ConfigureAwait(false);
             }
             catch (OperationCanceledException)
             {
@@ -312,6 +436,19 @@ namespace MinistryTracker.ViewModels
             {
                 EndOperation();
             }
+        }
+
+        // =====================================================================
+        // MIGRATION (FUTURE)
+        // =====================================================================
+
+        [RelayCommand]
+        private async Task ApplyMigration()
+        {
+            // Placeholder only.
+            // Real migration flow stays in DataService.cs, not in diagnostics helpers.
+
+            await Task.CompletedTask;
         }
 
         // =====================================================================
