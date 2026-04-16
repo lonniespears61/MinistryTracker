@@ -9,17 +9,34 @@
     Title="Add Student">
 
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="Save" Command="{Binding SaveStudentCommand}" Priority="0" />
-        <ToolbarItem Text="Cancel" Clicked="OnCancelClicked" Priority="1" />
+        <!-- Save triggers ViewModel logic only.
+             Navigation / prompts handled in code-behind via events -->
+        <ToolbarItem Text="Save"
+                     Command="{Binding SaveStudentCommand}"
+                     Priority="0" />
+
+        <!-- Cancel is UI-only behavior -->
+        <ToolbarItem Text="Cancel"
+                     Clicked="OnCancelClicked"
+                     Priority="1" />
     </ContentPage.ToolbarItems>
 
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="14">
 
-            <!-- FIRST PASS / CORE -->
-            <Label Text="Name" />
-            <Entry Text="{Binding Name}" Placeholder="Required" />
+            <!-- ========================================================= -->
+            <!-- TIER 1: Minimum required to create a Student              -->
+            <!-- ========================================================= -->
 
+            <!-- Identifier:
+                 Can be real name OR meaningful placeholder (e.g., "Blue house man")
+                 ViewModel will fallback to "Name Unknown" if left blank -->
+            <Label Text="Name / Identifier" />
+            <Entry Text="{Binding Name}"
+                   Placeholder="Name or short identifier" />
+
+            <!-- Historical field:
+                 Should represent actual first contact, not app entry date -->
             <Label Text="Initial Contact Type" />
             <Picker ItemsSource="{Binding InitialContactTypeValues}"
                     SelectedItem="{Binding InitialContactType}" />
@@ -27,16 +44,36 @@
             <Label Text="First Contact Date" />
             <DatePicker Date="{Binding FirstContactDate}" />
 
+            <!-- ========================================================= -->
+            <!-- TIER 2: Useful early data (optional but valuable)         -->
+            <!-- ========================================================= -->
+
             <Label Text="Phone Number" />
             <Entry Text="{Binding PhoneNumber}"
                    Keyboard="Telephone"
                    Placeholder="Optional" />
 
+            <!-- Address vs GPS:
+                 - Address = human-readable label
+                 - GPS = actual return location (captured separately)
+                 - ViewModel will NOT auto-overwrite Address -->
             <Label Text="Address" />
             <Entry Text="{Binding Address}"
                    Placeholder="Street, rural directions, or notes"
                    ClearButtonVisibility="WhileEditing" />
 
+            <!-- Indicates whether this address represents the person's home.
+                 Used later for grouping / visit logic -->
+            <HorizontalStackLayout Spacing="10">
+                <CheckBox IsChecked="{Binding IsHomeAddress}" />
+                <Label Text="This is the home address"
+                       VerticalOptions="Center" />
+            </HorizontalStackLayout>
+
+            <!-- GPS Capture:
+                 - Stores coordinates immediately (best return point)
+                 - May suggest replacing Address if reverse geocode differs
+                 - Actual prompt handled in code-behind via ViewModel event -->
             <HorizontalStackLayout Spacing="10">
                 <Button Text="Use Current Location"
                         Command="{Binding UseCurrentLocationCommand}" />
@@ -44,7 +81,10 @@
                                    IsVisible="{Binding IsLocating}" />
             </HorizontalStackLayout>
 
-            <!-- OPTIONAL DETAILS -->
+            <!-- ========================================================= -->
+            <!-- EXPANDER: Additional optional details                     -->
+            <!-- ========================================================= -->
+
             <toolkit:Expander>
                 <toolkit:Expander.Header>
                     <Label Text="More Details"
@@ -54,24 +94,28 @@
 
                 <VerticalStackLayout Spacing="12" Padding="0,10,0,0">
 
-                    <Label Text="Default Contact Method" />
-                    <Picker ItemsSource="{Binding ContactMethodValues}"
-                            SelectedItem="{Binding DefaultContactMethod}" />
-
+                    <!-- InterestLevel:
+                         - Default = Promising
+                         - Editable here to support backfilling existing students
+                         - Later updated by visit workflow -->
                     <Label Text="Interest Level" />
                     <Picker ItemsSource="{Binding InterestLevelValues}"
                             SelectedItem="{Binding InterestLevel}" />
 
-                    <Label Text="Status" />
-                    <Picker ItemsSource="{Binding StudentStatusValues}"
-                            SelectedItem="{Binding Status}" />
- 
-                    <HorizontalStackLayout Spacing="10">
-                        <CheckBox IsChecked="{Binding IsDoNotCall}" />
-                        <Label Text="Do Not Call"
-                               VerticalOptions="Center" />
-                    </HorizontalStackLayout>
+                    <!-- Optional demographic info.
+                         Not required for initial contact -->
+                    <Label Text="Age" />
+                    <Entry Text="{Binding StudentAge}"
+                           Keyboard="Numeric"
+                           Placeholder="Optional" />
 
+                    <Label Text="Gender" />
+                    <Picker ItemsSource="{Binding GenderValues}"
+                            SelectedItem="{Binding SelectedGender}" />
+
+                    <!-- Free-form notes:
+                         Use for personality, context, directions, etc.
+                         NOT for structured fields like address anymore -->
                     <Label Text="Notes" />
                     <Editor Text="{Binding Notes}"
                             AutoSize="TextChanges"

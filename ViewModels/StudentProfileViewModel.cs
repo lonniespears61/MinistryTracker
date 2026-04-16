@@ -1,4 +1,17 @@
-﻿// StudentProfileViewModel.cs — Student Profile VM — 2026-03-28
+﻿// ---------------------------------------------------------------------------------------------------------------------
+// StudentProfileViewModel.cs
+//
+// PURPOSE
+// - Read-only presentation ViewModel for the Student Profile page.
+// - Wraps a Student model and exposes safe UI-friendly computed properties.
+//
+// DESIGN RULES
+// - No legacy fields (DoNotCall / NoLongerInterested)
+// - Student profile shows person-level information only
+// - Visit history / next visit belong elsewhere
+// - Keeps compatibility with older XAML via StudentModel alias
+//
+// ---------------------------------------------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -10,26 +23,35 @@ using MinistryTracker.Models.Enums;
 
 namespace MinistryTracker.ViewModels
 {
-    /// <summary>ViewModel for the Student Profile page.</summary>
     public partial class StudentProfileViewModel : ObservableObject
     {
         [ObservableProperty]
         private Student? model;
 
-        public StudentProfileViewModel() { }
+        public StudentProfileViewModel()
+        {
+        }
 
         /// <summary>
-        /// Alias for older XAML that bound to StudentModel.
-        /// Keep this to avoid breaking older bindings while we refactor pages.
+        /// Compatibility alias for older XAML that bound to StudentModel.
         /// </summary>
         public Student? StudentModel
         {
             get => Model;
-            set { if (value != null) Load(value); }
+            set
+            {
+                if (value != null)
+                    Load(value);
+            }
         }
 
-        /// <summary>Initialize/refresh the profile with a Student.</summary>
-        public void Load(Student student) => Model = student;
+        /// <summary>
+        /// Initialize or refresh the profile with a Student.
+        /// </summary>
+        public void Load(Student student)
+        {
+            Model = student;
+        }
 
         partial void OnModelChanged(Student? value)
         {
@@ -69,15 +91,12 @@ namespace MinistryTracker.ViewModels
             {
                 var status = Model?.Status ?? StudentStatus.Active;
 
-                if (Model?.IsDoNotCall == true)
-                    return Colors.Red;
-
                 return status switch
                 {
                     StudentStatus.Active => Colors.Green,
                     StudentStatus.Paused => Colors.Orange,
-                    StudentStatus.NoLongerInterested => Colors.Gray,
                     StudentStatus.Discontinued => Colors.DarkGray,
+                    StudentStatus.Completed => Colors.SteelBlue,
                     _ => Colors.Gray
                 };
             }
@@ -105,11 +124,13 @@ namespace MinistryTracker.ViewModels
             get
             {
                 var name = Model?.Name;
-                if (string.IsNullOrWhiteSpace(name)) return "?";
+                if (string.IsNullOrWhiteSpace(name))
+                    return "?";
 
-                var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                                .Where(p => p.Length > 0)
-                                .Select(p => char.ToUpperInvariant(p[0]));
+                var parts = name
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Where(p => p.Length > 0)
+                    .Select(p => char.ToUpperInvariant(p[0]));
 
                 var two = new string(parts.Take(2).ToArray());
                 return string.IsNullOrWhiteSpace(two) ? "?" : two;
@@ -120,18 +141,18 @@ namespace MinistryTracker.ViewModels
         {
             get
             {
-                var segs = new List<string>();
+                var segments = new List<string>();
 
                 if (!string.IsNullOrWhiteSpace(PhoneNumber))
-                    segs.Add($"Phone: {PhoneNumber}");
+                    segments.Add($"Phone: {PhoneNumber}");
 
                 if (Model?.FirstContactDate is DateTime d && d != default)
-                    segs.Add($"First contact: {d:MMM dd, yyyy}");
+                    segments.Add($"First contact: {d:MMM dd, yyyy}");
 
                 if (Model is not null)
-                    segs.Add(Model.InitialContactType.ToString());
+                    segments.Add(Model.InitialContactType.ToString());
 
-                return string.Join(" • ", segs);
+                return string.Join(" • ", segments);
             }
         }
     }

@@ -1,14 +1,14 @@
-// ---------------------------------------------------------------------------------------------------------------------
+﻿// ---------------------------------------------------------------------------------------------------------------------
 // Student.cs
-// Domain model representing an individual being contacted in the ministry.
+// Domain model representing a Return Visit (person + relationship).
 //
-// DESIGN NOTES
-// - Student holds identity, contact info, overall relationship state,
-//   and the person's primary known location.
-// - "PrimaryAddress" may be a home address or another usual meeting location.
-// - "IsHomeAddress" tells us whether the primary address is actually the person's home.
-// - Visit records hold interaction history (what happened, when, where).
-// - This model uses sqlite-net-pcl attributes.
+// DESIGN INTENT
+// - This model represents WHO the person is and HOW we can reach them again.
+// - PrimaryAddress = best known reliable physical place to reach them.
+// - IsHomeAddress = indicates whether that address is their actual home.
+// - Household grouping is ONLY valid when IsHomeAddress = true.
+// - Visit records handle all interaction history and per-visit locations.
+// - This model remains language-neutral (no UI text stored here).
 // ---------------------------------------------------------------------------------------------------------------------
 
 using SQLite;
@@ -20,19 +20,20 @@ namespace MinistryTracker.Models
     public class Student
     {
         /// <summary>
-        /// Primary key for this student record.
+        /// Primary key for this record.
         /// </summary>
         [PrimaryKey, AutoIncrement]
         public int StudentId { get; set; }
 
         /// <summary>
         /// Full name of the individual.
+        /// Required for all records.
         /// </summary>
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// How the first contact with this individual was made.
-        /// This is a historical value and does not change.
+        /// How the first contact was made.
+        /// Historical value (does not change).
         /// </summary>
         public InitialContactType InitialContactType { get; set; }
 
@@ -42,97 +43,104 @@ namespace MinistryTracker.Models
         public DateTime FirstContactDate { get; set; }
 
         /// <summary>
-        /// Primary phone number or contact number for the individual.
-        /// Used for calls or texting.
+        /// Primary phone number (call/text).
+        /// Optional but may serve as an anchor.
         /// </summary>
         public string? PhoneNumber { get; set; }
 
         /// <summary>
-        /// Main known address or usual location associated with this person.
-        /// In most cases this will also be the default starting point for new visit locations.
+        /// Email address if available.
+        /// Optional anchor.
+        /// </summary>
+        public string? Email { get; set; }
+
+        /// <summary>
+        /// Best known reliable physical location to reach this person.
+        /// May be home, work, or other consistent place.
+        /// Used for map and in-person planning.
         /// </summary>
         public string? PrimaryAddress { get; set; }
 
         /// <summary>
-        /// True when the primary address is the person's home address.
-        /// False when it is another meeting location.
+        /// True if PrimaryAddress is the person's actual home.
+        /// Only TRUE values are used for household grouping.
         /// </summary>
         public bool IsHomeAddress { get; set; } = false;
 
         /// <summary>
-        /// Optional latitude for the primary location.
+        /// Indicates the general type of location for planning context.
+        /// (Home, Work, Public)
+        /// </summary>
+        public LocationContext LocationContext { get; set; } = LocationContext.Home;
+
+        /// <summary>
+        /// Latitude for PrimaryAddress (if known).
         /// </summary>
         public double? PrimaryLatitude { get; set; }
 
         /// <summary>
-        /// Optional longitude for the primary location.
+        /// Longitude for PrimaryAddress (if known).
         /// </summary>
         public double? PrimaryLongitude { get; set; }
 
         /// <summary>
-        /// Tracks whether location capture / geocoding has succeeded for the primary location.
+        /// Tracks whether geocoding has succeeded.
         /// </summary>
         public GeocodeStatus PrimaryGeocodeStatus { get; set; } = GeocodeStatus.None;
 
         /// <summary>
         /// Preferred language for communication or study.
+        /// Stored as user-entered value (not auto-translated).
         /// </summary>
         public string? PreferredLanguage { get; set; }
 
         /// <summary>
-        /// Preferred or most commonly used method of communication.
-        /// This is a default/memory aid and may change over time.
+        /// Default / most common method of contact.
+        /// Used as a convenience when scheduling visits.
         /// </summary>
-        public ContactMethod? DefaultContactMethod { get; set; }
+        public ContactMethod? PreferredContactMethod { get; set; }
 
         /// <summary>
-        /// Current ministry standing / progression of the individual.
-        /// (Promising, Interested, Return Visit, Study)
+        /// Indicates level of development (interest → study).
+        /// Lightweight guidance, not strict workflow.
         /// </summary>
         public InterestLevel InterestLevel { get; set; }
 
         /// <summary>
-        /// Indicates this individual should not be contacted again.
-        /// Used as a hard filter in most queries.
-        /// </summary>
-        public bool IsDoNotCall { get; set; } = false;
-
-        /// <summary>
-        /// General status of the student relationship.
-        /// Does not replace Do Not Call.
+        /// Current relationship status.
+        /// Controls visibility in dashboard/map logic.
         /// </summary>
         public StudentStatus Status { get; set; } = StudentStatus.Active;
 
         /// <summary>
         /// Optional demographic field.
-        /// Usually not required on first entry.
         /// </summary>
         public Gender? Gender { get; set; }
 
         /// <summary>
         /// Optional demographic field.
-        /// Usually not required on first entry.
         /// </summary>
         public int? Age { get; set; }
 
         /// <summary>
-        /// Optional link to a household for shared address and region.
+        /// Household grouping (only valid when IsHomeAddress = true).
         /// </summary>
         public int? HouseholdId { get; set; }
 
         /// <summary>
-        /// Navigation property for convenience (not stored).
+        /// Navigation property (not stored).
         /// </summary>
         [Ignore]
         public Household? Household { get; set; }
 
         /// <summary>
-        /// General notes about the individual (background, needs, personality, etc.).
+        /// General notes about the individual.
+        /// Used for background, personality, and long-term context.
         /// </summary>
         public string? Notes { get; set; } = string.Empty;
 
         /// <summary>
-        /// Soft delete flag. Record remains in DB but is hidden from normal use.
+        /// Soft delete flag.
         /// </summary>
         public bool IsDeleted { get; set; } = false;
     }

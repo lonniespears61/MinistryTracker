@@ -2,12 +2,13 @@
 // DataService.Projections.cs
 //
 // PURPOSE
-// - DTO helpers combining Visit + Student for UI (lists, calendar)
+// - DTO helpers combining Visit + Student for UI display (lists, dashboard, calendar)
 //
 // DESIGN RULES
-// - Small dataset → in-memory join is fine
-// - Visit uses Stage (not VisitType)
-// - Table name = Visits
+// - Small dataset → in-memory join is acceptable
+// - Visit no longer uses Stage or Type
+// - Status drives lifecycle behavior
+// - NotesPreview is only for lightweight display
 //
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -37,10 +38,15 @@ namespace MinistryTracker.Data
                                                 v.ScheduledDateTime < endExclusive);
 
                 if (!includeCanceled)
-                    visitsQuery = visitsQuery.Where(v => v.Status != VisitStatus.Canceled);
+                {
+                    visitsQuery = visitsQuery.Where(v =>
+                        v.Status != VisitStatus.CanceledByMe &&
+                        v.Status != VisitStatus.CanceledByThem);
+                }
 
                 var visits = await visitsQuery.ToListAsync().ConfigureAwait(false);
-                if (visits.Count == 0) return new List<VisitWithStudent>();
+                if (visits.Count == 0)
+                    return new List<VisitWithStudent>();
 
                 var studentIds = visits.Select(v => v.StudentId).Distinct().ToList();
 
@@ -53,23 +59,20 @@ namespace MinistryTracker.Data
 
                 var result = new List<VisitWithStudent>(visits.Count);
 
-                foreach (var v in visits)
+                foreach (var visit in visits)
                 {
                     ct.ThrowIfCancellationRequested();
 
-                    byId.TryGetValue(v.StudentId, out var stu);
+                    byId.TryGetValue(visit.StudentId, out var student);
 
                     result.Add(new VisitWithStudent
                     {
-                        VisitId = v.Id,
-                        StudentId = v.StudentId,
-                        StudentName = stu?.Name ?? "(Unnamed)",
-                        ScheduledDateTime = v.ScheduledDateTime,
-                        Status = v.Status,
-                        Stage = v.Stage,
-                        NotesPreview = string.IsNullOrWhiteSpace(v.Notes)
-                            ? string.Empty
-                            : (v.Notes!.Length > 80 ? v.Notes[..80] + "…" : v.Notes)
+                        VisitId = visit.Id,
+                        StudentId = visit.StudentId,
+                        StudentName = student?.Name ?? "(Unnamed)",
+                        ScheduledDateTime = visit.ScheduledDateTime,
+                        Status = visit.Status,
+                        NotesPreview = BuildNotesPreview(visit.Notes)
                     });
                 }
 
@@ -88,10 +91,15 @@ namespace MinistryTracker.Data
                                                 v.ScheduledDateTime < end);
 
                 if (!includeCanceled)
-                    visitsQuery = visitsQuery.Where(v => v.Status != VisitStatus.Canceled);
+                {
+                    visitsQuery = visitsQuery.Where(v =>
+                        v.Status != VisitStatus.CanceledByMe &&
+                        v.Status != VisitStatus.CanceledByThem);
+                }
 
                 var visits = await visitsQuery.ToListAsync().ConfigureAwait(false);
-                if (visits.Count == 0) return new List<VisitWithStudent>();
+                if (visits.Count == 0)
+                    return new List<VisitWithStudent>();
 
                 var studentIds = visits.Select(v => v.StudentId).Distinct().ToList();
 
@@ -104,23 +112,20 @@ namespace MinistryTracker.Data
 
                 var result = new List<VisitWithStudent>(visits.Count);
 
-                foreach (var v in visits)
+                foreach (var visit in visits)
                 {
                     ct.ThrowIfCancellationRequested();
 
-                    byId.TryGetValue(v.StudentId, out var stu);
+                    byId.TryGetValue(visit.StudentId, out var student);
 
                     result.Add(new VisitWithStudent
                     {
-                        VisitId = v.Id,
-                        StudentId = v.StudentId,
-                        StudentName = stu?.Name ?? "(Unnamed)",
-                        ScheduledDateTime = v.ScheduledDateTime,
-                        Status = v.Status,
-                        Stage = v.Stage,
-                        NotesPreview = string.IsNullOrWhiteSpace(v.Notes)
-                            ? string.Empty
-                            : (v.Notes!.Length > 80 ? v.Notes[..80] + "…" : v.Notes)
+                        VisitId = visit.Id,
+                        StudentId = visit.StudentId,
+                        StudentName = student?.Name ?? "(Unnamed)",
+                        ScheduledDateTime = visit.ScheduledDateTime,
+                        Status = visit.Status,
+                        NotesPreview = BuildNotesPreview(visit.Notes)
                     });
                 }
 
@@ -131,42 +136,64 @@ namespace MinistryTracker.Data
             DateTime? nowOverride = null,
             bool includeCanceled = false,
             CancellationToken ct = default)
-        {
-            return EnsureInitThen(async () =>
+            => EnsureInitThen(async () =>
             {
                 ct.ThrowIfCancellationRequested();
 
                 var now = nowOverride ?? DateTime.Now;
-                var canceledStatus = (int)VisitStatus.Canceled;
-                var includeCanceledInt = includeCanceled ? 1 : 0;
 
-                const string sql = @"
-SELECT
-    v.Id                AS VisitId,
-    v.StudentId         AS StudentId,
-    s.Name              AS StudentName,
-    v.ScheduledDateTime AS ScheduledDateTime,
-    v.Status            AS Status,
-    v.Stage             AS Stage,
-    CASE
-        WHEN v.Notes IS NULL THEN ''
-        ELSE trim(substr(v.Notes, 1, 80))
-    END                 AS NotesPreview
-FROM Visits v
-JOIN Students s ON s.StudentId = v.StudentId
-WHERE
-    s.IsDeleted = 0
-    AND v.ScheduledDateTime > ?
-    AND (? = 1 OR v.Status != ?)
-ORDER BY v.ScheduledDateTime ASC;";
+                var visits = await Db.Table<Visit>()
+                                     .Where(v =>
+                                         v.ScheduledDateTime > now &&
+                                         (includeCanceled ||
+                                          (v.Status != VisitStatus.CanceledByMe &&
+                                           v.Status != VisitStatus.CanceledByThem)))
+                                     .OrderBy(v => v.ScheduledDateTime)
+                                     .ToListAsync()
+                                     .ConfigureAwait(false);
 
-                return await Db.QueryAsync<VisitWithStudent>(
-                    sql,
-                    now,
-                    includeCanceledInt,
-                    canceledStatus
-                ).ConfigureAwait(false);
+                if (visits.Count == 0)
+                    return new List<VisitWithStudent>();
+
+                var studentIds = visits.Select(v => v.StudentId).Distinct().ToList();
+
+                var students = await Db.Table<Student>()
+                                       .Where(s => studentIds.Contains(s.StudentId) && !s.IsDeleted)
+                                       .ToListAsync()
+                                       .ConfigureAwait(false);
+
+                var byId = students.ToDictionary(s => s.StudentId);
+
+                var result = new List<VisitWithStudent>(visits.Count);
+
+                foreach (var visit in visits)
+                {
+                    ct.ThrowIfCancellationRequested();
+
+                    byId.TryGetValue(visit.StudentId, out var student);
+
+                    result.Add(new VisitWithStudent
+                    {
+                        VisitId = visit.Id,
+                        StudentId = visit.StudentId,
+                        StudentName = student?.Name ?? "(Unnamed)",
+                        ScheduledDateTime = visit.ScheduledDateTime,
+                        Status = visit.Status,
+                        NotesPreview = BuildNotesPreview(visit.Notes)
+                    });
+                }
+
+                return result;
             }, ct);
+
+        private static string BuildNotesPreview(string? notes)
+        {
+            if (string.IsNullOrWhiteSpace(notes))
+                return string.Empty;
+
+            return notes.Length > 80
+                ? notes[..80] + "…"
+                : notes;
         }
     }
 }

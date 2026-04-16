@@ -9,7 +9,8 @@
 // DESIGN RULES
 // - ViewModel owns data/state/save logic
 // - View owns navigation and picker UX
-// - Visit must be saved with meaningful Stage + Method, not just date/time
+// - Visit tracks one planned follow-up attempt
+// - Visit no longer uses Stage/Type concepts
 // - Default visit date/time should follow the user's configured Normal Service Days
 //
 // ---------------------------------------------------------------------------------------------------------------------
@@ -40,8 +41,7 @@ namespace MinistryTracker.ViewModels
 
             ApplyDefaultVisitDateTime();
 
-            // Sensible defaults
-            Stage = VisitStage.ReturnVisit;
+            // Sensible default
             Method = ContactMethod.InPerson;
         }
 
@@ -104,9 +104,6 @@ namespace MinistryTracker.ViewModels
         private TimeSpan visitTime;
 
         [ObservableProperty]
-        private VisitStage stage = VisitStage.ReturnVisit;
-
-        [ObservableProperty]
         private ContactMethod method = ContactMethod.InPerson;
 
         [ObservableProperty]
@@ -125,9 +122,6 @@ namespace MinistryTracker.ViewModels
         // PICKER SOURCES
         // =====================================================================
 
-        public List<VisitStage> VisitStageValues =>
-            Enum.GetValues<VisitStage>().ToList();
-
         public List<ContactMethod> ContactMethodValues =>
             Enum.GetValues<ContactMethod>().ToList();
 
@@ -144,7 +138,6 @@ namespace MinistryTracker.ViewModels
         {
             ApplyDefaultVisitDateTime();
 
-            Stage = VisitStage.ReturnVisit;
             Method = ContactMethod.InPerson;
             MeetingAddress = null;
             Notes = null;
@@ -187,11 +180,11 @@ namespace MinistryTracker.ViewModels
                 var visit = new Visit
                 {
                     StudentId = StudentId,
-                    Stage = Stage,
                     Method = Method,
                     ScheduledDateTime = VisitDate.Date + VisitTime,
                     MeetingAddress = string.IsNullOrWhiteSpace(MeetingAddress) ? null : MeetingAddress.Trim(),
                     Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes.Trim(),
+                    NotesCreatedDateTime = string.IsNullOrWhiteSpace(Notes) ? null : DateTime.Now,
                     Status = VisitStatus.Scheduled
                 };
 

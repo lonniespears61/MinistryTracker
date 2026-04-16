@@ -1,4 +1,18 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿// ---------------------------------------------------------------------------------------------------------------------
+// EditStudentViewModel.cs
+//
+// PURPOSE
+// - Handles editing an existing Student record.
+//
+// DESIGN RULES
+// - Student = identity + relationship state
+// - No visit data here
+// - Uses current Student model
+// - ViewModel owns state + save logic
+//
+// ---------------------------------------------------------------------------------------------------------------------
+
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MinistryTracker.Data;
 using MinistryTracker.Models;
@@ -10,14 +24,6 @@ using System.Threading.Tasks;
 
 namespace MinistryTracker.ViewModels
 {
-    /// <summary>
-    /// ViewModel for editing a Student.
-    ///
-    /// DESIGN RULES
-    /// - Student = identity + relationship state
-    /// - NO visit/location data here (that belongs to Visit)
-    /// - This page edits only student-level fields
-    /// </summary>
     public partial class EditStudentViewModel : ObservableObject
     {
         private readonly DataService _data;
@@ -35,10 +41,9 @@ namespace MinistryTracker.ViewModels
         [ObservableProperty] private InitialContactType initialContactType;
 
         [ObservableProperty] private string? phoneNumber;
-        [ObservableProperty] private ContactMethod? defaultContactMethod;
+        [ObservableProperty] private ContactMethod? preferredContactMethod;
         [ObservableProperty] private InterestLevel interestLevel;
         [ObservableProperty] private StudentStatus status;
-        [ObservableProperty] private bool isDoNotCall;
         [ObservableProperty] private string? notes;
 
         [ObservableProperty] private bool isBusy;
@@ -48,27 +53,15 @@ namespace MinistryTracker.ViewModels
         // PICKER SOURCES
         // =====================================================================
 
-        /// <summary>
-        /// Available initial contact types for the picker.
-        /// </summary>
         public List<InitialContactType> InitialContactTypeValues =>
             Enum.GetValues<InitialContactType>().ToList();
 
-        /// <summary>
-        /// Available contact methods for the picker.
-        /// </summary>
         public List<ContactMethod> ContactMethodValues =>
             Enum.GetValues<ContactMethod>().ToList();
 
-        /// <summary>
-        /// Available interest levels for the picker.
-        /// </summary>
         public List<InterestLevel> InterestLevelValues =>
             Enum.GetValues<InterestLevel>().ToList();
 
-        /// <summary>
-        /// Available student statuses for the picker.
-        /// </summary>
         public List<StudentStatus> StudentStatusValues =>
             Enum.GetValues<StudentStatus>().ToList();
 
@@ -99,10 +92,9 @@ namespace MinistryTracker.ViewModels
                 FirstContactDate = s.FirstContactDate;
                 InitialContactType = s.InitialContactType;
                 PhoneNumber = s.PhoneNumber;
-                DefaultContactMethod = s.DefaultContactMethod;
+                PreferredContactMethod = s.PreferredContactMethod;
                 InterestLevel = s.InterestLevel;
                 Status = s.Status;
-                IsDoNotCall = s.IsDoNotCall;
                 Notes = s.Notes;
             }
             catch (Exception ex)
@@ -149,10 +141,9 @@ namespace MinistryTracker.ViewModels
                 _loadedStudent.FirstContactDate = FirstContactDate;
                 _loadedStudent.InitialContactType = InitialContactType;
                 _loadedStudent.PhoneNumber = string.IsNullOrWhiteSpace(PhoneNumber) ? null : PhoneNumber.Trim();
-                _loadedStudent.DefaultContactMethod = DefaultContactMethod;
+                _loadedStudent.PreferredContactMethod = PreferredContactMethod;
                 _loadedStudent.InterestLevel = InterestLevel;
                 _loadedStudent.Status = Status;
-                _loadedStudent.IsDoNotCall = IsDoNotCall;
                 _loadedStudent.Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes.Trim();
 
                 await _data.UpdateStudentAsync(_loadedStudent);

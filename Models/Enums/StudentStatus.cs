@@ -1,37 +1,33 @@
+// ---------------------------------------------------------------------------------------------------------------------
+// StudentStatus.cs
+//
+// PURPOSE
+// - Represents the current relationship state of a Return Visit.
+//
+// DESIGN RULES
+// - Status describes the current state of the relationship, not activity totals.
+// - Completed and Discontinued are removed from normal working flow.
+// - Paused remains valid and may resurface later.
+// - Do Not Call does not exist in this app.
+//
+// ---------------------------------------------------------------------------------------------------------------------
+
 using System.ComponentModel.DataAnnotations;
 
 namespace MinistryTracker.Models.Enums
 {
-    /// <summary>
-    /// Represents the current ministry disposition of the student.
-    /// Does NOT include Do Not Call, which is handled separately by IsDoNotCall.
-    /// </summary>
     public enum StudentStatus
     {
-        /// <summary>
-        /// Actively being visited and showing interest.
-        /// </summary>
         [Display(Name = "Active")]
         Active,
 
-        /// <summary>
-        /// Temporarily not being visited due to schedule, health, or other circumstances.
-        /// May resume in the future.
-        /// </summary>
         [Display(Name = "Paused")]
         Paused,
 
-        /// <summary>
-        /// Previously showed interest but is no longer interested in continuing.
-        /// </summary>
-        [Display(Name = "No Longer Interested")]
-        NoLongerInterested,
-
-        /// <summary>
-        /// Visits have been intentionally stopped for practical reasons
-        /// (moved away, not a good match, etc.), but not a Do Not Call.
-        /// </summary>
         [Display(Name = "Discontinued")]
-        Discontinued
+        Discontinued,
+
+        [Display(Name = "Completed")]
+        Completed
     }
 }

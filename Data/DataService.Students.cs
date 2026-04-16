@@ -2,20 +2,24 @@
 // DataService.Students.cs
 //
 // PURPOSE
-// - Student-focused CRUD operations
-// - Keeps Student queries aligned with the refactored Student model
+// - Student-focused CRUD operations and student-level query helpers.
+// - Keeps Student access aligned with the current Student model.
 //
-// IMPORTANT
-// - Student no longer stores visit-level location/geocode data
-// - Shared address/region belongs in Household
-// - Interaction location belongs in Visit
+// DESIGN RULES
+// - Student stores identity, relationship state, preferred contact path,
+//   and the primary reachable physical location.
+// - Household-style grouping is only valid when IsHomeAddress = true.
+// - Visit-specific meeting places belong on Visit, not Student.
+// - This file provides data access only; UI validation belongs elsewhere.
 //
 // ---------------------------------------------------------------------------------------------------------------------
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MinistryTracker.Models;
+using MinistryTracker.Models.Enums;
 
 namespace MinistryTracker.Data
 {
@@ -40,12 +44,24 @@ namespace MinistryTracker.Data
         public Task<int> SoftDeleteStudentAsync(int studentId, CancellationToken ct = default)
             => EnsureInitThen(async () =>
             {
-                var s = await Db.FindAsync<Student>(studentId).ConfigureAwait(false);
-                if (s is null) return 0;
+                var student = await Db.FindAsync<Student>(studentId).ConfigureAwait(false);
+                if (student is null)
+                    return 0;
 
-                s.IsDeleted = true;
-                return await Db.UpdateAsync(s).ConfigureAwait(false);
+                student.IsDeleted = true;
+                return await Db.UpdateAsync(student).ConfigureAwait(false);
             }, ct);
+
+        /// <summary>
+        /// Find a student by primary key.
+        /// Returns null if not found.
+        /// </summary>
+        public Task<Student?> GetStudentByIdAsync(int studentId, CancellationToken ct = default)
+     => EnsureInitThen<Student?>(async () =>
+     {
+         var student = await Db.FindAsync<Student>(studentId).ConfigureAwait(false);
+         return student;
+     }, ct);
 
         /// <summary>
         /// Get all students, optionally including soft-deleted records.
@@ -63,23 +79,94 @@ namespace MinistryTracker.Data
             }, ct);
 
         /// <summary>
-        /// Find a student by primary key.
-        /// Returns null if not found.
+        /// Get students that are still in normal working scope.
+        /// Completed and Discontinued are excluded.
+        /// Paused stays in scope because it can resurface later.
         /// </summary>
-        public Task<Student?> GetStudentByIdAsync(int studentId, CancellationToken ct = default)
-            => EnsureInitThen<Student?>(async () =>
-            {
-                var student = await Db.FindAsync<Student>(studentId).ConfigureAwait(false);
-                return student;
-            }, ct);
+        public Task<List<Student>> GetWorkingScopeStudentsAsync(CancellationToken ct = default)
+            => EnsureInitThen(() =>
+                Db.Table<Student>()
+                  .Where(s =>
+                      !s.IsDeleted &&
+                      s.Status != StudentStatus.Completed &&
+                      s.Status != StudentStatus.Discontinued)
+                  .OrderBy(s => s.Name)
+                  .ToListAsync(), ct);
 
         /// <summary>
-        /// Count active (not soft-deleted) students.
+        /// Count students still in normal working scope.
         /// </summary>
         public Task<int> GetActiveStudentsCountAsync(CancellationToken ct = default)
             => EnsureInitThen(() =>
                 Db.Table<Student>()
-                  .Where(s => !s.IsDeleted)
+                  .Where(s =>
+                      !s.IsDeleted &&
+                      s.Status != StudentStatus.Completed &&
+                      s.Status != StudentStatus.Discontinued)
                   .CountAsync(), ct);
+
+        /// <summary>
+        /// Returns students that can be shown on the map.
+        /// Map scope is limited to in-person-capable students with a usable primary location.
+        /// </summary>
+        public Task<List<Student>> GetMappableStudentsAsync(CancellationToken ct = default)
+            => EnsureInitThen(() =>
+                Db.Table<Student>()
+                  .Where(s =>
+                      !s.IsDeleted &&
+                      s.Status != StudentStatus.Completed &&
+                      s.Status != StudentStatus.Discontinued &&
+                      s.PrimaryLatitude != null &&
+                      s.PrimaryLongitude != null &&
+                      !string.IsNullOrWhiteSpace(s.PrimaryAddress) &&
+                      (
+                          s.PreferredContactMethod == null ||
+                          s.PreferredContactMethod == ContactMethod.InPerson
+                      ))
+                  .OrderBy(s => s.Name)
+                  .ToListAsync(), ct);
+
+        /// <summary>
+        /// Returns students sharing the same home address.
+        /// Only addresses explicitly marked as home are eligible.
+        /// </summary>
+        public Task<List<Student>> GetStudentsByHomeAddressAsync(string primaryAddress, CancellationToken ct = default)
+            => EnsureInitThen(() =>
+                Db.Table<Student>()
+                  .Where(s =>
+                      !s.IsDeleted &&
+                      s.IsHomeAddress &&
+                      s.PrimaryAddress == primaryAddress)
+                  .OrderBy(s => s.Name)
+                  .ToListAsync(), ct);
+
+        /// <summary>
+        /// Updates only the student's primary location fields.
+        /// Keeps location changes isolated from broader student edits.
+        /// </summary>
+        public Task<int> UpdateStudentPrimaryLocationAsync(
+            int studentId,
+            string? primaryAddress,
+            bool isHomeAddress,
+            LocationContext locationContext,
+            double? primaryLatitude,
+            double? primaryLongitude,
+            GeocodeStatus geocodeStatus,
+            CancellationToken ct = default)
+            => EnsureInitThen(async () =>
+            {
+                var student = await Db.FindAsync<Student>(studentId).ConfigureAwait(false);
+                if (student is null)
+                    return 0;
+
+                student.PrimaryAddress = primaryAddress;
+                student.IsHomeAddress = isHomeAddress;
+                student.LocationContext = locationContext;
+                student.PrimaryLatitude = primaryLatitude;
+                student.PrimaryLongitude = primaryLongitude;
+                student.PrimaryGeocodeStatus = geocodeStatus;
+
+                return await Db.UpdateAsync(student).ConfigureAwait(false);
+            }, ct);
     }
 }

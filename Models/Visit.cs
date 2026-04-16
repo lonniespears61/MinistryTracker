@@ -1,16 +1,19 @@
 ﻿// ---------------------------------------------------------------------------------------------------------------------
 // Visit.cs
-// Domain model for a single planned or recorded ministry contact attempt in the MinistryTracker app.
+// Domain model for one planned or completed follow-up attempt for a Return Visit.
 //
-// DESIGN NOTES
-// - One Visit record = one attempt.
+// DESIGN INTENT
+// - One Visit record = one scheduled attempt.
+// - Each Visit stands on its own, even when the same person is contacted repeatedly.
 // - If a visit is rescheduled, this record is marked Rescheduled and a NEW Visit record is created.
-// - If a visit is canceled and a later appointment is made, that later appointment starts a NEW chain.
-// - Visit-level location is important because a meeting place may differ from the student's primary location.
-// - New visits may default MeetingAddress / MeetingLatitude / MeetingLongitude
-//   from the student's PrimaryAddress / PrimaryLatitude / PrimaryLongitude,
+// - Visit-level location may differ from the student's PrimaryAddress.
+// - New visits may default meeting location from the student's primary location,
 //   but each Visit remains independently editable.
-// - This model uses sqlite-net-pcl attributes, not Entity Framework.
+// - Notes are stored as a single field.
+//   On entry, the UI may split this into:
+//     1) What happened
+//     2) Next Time
+//   but the model stores one combined note body to avoid duplication.
 // ---------------------------------------------------------------------------------------------------------------------
 
 using SQLite;
@@ -28,7 +31,7 @@ namespace MinistryTracker.Models
         public int Id { get; set; }
 
         /// <summary>
-        /// Foreign key to the Student this visit is associated with.
+        /// Foreign key to the Return Visit this attempt belongs to.
         /// </summary>
         public int StudentId { get; set; }
 
@@ -40,69 +43,60 @@ namespace MinistryTracker.Models
         public Student? Student { get; set; }
 
         /// <summary>
-        /// The ministry stage represented by this contact attempt
-        /// (for example: Initial Contact, Return Visit, Bible Study).
-        /// </summary>
-        public VisitStage Stage { get; set; }
-
-        /// <summary>
-        /// How this interaction is or was conducted
-        /// (for example: InPerson, Text, Phone, WhatsApp, Email).
+        /// How this visit is planned to happen.
+        /// Examples: InPerson, Text, Phone, WhatsApp, Email, Letter.
         /// </summary>
         public ContactMethod Method { get; set; }
 
         /// <summary>
-        /// When this visit is scheduled to occur.
-        /// For completed visits, this remains the originally scheduled date/time.
+        /// Scheduled date/time for this visit.
+        /// For completed visits, this remains the original planned time.
         /// </summary>
         public DateTime ScheduledDateTime { get; set; }
 
         /// <summary>
-        /// Current status of this single visit attempt.
+        /// Outcome / current state of this visit attempt.
         /// </summary>
         public VisitStatus Status { get; set; } = VisitStatus.Scheduled;
 
         /// <summary>
-        /// When the visit actually occurred, if completed.
+        /// When the visit actually happened, if it was completed successfully.
         /// </summary>
         public DateTime? CompletedDateTime { get; set; }
 
         /// <summary>
-        /// Optional human-readable meeting address or description for this visit.
-        /// This may be copied from the student's primary location when creating a new visit,
-        /// but it can differ for any specific appointment.
+        /// Optional visit-specific meeting address or description.
+        /// This may differ from the student's PrimaryAddress.
         /// </summary>
         public string? MeetingAddress { get; set; }
 
         /// <summary>
-        /// Latitude for the meeting location, if captured.
-        /// Useful when no reliable address is available or when returning to a pinned rural location.
+        /// Optional latitude for the meeting location.
         /// </summary>
         public double? MeetingLatitude { get; set; }
 
         /// <summary>
-        /// Longitude for the meeting location, if captured.
-        /// Useful when no reliable address is available or when returning to a pinned rural location.
+        /// Optional longitude for the meeting location.
         /// </summary>
         public double? MeetingLongitude { get; set; }
 
         /// <summary>
-        /// If this visit was created because another visit was rescheduled,
-        /// this links back to the prior visit in that same chain.
-        /// This should only be used for true reschedules, not for a brand-new appointment
-        /// made after a cancellation.
+        /// Links this visit to the prior visit when this one was created by rescheduling.
+        /// Used only for true reschedules.
         /// </summary>
         public int? RescheduledFromVisitId { get; set; }
 
         /// <summary>
-        /// Free-form notes used as a memory aid.
-        /// Examples:
-        /// what was discussed,
-        /// why a change happened,
-        /// what question was asked,
-        /// observations that may help with future visits,
-        /// or details needed for a handoff to another publisher.
+        /// Single stored note body for this visit.
+        /// The UI may visually separate "What happened" and "Next Time",
+        /// but storage stays unified to avoid duplicate writing and duplicate reading.
         /// </summary>
         public string? Notes { get; set; } = string.Empty;
+
+        /// <summary>
+        /// When the note content for this visit was last entered or updated.
+        /// This is separate from the visit date because notes may be written later.
+        /// </summary>
+        public DateTime? NotesCreatedDateTime { get; set; }
     }
 }

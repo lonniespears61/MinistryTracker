@@ -1,27 +1,15 @@
 ﻿// ---------------------------------------------------------------------------------------------------------------------
 // StudentsListViewModel.cs
+//
 // PURPOSE
-// - Orchestrates the student list: load, filter, schedule visit flow.
+// - Orchestrates the student list: load, filter, and schedule visit flow.
 //
-// VIOLATION FIXED
-// - ScheduleVisit was calling Application.Current.Windows.FirstOrDefault().Page.DisplayActionSheet(...)
-//   directly. That is a UI call from a ViewModel. ViewModels must not reference Application,
-//   Windows, Page, or any UI display methods.
+// DESIGN RULES
+// - ViewModel owns data/state logic
+// - View owns UI prompts and navigation execution
+// - Scheduling conflicts are surfaced to the View through an event/callback pattern
+// - ViewModel must not directly call UI display APIs
 //
-// FIX APPROACH — event with callback pattern
-// The VM fires a ScheduleConflictDetected event that carries the conflict details and a
-// callback delegate. The View shows the action sheet and calls back with the user's choice.
-// The VM then acts on that choice (cancel, edit, replace).
-//
-// WHY NOT MESSENGER?
-// StudentsListPage and StudentsListViewModel have a direct 1:1 relationship — the page
-// creates the VM via DI and holds a reference to it. An event is simpler and traceable.
-// Messenger adds indirection that is only worth it for cross-page signals.
-//
-// WHY NOT JUST MOVE THE ACTIONSHEET INTO THE VIEW WITH A COMMAND PARAMETER?
-// The conflict check (does this student have a future visit?) requires a DataService call.
-// That data call belongs in the VM, not the View. So the VM must remain the entry point
-// for the ScheduleVisit action, but it cannot show UI — hence the event.
 // ---------------------------------------------------------------------------------------------------------------------
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -62,15 +50,7 @@ public partial class StudentsListViewModel : ObservableObject
     }
 
     // =========================================================================
-    // EVENT — fires when a scheduling conflict is detected
-    //
-    // WHY AN EVENT WITH A CALLBACK?
-    // The VM needs the user's answer (Edit / Replace / Cancel) before it can
-    // proceed. A Task-based approach or async event won't work cleanly here.
-    // The callback pattern (Action<string?>) lets the View call back into the
-    // VM's continuation without the VM ever touching UI.
-    //
-    // The View subscribes in OnAppearing, unsubscribes in OnDisappearing.
+    // EVENTS
     // =========================================================================
 
     /// <summary>
@@ -80,6 +60,12 @@ public partial class StudentsListViewModel : ObservableObject
     /// </summary>
     public event Action<string, int, int, Action<string?>>? ScheduleConflictDetected;
 
+    /// <summary>
+    /// Fired when the VM wants navigation to occur.
+    /// The View performs the actual navigation.
+    /// </summary>
+    public event Action<string>? RequestNavigate;
+
     // =========================================================================
     // LOAD
     // =========================================================================
@@ -87,27 +73,30 @@ public partial class StudentsListViewModel : ObservableObject
     public async Task LoadAsync()
     {
         if (IsBusy) return;
+
         try
         {
             IsBusy = true;
 
             var allStudents = await _data.GetStudentsAsync().ConfigureAwait(false);
 
-            // Enrich each student with their next scheduled visit in parallel
-            var tasks = allStudents.Select(async s =>
+            var tasks = allStudents.Select(async student =>
             {
-                var next = await _data.GetNextFutureVisitForStudentAsync(s.StudentId)
+                var next = await _data.GetNextFutureVisitForStudentAsync(student.StudentId)
                                       .ConfigureAwait(false);
-                return (Student: s, NextVisit: next);
+                return (Student: student, NextVisit: next);
             });
+
             var enriched = await Task.WhenAll(tasks).ConfigureAwait(false);
 
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
                 Students.Clear();
+
                 foreach (var item in enriched)
                 {
                     var svm = new StudentViewModel(item.Student);
+
                     if (item.NextVisit is not null)
                     {
                         svm.NextFutureVisitId = item.NextVisit.Id;
@@ -118,8 +107,10 @@ public partial class StudentsListViewModel : ObservableObject
                         svm.NextFutureVisitId = null;
                         svm.NextFutureVisitDisplay = "No visit scheduled";
                     }
+
                     Students.Add(svm);
                 }
+
                 ApplyFilter();
             });
         }
@@ -134,30 +125,22 @@ public partial class StudentsListViewModel : ObservableObject
     }
 
     // =========================================================================
-    // REFRESH COMMAND
+    // REFRESH
     // =========================================================================
 
     [RelayCommand]
-    private async Task Refresh() => await LoadAsync();
+    private async Task Refresh()
+        => await LoadAsync();
 
     // =========================================================================
     // SCHEDULE VISIT
-    //
-    // VIOLATION FIXED: no longer calls Application.Current or DisplayActionSheet.
-    // If there is no conflict → navigation intent is communicated via RequestNavigate.
-    // If there is a conflict → fires ScheduleConflictDetected for the View to handle.
     // =========================================================================
-
-    /// <summary>
-    /// Fired when the VM wants to navigate somewhere.
-    /// The View calls Shell.Current.GoToAsync(route) in response.
-    /// </summary>
-    public event Action<string>? RequestNavigate;
 
     [RelayCommand]
     private async Task ScheduleVisit(StudentViewModel? svm)
     {
         if (svm?.Model is null) return;
+
         try
         {
             var studentId = svm.Model.StudentId;
@@ -166,19 +149,13 @@ public partial class StudentsListViewModel : ObservableObject
 
             if (existing is null)
             {
-                // No conflict — navigate directly to Add Visit
                 RequestNavigate?.Invoke($"AddVisitPage?studentId={studentId}");
                 return;
             }
 
-            // Conflict: student already has a future visit.
-            // VIOLATION FIXED: we do NOT call DisplayActionSheet here.
-            // Fire an event; the View shows the dialog and calls back with the choice.
             var when = existing.ScheduledDateTime;
             var message = $"Scheduled for {when:ddd, MMM d} at {when:h:mm tt}.";
 
-            // Use a TaskCompletionSource so we can await the user's choice
-            // even though the event is synchronous.
             var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             ScheduleConflictDetected?.Invoke(message, studentId, existing.Id, choice =>
@@ -195,12 +172,12 @@ public partial class StudentsListViewModel : ObservableObject
                     break;
 
                 case "Replace it":
-                    await _data.CancelVisitAsync(existing.Id, "Replaced by new visit")
+                    await _data.CancelVisitByMeAsync(existing.Id, "Replaced by new visit")
                                .ConfigureAwait(false);
                     RequestNavigate?.Invoke($"AddVisitPage?studentId={studentId}");
                     break;
 
-                    // "Cancel" or null — do nothing
+                    // "Cancel" or null = do nothing
             }
         }
         catch (Exception ex)
@@ -231,20 +208,23 @@ public partial class StudentsListViewModel : ObservableObject
             query = query.Where(s => s.Model.Status == StudentStatus.Active);
 
         if (!string.IsNullOrEmpty(term))
+        {
             query = query.Where(s =>
                 (!string.IsNullOrEmpty(s.Name) &&
                  s.Name.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
                 (!string.IsNullOrEmpty(s.PhoneNumber) &&
                  s.PhoneNumber.Contains(term, StringComparison.OrdinalIgnoreCase)));
+        }
 
         query = query.OrderBy(s => s.Name ?? string.Empty);
 
         FilteredStudents.Clear();
+
         var index = 0;
-        foreach (var s in query)
+        foreach (var student in query)
         {
-            s.IsAlternate = (index % 2 == 1);
-            FilteredStudents.Add(s);
+            student.IsAlternate = (index % 2 == 1);
+            FilteredStudents.Add(student);
             index++;
         }
 

@@ -3,13 +3,13 @@
 //
 // PURPOSE
 // - Plausible, deterministic seed data for UI testing
-// - Creates Students + Visits using the CURRENT refactored models
+// - Creates Students + Visits using the current models
 //
 // DESIGN RULES
-// - Student = identity + relationship state
-// - Visit = one attempt
-// - Household/address is not seeded here yet
-// - Keep data realistic enough for list/profile/calendar testing
+// - Student = identity + relationship state + reachable anchor
+// - Visit = one scheduled attempt
+// - No dead concepts (VisitStage / VisitType / DoNotCall)
+// - Keep data realistic enough for dashboard, list, profile, and map testing
 //
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -27,9 +27,6 @@ namespace MinistryTracker.Data
     {
         private const int SeedRandom = 42;
 
-        /// <summary>
-        /// Seeds demo data only if there are no non-deleted students.
-        /// </summary>
         public Task SeedDemoDataAsync(CancellationToken ct = default)
         {
             return EnsureInitThen(async () =>
@@ -37,36 +34,30 @@ namespace MinistryTracker.Data
                 ct.ThrowIfCancellationRequested();
 
                 var existingCount = await Db.Table<Student>()
-                                            .Where(s => !s.IsDeleted)
-                                            .CountAsync()
-                                            .ConfigureAwait(false);
+                    .Where(s => !s.IsDeleted)
+                    .CountAsync()
+                    .ConfigureAwait(false);
 
                 if (existingCount > 0)
                     return;
 
                 var rng = new Random(SeedRandom);
 
-                // -----------------------------------------------------------------
-                // Seed Students
-                // -----------------------------------------------------------------
                 var students = BuildSeedStudents(rng);
 
-                foreach (var s in students)
+                foreach (var student in students)
                 {
                     ct.ThrowIfCancellationRequested();
-                    await Db.InsertAsync(s).ConfigureAwait(false);
+                    await Db.InsertAsync(student).ConfigureAwait(false);
                 }
 
-                // -----------------------------------------------------------------
-                // Seed Visits
-                // -----------------------------------------------------------------
                 var now = DateTime.Now;
                 var visits = BuildSeedVisits(rng, students, now);
 
-                foreach (var v in visits)
+                foreach (var visit in visits)
                 {
                     ct.ThrowIfCancellationRequested();
-                    await Db.InsertAsync(v).ConfigureAwait(false);
+                    await Db.InsertAsync(visit).ConfigureAwait(false);
                 }
 
             }, ct);
@@ -81,73 +72,56 @@ namespace MinistryTracker.Data
             var firstNames = new[]
             {
                 "Maria", "James", "Linda", "Carlos", "Ashley", "Robert",
-                "Sofia", "Miguel", "Karen", "Ethan", "Rosa", "Daniel",
-                "Hannah", "Noah", "Elena", "Diego", "Grace", "Samuel"
+                "Sofia", "Miguel", "Karen", "Ethan", "Rosa", "Daniel"
             };
 
             var lastNames = new[]
             {
                 "Gonzalez", "Wilson", "Park", "Hernandez", "Smith", "Davis",
-                "Lopez", "Martinez", "Nguyen", "Brown", "Garcia", "Johnson",
-                "Anderson", "Taylor", "Thomas", "Moore"
+                "Lopez", "Martinez", "Nguyen", "Brown", "Garcia"
             };
 
             const int count = 20;
-            var results = new List<Student>(capacity: count);
+            var results = new List<Student>(count);
 
             for (int i = 0; i < count; i++)
             {
                 var name = $"{Pick(rng, firstNames)} {Pick(rng, lastNames)}";
 
-                var status = (i % 8 == 0) ? StudentStatus.Paused : StudentStatus.Active;
+                var status =
+                    (i % 11 == 0) ? StudentStatus.Completed :
+                    (i % 9 == 0) ? StudentStatus.Discontinued :
+                    (i % 6 == 0) ? StudentStatus.Paused :
+                    StudentStatus.Active;
 
-                var interest = (i % 7 == 0) ? InterestLevel.Promising
-                             : (i % 4 == 0) ? InterestLevel.Interested
-                             : (i % 3 == 0) ? InterestLevel.ReturnVisit
-                             : InterestLevel.Study;
+                // ✅ FIXED INTEREST LEVEL
+                var interest =
+                    (i % 7 == 0) ? InterestLevel.Study :
+                    (i % 4 == 0) ? InterestLevel.ReturnVisit :
+                    (i % 3 == 0) ? InterestLevel.Interested :
+                    InterestLevel.Promising;
 
-                var initialContactType = (i % 4 == 0) ? InitialContactType.HouseToHouse
-                                       : (i % 4 == 1) ? InitialContactType.Cart
-                                       : (i % 4 == 2) ? InitialContactType.Phone
-                                       : InitialContactType.Letter;
-
-                var defaultMethod = (i % 3 == 0) ? ContactMethod.Text
-                                   : (i % 3 == 1) ? ContactMethod.Phone
-                                   : ContactMethod.InPerson;
-
-                var phoneNumber = $"270-555-{rng.Next(1000, 9999)}";
+                var initialContactType =
+                    (i % 4 == 0) ? InitialContactType.HouseToHouse :
+                    (i % 4 == 1) ? InitialContactType.Cart :
+                    (i % 4 == 2) ? InitialContactType.Phone :
+                    InitialContactType.Letter;
 
                 results.Add(new Student
                 {
                     Name = name,
                     InitialContactType = initialContactType,
-                    FirstContactDate = DateTime.Today.AddDays(-rng.Next(7, 140)),
-                    PhoneNumber = phoneNumber,
-                    DefaultContactMethod = defaultMethod,
+                    FirstContactDate = DateTime.Today.AddDays(-rng.Next(15, 180)),
+                    PhoneNumber = $"270-555-{rng.Next(1000, 9999)}",
+                    PreferredContactMethod = ContactMethod.InPerson,
                     InterestLevel = interest,
                     Status = status,
-                    IsDoNotCall = false,
-                    Notes = BuildPlausibleStudentNotes(rng),
+                    Notes = "Good conversation. Worth following up.",
                     IsDeleted = false
                 });
             }
 
             return results;
-        }
-
-        private static string BuildPlausibleStudentNotes(Random rng)
-        {
-            var notes = new[]
-            {
-                "Friendly and easy to talk with. Good memory aid candidate.",
-                "Asked thoughtful questions and seems comfortable texting first.",
-                "May prefer shorter follow-up visits due to schedule.",
-                "Good conversation about the Kingdom. Worth following up.",
-                "Seems more relaxed in informal settings.",
-                "Likely best to keep visits simple and consistent."
-            };
-
-            return Pick(rng, notes);
         }
 
         // =====================================================================
@@ -159,76 +133,32 @@ namespace MinistryTracker.Data
             var results = new List<Visit>();
 
             var studentsWithVisits = students
-                .Where((s, idx) => idx % 10 != 0 && s.Status == StudentStatus.Active)
+                .Where(s => s.Status == StudentStatus.Active || s.Status == StudentStatus.Paused)
+                .Take(15)
                 .ToList();
 
-            foreach (var s in studentsWithVisits)
+            foreach (var student in studentsWithVisits)
             {
-                var daysAhead = rng.Next(1, 35);
-                var hour = rng.Next(9, 19);
-                var minute = rng.Next(0, 4) * 15;
+                var scheduled = now.AddDays(rng.Next(-30, 20))
+                    .AddHours(rng.Next(9, 18));
 
-                var scheduled = new DateTime(now.Year, now.Month, now.Day, 0, 0, 0)
-                    .AddDays(daysAhead)
-                    .AddHours(hour)
-                    .AddMinutes(minute);
+                var isPast = scheduled < now;
 
-                var stage = (s.InterestLevel == InterestLevel.Study)
-                    ? VisitStage.BibleStudy
-                    : VisitStage.ReturnVisit;
+                var status = isPast
+                    ? VisitStatus.Successful
+                    : VisitStatus.Scheduled;
 
-                var method = s.DefaultContactMethod ?? ContactMethod.InPerson;
-
-                var visit = new Visit
+                results.Add(new Visit
                 {
-                    StudentId = s.StudentId,
-                    Stage = stage,
-                    Method = method,
+                    StudentId = student.StudentId,
+                    Method = ContactMethod.InPerson,
                     ScheduledDateTime = scheduled,
-                    Status = VisitStatus.Scheduled,
-                    MeetingAddress = BuildPlausibleMeetingPlace(rng, method),
-                    Notes = $"Follow-up with {FirstWordOrFallback(s.Name, "student")}."
-                };
-
-                results.Add(visit);
+                    Status = status,
+                    Notes = "Follow up discussion"
+                });
             }
 
-            results.Sort((a, b) => a.ScheduledDateTime.CompareTo(b.ScheduledDateTime));
-            return results;
-        }
-
-        private static string BuildPlausibleMeetingPlace(Random rng, ContactMethod method)
-        {
-            if (method == ContactMethod.Text)
-                return "Text only";
-
-            if (method == ContactMethod.Phone)
-                return "Phone";
-
-            if (method == ContactMethod.Email)
-                return "Email";
-
-            if (method == ContactMethod.WhatsApp)
-                return "WhatsApp";
-
-            var places = new[]
-            {
-                "Home",
-                "The Grind",
-                "Work lunch break",
-                "Front porch",
-                "By the barn",
-                "Local park bench"
-            };
-
-            return Pick(rng, places);
-        }
-
-        private static string FirstWordOrFallback(string? text, string fallback)
-        {
-            if (string.IsNullOrWhiteSpace(text)) return fallback;
-            var parts = text.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-            return parts.Length > 0 ? parts[0] : fallback;
+            return results.OrderBy(v => v.ScheduledDateTime).ToList();
         }
 
         private static T Pick<T>(Random rng, IReadOnlyList<T> items)

@@ -1,4 +1,4 @@
-// StudentViewModel.cs — Student row + detail presentation VM — 2026-03-28
+// StudentViewModel.cs — Student row + detail presentation VM — 2026-04-15
 //
 // Purpose:
 // - Wraps Student model for UI binding (lists + details)
@@ -57,7 +57,6 @@ public partial class StudentViewModel : ObservableObject
         OnPropertyChanged(nameof(InterestColor));
         OnPropertyChanged(nameof(Initials));
         OnPropertyChanged(nameof(SubTitle));
-        OnPropertyChanged(nameof(IsDoNotCall));
         OnPropertyChanged(nameof(Notes));
     }
 
@@ -91,8 +90,6 @@ public partial class StudentViewModel : ObservableObject
 
     public string? PhoneNumber => _student.PhoneNumber;
 
-    public bool IsDoNotCall => _student.IsDoNotCall;
-
     public string? Notes => _student.Notes;
 
     public string FirstContactFormatted =>
@@ -104,41 +101,25 @@ public partial class StudentViewModel : ObservableObject
     // 5) STATUS / INTEREST VISUALS
     // =====================================================================
 
-    public Color StatusBorderColor
-    {
-        get
+    public Color StatusBorderColor =>
+        _student.Status switch
         {
-            if (_student.IsDoNotCall)
-                return Colors.Red;
+            StudentStatus.Active => Colors.ForestGreen,
+            StudentStatus.Paused => Colors.DarkOrange,
+            StudentStatus.Discontinued => Colors.DarkGray,
+            StudentStatus.Completed => Colors.SteelBlue,
+            _ => Colors.LightGray
+        };
 
-            return _student.Status switch
-            {
-                StudentStatus.Active => Colors.ForestGreen,
-                StudentStatus.Paused => Colors.DarkOrange,
-                StudentStatus.NoLongerInterested => Colors.Gray,
-                StudentStatus.Discontinued => Colors.DarkGray,
-                _ => Colors.LightGray
-            };
-        }
-    }
-
-    public Color StatusBackgroundColor
-    {
-        get
+    public Color StatusBackgroundColor =>
+        _student.Status switch
         {
-            if (_student.IsDoNotCall)
-                return Color.FromArgb("#ffe6e6");
-
-            return _student.Status switch
-            {
-                StudentStatus.Active => Color.FromArgb("#e6ffe6"),
-                StudentStatus.Paused => Color.FromArgb("#fffbe6"),
-                StudentStatus.NoLongerInterested => Color.FromArgb("#f2f2f2"),
-                StudentStatus.Discontinued => Color.FromArgb("#eeeeee"),
-                _ => Colors.White
-            };
-        }
-    }
+            StudentStatus.Active => Color.FromArgb("#e6ffe6"),
+            StudentStatus.Paused => Color.FromArgb("#fffbe6"),
+            StudentStatus.Discontinued => Color.FromArgb("#eeeeee"),
+            StudentStatus.Completed => Color.FromArgb("#e6f0ff"),
+            _ => Colors.White
+        };
 
     public Color InterestColor => _student.InterestLevel switch
     {

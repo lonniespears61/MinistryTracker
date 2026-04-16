@@ -23,15 +23,18 @@ public class MainActivity : MauiAppCompatActivity
         if (Window is null)
             return;
 
-        // Edge-to-edge is only supported on Android 11 / API 30+
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.R)
+        // Edge-to-edge is supported on Android 11 / API 30+.
+        // Using OperatingSystem guards helps the analyzer understand
+        // the platform/version check more reliably than raw Build.VERSION checks.
+        if (OperatingSystem.IsAndroidVersionAtLeast(30))
         {
             Window.SetDecorFitsSystemWindows(false);
         }
 
-        // SetStatusBarColor is obsolete on newer Android versions, so only use it below API 35
-        if (Build.VERSION.SdkInt >= BuildVersionCodes.Lollipop &&
-            Build.VERSION.SdkInt < BuildVersionCodes.VanillaIceCream)
+        // setStatusBarColor is deprecated and has no effect on Android 15 / API 35+.
+        // Keep it only for older supported Android versions.
+        if (OperatingSystem.IsAndroidVersionAtLeast(21) &&
+            !OperatingSystem.IsAndroidVersionAtLeast(35))
         {
             Window.SetStatusBarColor(global::Android.Graphics.Color.Transparent);
         }
