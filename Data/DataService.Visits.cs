@@ -94,11 +94,11 @@ namespace MinistryTracker.Data
         /// Find a visit by primary key.
         /// </summary>
         public Task<Visit?> GetVisitByIdAsync(int visitId, CancellationToken ct = default)
-     => EnsureInitThen<Visit?>(async () =>
-     {
-         var visit = await Db.FindAsync<Visit>(visitId).ConfigureAwait(false);
-         return visit;
-     }, ct);
+            => EnsureInitThen<Visit?>(async () =>
+            {
+                var visit = await Db.FindAsync<Visit>(visitId).ConfigureAwait(false);
+                return visit;
+            }, ct);
 
         /// <summary>
         /// Delete a visit record.
@@ -235,6 +235,47 @@ namespace MinistryTracker.Data
                         string.IsNullOrWhiteSpace(v.Notes) &&
                         !studentsWithFutureVisits.Contains(v.StudentId))
                     .ToList();
+            }, ct);
+
+        // =====================================================================
+        // EDIT HELPERS
+        // =====================================================================
+
+        /// <summary>
+        /// Update the editable details of an existing visit without changing its identity or schedule.
+        ///
+        /// WHY:
+        /// - Same-record edits are allowed for notes, method, and meeting address.
+        /// - Rescheduling is NOT handled here. Reschedule has its own workflow that
+        ///   closes the old record as Rescheduled and creates a new Scheduled record.
+        /// - Status changes like cancel/success/missed are also handled by dedicated methods.
+        /// </summary>
+        public Task<int> UpdateVisitDetailsAsync(
+            int visitId,
+            ContactMethod method,
+            string? meetingAddress,
+            string? notes,
+            CancellationToken ct = default)
+            => EnsureInitThen(async () =>
+            {
+                var visit = await Db.FindAsync<Visit>(visitId).ConfigureAwait(false);
+                if (visit is null)
+                    return 0;
+
+                visit.Method = method;
+                visit.MeetingAddress = string.IsNullOrWhiteSpace(meetingAddress)
+                    ? null
+                    : meetingAddress.Trim();
+
+                visit.Notes = string.IsNullOrWhiteSpace(notes)
+                    ? null
+                    : notes.Trim();
+
+                visit.NotesCreatedDateTime = string.IsNullOrWhiteSpace(visit.Notes)
+                    ? null
+                    : DateTime.Now;
+
+                return await Db.UpdateAsync(visit).ConfigureAwait(false);
             }, ct);
 
         // =====================================================================

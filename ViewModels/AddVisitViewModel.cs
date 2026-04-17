@@ -13,6 +13,10 @@
 // - Visit no longer uses Stage/Type concepts
 // - Default visit date/time should follow the user's configured Normal Service Days
 //
+// CHANGE NOTES
+// - Enforces a minimum 30-minute gap between scheduled visits.
+// - Uses existing DataService range query instead of introducing new data methods.
+//
 // ---------------------------------------------------------------------------------------------------------------------
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -177,11 +181,46 @@ namespace MinistryTracker.ViewModels
                 if (StudentId <= 0)
                     throw new InvalidOperationException("StudentId must be set before saving a visit.");
 
+                var scheduledDateTime = VisitDate.Date + VisitTime;
+
+                // -----------------------------------------------------------------
+                // SCHEDULING RULE: VISITS MUST BE AT LEAST 30 MINUTES APART
+                //
+                // WHY:
+                // - The app is for one publisher's real-world schedule.
+                // - The user should not be able to schedule two visits too close together.
+                // - This applies across ALL students, not just the same student.
+                //
+                // HOW:
+                // - Look 29 minutes backward and 29 minutes forward from the proposed time.
+                // - If any scheduled visit already exists in that window, block the save.
+                //
+                // NOTE:
+                // - Exact 30-minute spacing is allowed.
+                // - Only scheduled visits count as conflicts.
+                // -----------------------------------------------------------------
+                var windowStart = scheduledDateTime.AddMinutes(-29);
+                var windowEnd = scheduledDateTime.AddMinutes(29);
+
+                var nearbyVisits = await _data
+                    .GetVisitsWithStudentsInRangeAsync(windowStart, windowEnd, includeCanceled: false)
+                    .ConfigureAwait(false);
+
+                var hasConflict = nearbyVisits.Any(v =>
+                    v.Status == VisitStatus.Scheduled &&
+                    Math.Abs((v.ScheduledDateTime - scheduledDateTime).TotalMinutes) < 30);
+
+                if (hasConflict)
+                {
+                    throw new InvalidOperationException(
+                        "You already have a visit scheduled within 30 minutes of this time.");
+                }
+
                 var visit = new Visit
                 {
                     StudentId = StudentId,
                     Method = Method,
-                    ScheduledDateTime = VisitDate.Date + VisitTime,
+                    ScheduledDateTime = scheduledDateTime,
                     MeetingAddress = string.IsNullOrWhiteSpace(MeetingAddress) ? null : MeetingAddress.Trim(),
                     Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes.Trim(),
                     NotesCreatedDateTime = string.IsNullOrWhiteSpace(Notes) ? null : DateTime.Now,

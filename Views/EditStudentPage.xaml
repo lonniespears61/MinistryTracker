@@ -16,45 +16,49 @@
         <VerticalStackLayout Padding="16" Spacing="12">
 
             <Label Text="Name" />
-            <Entry Text="{Binding Name}" Placeholder="Required" />
+            <Entry
+                Text="{Binding Name}"
+                Placeholder="Required" />
 
             <Label Text="First Contact Date" />
             <DatePicker Date="{Binding FirstContactDate}" />
 
             <Label Text="Initial Contact Type" />
-            <Picker ItemsSource="{Binding InitialContactTypeValues}"
-                    SelectedItem="{Binding InitialContactType}" />
+            <Picker
+                ItemsSource="{Binding InitialContactTypeValues}"
+                SelectedItem="{Binding InitialContactType}" />
 
             <Label Text="Phone Number" />
-            <Entry Text="{Binding PhoneNumber}"
-                   Placeholder="Optional"
-                   Keyboard="Telephone" />
+            <Entry
+                Text="{Binding PhoneNumber}"
+                Placeholder="Optional"
+                Keyboard="Telephone" />
 
-            <Label Text="Default Contact Method" />
-            <Picker ItemsSource="{Binding ContactMethodValues}"
-                    SelectedItem="{Binding DefaultContactMethod}" />
+            <Label Text="Preferred Contact Method" />
+            <Picker
+                ItemsSource="{Binding ContactMethodValues}"
+                SelectedItem="{Binding PreferredContactMethod}" />
 
             <Label Text="Interest Level" />
-            <Picker ItemsSource="{Binding InterestLevelValues}"
-                    SelectedItem="{Binding InterestLevel}" />
+            <Picker
+                ItemsSource="{Binding InterestLevelValues}"
+                SelectedItem="{Binding InterestLevel}" />
 
             <Label Text="Status" />
-            <Picker ItemsSource="{Binding StudentStatusValues}"
-                    SelectedItem="{Binding Status}" />
-
-            <HorizontalStackLayout Spacing="10" Margin="0,6,0,0">
-                <CheckBox IsChecked="{Binding IsDoNotCall}" VerticalOptions="Center" />
-                <Label Text="Do Not Call" VerticalOptions="Center" />
-            </HorizontalStackLayout>
+            <Picker
+                ItemsSource="{Binding StudentStatusValues}"
+                SelectedItem="{Binding Status}" />
 
             <Label Text="Notes" />
-            <Editor Text="{Binding Notes}"
-                    AutoSize="TextChanges"
-                    Placeholder="Background, needs, personality, or other notes" />
+            <Editor
+                Text="{Binding Notes}"
+                AutoSize="TextChanges"
+                Placeholder="Background, needs, personality, or other notes" />
 
-            <Label Text="{Binding StatusMessage}"
-                   FontSize="12"
-                   TextColor="Green">
+            <Label
+                Text="{Binding StatusMessage}"
+                FontSize="12"
+                TextColor="Green">
                 <Label.Triggers>
                     <DataTrigger TargetType="Label" Binding="{Binding StatusMessage}" Value="">
                         <Setter Property="IsVisible" Value="False" />

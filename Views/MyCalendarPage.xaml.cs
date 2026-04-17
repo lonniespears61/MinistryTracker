@@ -1,16 +1,30 @@
 ﻿// ---------------------------------------------------------------------------------------------------------------------
 // MyCalendarPage.xaml.cs — My calendar page shell host — 2026-02-01
-// Purpose: Loads VM, receives schedule context from Shell query params,
-//          and performs navigation when VM raises ScheduleVisitRequested.
+// Purpose: Loads VM, receives calendar context from Shell query params,
+//          and performs navigation when VM raises scheduling/edit intents.
+//
+// DESIGN RULES
+// - Calendar has three modes:
+//   1) normal mode: view/manage existing visits
+//   2) scheduling mode: entered from a known student to choose a date
+//   3) reschedule mode: entered from UpdateVisit to move an existing visit
+//
+// - Student scheduling context should remain sticky until the user intentionally
+//   leaves it or completes a different action.
+// - Day selection is transient.
+// - Page owns prompts / navigation.
+// - ViewModel owns state and intent events.
 // ---------------------------------------------------------------------------------------------------------------------
 
 using System;
+using MinistryTracker.Models.DTOs;
 using MinistryTracker.ViewModels;
 
 namespace MinistryTracker.Views;
 
 [QueryProperty(nameof(Mode), "mode")]
 [QueryProperty(nameof(StudentId), "studentId")]
+[QueryProperty(nameof(VisitId), "visitId")]
 public partial class MyCalendarPage : ContentPage
 {
     private readonly MyCalendarViewModel _vm;
@@ -20,6 +34,7 @@ public partial class MyCalendarPage : ContentPage
 
     public string? Mode { get; set; }
     public string? StudentId { get; set; }
+    public string? VisitId { get; set; }
 
     public MyCalendarPage(MyCalendarViewModel vm)
     {
@@ -35,6 +50,8 @@ public partial class MyCalendarPage : ContentPage
         if (!_subscribed)
         {
             _vm.ScheduleVisitRequested += OnScheduleVisitRequested;
+            _vm.RescheduleVisitRequested += OnRescheduleVisitRequested;
+            _vm.ExistingVisitTapped += OnExistingVisitTapped;
             _subscribed = true;
         }
 
@@ -48,13 +65,16 @@ public partial class MyCalendarPage : ContentPage
         if (_subscribed)
         {
             _vm.ScheduleVisitRequested -= OnScheduleVisitRequested;
+            _vm.RescheduleVisitRequested -= OnRescheduleVisitRequested;
+            _vm.ExistingVisitTapped -= OnExistingVisitTapped;
             _subscribed = false;
         }
     }
 
     private async System.Threading.Tasks.Task TryLoadAsync()
     {
-        if (_loading) return;
+        if (_loading)
+            return;
 
         try
         {
@@ -67,6 +87,21 @@ public partial class MyCalendarPage : ContentPage
                 sid > 0)
             {
                 await _vm.BeginSchedulingForStudentAsync(sid);
+
+                // Keep the student scheduling context, but clear any previous day
+                // selection so backing out of Add Visit does not leave phantom state.
+                _vm.ClearSelectedDay();
+            }
+            else if (string.Equals(Mode, "reschedule", StringComparison.OrdinalIgnoreCase) &&
+                     int.TryParse(StudentId, out var rsid) &&
+                     int.TryParse(VisitId, out var vid) &&
+                     rsid > 0 &&
+                     vid > 0)
+            {
+                await _vm.BeginRescheduleAsync(vid, rsid);
+
+                // Same rule as schedule mode: keep context, clear transient date choice.
+                _vm.ClearSelectedDay();
             }
             else
             {
@@ -95,5 +130,101 @@ public partial class MyCalendarPage : ContentPage
             System.Diagnostics.Debug.WriteLine(ex);
             await DisplayAlert("Something Broke", "Back up and try again", "OK");
         }
+    }
+
+    private async void OnRescheduleVisitRequested(int visitId, int studentId, DateTime newDate)
+    {
+        try
+        {
+            var confirm = await DisplayAlert(
+                "Reschedule Visit",
+                $"Move this visit to {newDate:dddd, MMM d}?",
+                "Yes",
+                "No");
+
+            if (!confirm)
+                return;
+
+            // Calendar only chooses the replacement date.
+            // UpdateVisitPage / UpdateVisitViewModel remain the owners of the
+            // actual reschedule operation.
+            var dateString = newDate.ToString("yyyy-MM-dd");
+
+            await Shell.Current.GoToAsync(
+                $"..{nameof(UpdateVisitPage)}?visitId={visitId}&rescheduleDate={dateString}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex);
+            await DisplayAlert("Error", "Reschedule failed.", "OK");
+        }
+    }
+
+    private async void OnExistingVisitTapped(VisitWithStudent visit)
+    {
+        try
+        {
+            // Normal mode:
+            // tapping an existing visit means open it.
+            if (!_vm.IsSchedulingMode)
+            {
+                await OpenExistingVisitAsync(visit);
+                return;
+            }
+
+            // Scheduling/rescheduling mode + same student:
+            // opening the tapped visit is the most natural interpretation.
+            if (_vm.SchedulingStudentId == visit.StudentId)
+            {
+                await OpenExistingVisitAsync(visit);
+                return;
+            }
+
+            // Scheduling/rescheduling mode + different student:
+            // preserve current student context unless the user explicitly switches.
+            var currentStudentName = string.IsNullOrWhiteSpace(_vm.SchedulingStudentName)
+                ? "current student"
+                : _vm.SchedulingStudentName;
+
+            var tappedStudentName = string.IsNullOrWhiteSpace(visit.StudentName)
+                ? "this student"
+                : visit.StudentName;
+
+            var choice = await DisplayActionSheet(
+                $"You're scheduling for {currentStudentName}. What would you like to do?",
+                "Cancel",
+                null,
+                $"Schedule {currentStudentName} on this date",
+                $"Open {tappedStudentName}'s Visit");
+
+            if (choice == $"Schedule {currentStudentName} on this date")
+            {
+                if (_vm.SchedulingStudentId is int schedulingStudentId)
+                {
+                    OnScheduleVisitRequested(schedulingStudentId, visit.ScheduledDateTime.Date);
+                }
+
+                return;
+            }
+
+            if (choice == $"Open {tappedStudentName}'s Visit")
+            {
+                _vm.ClearSchedulingContext();
+                await OpenExistingVisitAsync(visit);
+                return;
+            }
+
+            // Cancel = keep current context and do nothing else.
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine(ex);
+            await DisplayAlert("Something Broke", "Back up and try again", "OK");
+        }
+    }
+
+    private async System.Threading.Tasks.Task OpenExistingVisitAsync(VisitWithStudent visit)
+    {
+        await Shell.Current.GoToAsync($"{nameof(UpdateVisitPage)}?visitId={visit.VisitId}");
     }
 }

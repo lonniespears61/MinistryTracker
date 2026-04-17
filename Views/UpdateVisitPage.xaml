@@ -1,12 +1,147 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-             x:Class="MinistryTracker.Views.UpdateVisitPage"
-             Title="UpdateVisitPage">
-    <VerticalStackLayout>
-        <Label 
-            Text="Welcome to .NET MAUI!"
-            VerticalOptions="Center" 
-            HorizontalOptions="Center" />
-    </VerticalStackLayout>
+<!--
+UpdateVisitPage.xaml
+
+PURPOSE
+- Edit/manage one existing visit.
+- Supports the visit actions we locked:
+  - edit details on the same record
+  - reschedule as a separate action
+  - cancel as an end state
+
+DESIGN RULES
+- This page is for an EXISTING visit, not creating a new one.
+- Notes/method/details are edited here.
+- Reschedule is a distinct action, not just typing over the date/time.
+- Keep the layout simple and readable.
+- Bind to UpdateVisitViewModel rather than named control manipulation.
+
+WHY THIS FILE EXISTS IN THIS SHAPE
+- The page should describe layout and bindable behavior.
+- The ViewModel should own load/save/cancel/reschedule logic.
+- This avoids code-behind churn and keeps the page aligned with the rest of the app.
+-->
+<ContentPage
+    x:Class="MinistryTracker.Views.UpdateVisitPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:MinistryTracker.ViewModels"
+    x:DataType="vm:UpdateVisitViewModel"
+    Title="Update Visit">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="14">
+
+            <!--
+            Context header:
+            Shows who this visit belongs to and when it is currently scheduled.
+            These are labels (not editors) because this page is for updating
+            the existing visit intentionally, not rewriting identity/schedule directly.
+            -->
+            <Border
+                Padding="14"
+                StrokeThickness="1"
+                Stroke="#D1D5DB"
+                BackgroundColor="#F9FAFB">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="14" />
+                </Border.StrokeShape>
+
+                <VerticalStackLayout Spacing="6">
+                    <Label
+                        Text="{Binding StudentName}"
+                        FontSize="20"
+                        FontAttributes="Bold" />
+
+                    <Label
+                        Text="{Binding CurrentVisitDateTimeDisplay}"
+                        FontSize="13"
+                        Opacity="0.8" />
+
+                    <Label
+                        Text="{Binding CurrentVisitStatusDisplay}"
+                        FontSize="13"
+                        FontAttributes="Bold"
+                        TextColor="#2563EB" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!--
+            Editable visit details:
+            These are same-record edits. They do NOT create a new visit.
+            -->
+            <Label Text="Method" />
+            <Picker
+                Title="Select method"
+                ItemsSource="{Binding ContactMethodValues}"
+                SelectedItem="{Binding Method}" />
+
+            <Label Text="Meeting Address" />
+            <Entry
+                Text="{Binding MeetingAddress}"
+                Placeholder="Optional address or meeting location" />
+
+            <Label Text="Notes" />
+            <Editor
+                Text="{Binding Notes}"
+                AutoSize="TextChanges"
+                Placeholder="Visit notes, reminders, or follow-up details" />
+
+            <!--
+            Action area:
+            - Save Changes = update same record details
+            - Reschedule = separate flow, not a silent overwrite
+            - Cancel Visit = end state
+            -->
+            <Label
+                Text="Actions"
+                FontSize="16"
+                FontAttributes="Bold"
+                Margin="0,6,0,0" />
+
+            <Grid ColumnDefinitions="*,*"
+                  ColumnSpacing="12">
+
+                <Button
+                    Text="Save Changes"
+                    Command="{Binding SaveCommand}"
+                    CornerRadius="14"
+                    HeightRequest="52" />
+
+                <Button
+                    Grid.Column="1"
+                    Text="Reschedule"
+                    Command="{Binding RescheduleCommand}"
+                    CornerRadius="14"
+                    HeightRequest="52" />
+            </Grid>
+
+            <Button
+                Text="Cancel Visit"
+                Command="{Binding CancelVisitCommand}"
+                CornerRadius="14"
+                HeightRequest="52" />
+
+            <!--
+            Status message:
+            Hidden when empty or null so the page does not show dead UI chrome.
+            -->
+            <Label
+                Text="{Binding StatusMessage}"
+                FontSize="12"
+                TextColor="Green">
+                <Label.Triggers>
+                    <DataTrigger TargetType="Label" Binding="{Binding StatusMessage}" Value="">
+                        <Setter Property="IsVisible" Value="False" />
+                    </DataTrigger>
+                    <DataTrigger TargetType="Label" Binding="{Binding StatusMessage}" Value="{x:Null}">
+                        <Setter Property="IsVisible" Value="False" />
+                    </DataTrigger>
+                </Label.Triggers>
+            </Label>
+
+            <BoxView HeightRequest="20" />
+
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>
