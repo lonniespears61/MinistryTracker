@@ -1,7 +1,19 @@
+// ---------------------------------------------------------------------------------------------------------------------
 // DataService.Students.cs
+//
+// PURPOSE
+// - CRUD and query operations for Student entities.
+// - Uses sqlite-net-pcl async APIs.
+// - All calls routed through EnsureInitThen for DB readiness + threading safety.
+//
+// NOTES
+// - sqlite-net-pcl is NOT nullability-aware.
+// - Any method that may not find a record MUST return nullable (Student?).
+// - Wrap FindAsync in async lambda so compiler accepts nullable contract.
+// ---------------------------------------------------------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MinistryTracker.Models;
@@ -25,6 +37,7 @@ namespace MinistryTracker.Data
             {
                 var s = await Db.FindAsync<Student>(studentId).ConfigureAwait(false);
                 if (s is null) return 0;
+
                 s.IsDeleted = true;
                 return await Db.UpdateAsync(s).ConfigureAwait(false);
             }, ct);
@@ -34,6 +47,7 @@ namespace MinistryTracker.Data
             => EnsureInitThen(() =>
             {
                 var query = Db.Table<Student>();
+
                 if (!includeDeleted)
                     query = query.Where(s => !s.IsDeleted);
 
@@ -42,12 +56,17 @@ namespace MinistryTracker.Data
 
         /// <summary>Find a student by primary key.</summary>
         public Task<Student?> GetStudentByIdAsync(int studentId, CancellationToken ct = default)
-            => EnsureInitThen(() => Db.FindAsync<Student>(studentId), ct);
+     => EnsureInitThen(async () =>
+         (Student?)await Db.FindAsync<Student>(studentId),
+         ct);
 
         /// <summary>Count active (not soft-deleted) students.</summary>
         public Task<int> GetActiveStudentsCountAsync(CancellationToken ct = default)
             => EnsureInitThen(() =>
-                Db.Table<Student>().Where(s => !s.IsDeleted).CountAsync(), ct);
+                Db.Table<Student>()
+                  .Where(s => !s.IsDeleted)
+                  .CountAsync(),
+                ct);
 
         /// <summary>List students that have GPS coordinates.</summary>
         public Task<List<Student>> GetStudentsWithLocationAsync(

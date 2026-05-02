@@ -2,7 +2,9 @@
 <ContentPage
     x:Class="MinistryTracker.Views.AddStudentPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
-    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml">
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
+    x:DataType="viewmodels:AddStudentViewModel">
 
     <ScrollView>
         <VerticalStackLayout Padding="20" Spacing="14">
@@ -23,9 +25,9 @@
 
             <Label Text="Notes" Margin="0,10,0,0" />
             <Editor Text="{Binding Notes}"
-                 Placeholder="Free text notes (use this for descriptions/context)"
-                 AutoSize="TextChanges"
-                 HeightRequest="100" />
+                    Placeholder="Free text notes (use this for descriptions/context)"
+                    AutoSize="TextChanges"
+                    HeightRequest="100" />
 
             <Button Text="Use current location"
                     Command="{Binding UseCurrentLocationCommand}" />
@@ -33,7 +35,6 @@
             <ActivityIndicator IsRunning="{Binding IsLocating}"
                                IsVisible="{Binding IsLocating}" />
 
-            <!-- Show status text when not empty -->
             <Label FontSize="12"
                    TextColor="Green"
                    Text="{Binding LocationStatus}">

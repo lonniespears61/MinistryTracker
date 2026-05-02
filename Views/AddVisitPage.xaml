@@ -2,9 +2,10 @@
     x:Class="MinistryTracker.Views.AddVisitPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
+    x:DataType="viewmodels:AddVisitViewModel"
     Title="Add Visit">
 
-    <!-- Toolbar Save button -->
     <ContentPage.ToolbarItems>
         <ToolbarItem Text="Save" Command="{Binding SaveCommand}" />
     </ContentPage.ToolbarItems>
@@ -12,35 +13,32 @@
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="16">
 
-            <!-- Context -->
-            <Label Text="{Binding StudentName, FallbackValue=Adding Visit}"
-             FontSize="18"
-             FontAttributes="Bold"
-             LineBreakMode="TailTruncation" />
+            <Label Text="{Binding StudentName, FallbackValue='Adding Visit'}"
+                   FontSize="18"
+                   FontAttributes="Bold"
+                   LineBreakMode="TailTruncation" />
 
-            <!-- DatePicker (calendar opens on page load via code-behind) -->
             <VerticalStackLayout Spacing="6">
                 <Label Text="Visit Date" />
                 <DatePicker x:Name="VisitDatePicker"
-                    Date="{Binding VisitDate, Mode=TwoWay}"
-                    DateSelected="OnVisitDateSelected"
-                    MinimumDate="2000-01-01"
-                    MaximumDate="2100-12-31" />
+                            Date="{Binding VisitDate, Mode=TwoWay}"
+                            DateSelected="OnVisitDateSelected"
+                            MinimumDate="2000-01-01"
+                            MaximumDate="2100-12-31" />
             </VerticalStackLayout>
 
-            <!-- TimePicker (enabled after date is chosen, auto-focuses) -->
             <VerticalStackLayout Spacing="6">
                 <Label Text="Visit Time" />
                 <TimePicker x:Name="VisitTimePicker"
-                    Time="{Binding VisitTime, Mode=TwoWay}"
-                    IsEnabled="False" />
+                            Time="{Binding VisitTime, Mode=TwoWay}"
+                            IsEnabled="False" />
             </VerticalStackLayout>
 
-            <!-- Confirm -->
             <Button Text="Schedule Visit"
-              Command="{Binding SaveCommand}"
-              HeightRequest="48"
-              CornerRadius="12" />
+                    Command="{Binding SaveCommand}"
+                    HeightRequest="48"
+                    CornerRadius="12" />
+
         </VerticalStackLayout>
     </ScrollView>
 </ContentPage>

@@ -1,16 +1,28 @@
-﻿// AddStudentViewModel.cs
+﻿// ---------------------------------------------------------------------------------------------------------------------
+// AddStudentViewModel.cs
+//
+// PURPOSE
+// - ViewModel for AddStudentPage.
+// - Collects required student fields.
+// - Optionally captures current GPS location.
+// - Saves a new Student record through DataService.
+//
+// NOTES
+// - This project uses Shell navigation.
+// - Do not use Application.Current.MainPage; it is obsolete in modern .NET MAUI.
+// ---------------------------------------------------------------------------------------------------------------------
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Maui.Controls;           // Application, etc.
-using Microsoft.Maui.Devices.Sensors;    // Geolocation, Location
+using Microsoft.Maui.Controls;
+using Microsoft.Maui.Devices.Sensors;
 using MinistryTracker.Data;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
 using MinistryTracker.Utilities;
-using System.Globalization;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -27,48 +39,56 @@ namespace MinistryTracker.ViewModels
             SaveCommand = new AsyncRelayCommand(SaveStudentAsync);
             UseCurrentLocationCommand = new AsyncRelayCommand(UseCurrentLocationAsync);
 
-            // Optional: set a reasonable default so the Picker isn't blank
             CallType = CallTypeValues.FirstOrDefault();
 
-            // Device / app UI language (e.g., "en", "es")
             var uiLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
             PreferredLanguage = uiLang == "es" ? "Español" : "English";
-                     
         }
 
-        // --------------------------------------------------------------------
-        // Properties bound from XAML
-        // --------------------------------------------------------------------
+        [ObservableProperty]
+        private string name = string.Empty;
 
-        [ObservableProperty] private string name = string.Empty;                // Required
-        [ObservableProperty] private InitialCallType callType;                  // Required
-        [ObservableProperty] private DateTime firstContactDate = DateTime.Today; // Required
-        [ObservableProperty] private string? preferredLanguage;
-        [ObservableProperty] private string? notes; // Optional free text (no indexing)// Optional
+        [ObservableProperty]
+        private InitialCallType callType;
 
-        // Location fields (optional)
-        [ObservableProperty] private double? studyLatitude;
-        [ObservableProperty] private double? studyLongitude;
+        [ObservableProperty]
+        private DateTime firstContactDate = DateTime.Today;
 
-        // Picker ItemsSource
+        [ObservableProperty]
+        private string? preferredLanguage;
+
+        [ObservableProperty]
+        private string? notes;
+
+        [ObservableProperty]
+        private double? studyLatitude;
+
+        [ObservableProperty]
+        private double? studyLongitude;
+
+        [ObservableProperty]
+        private bool isLocating;
+
+        [ObservableProperty]
+        private string? locationStatus;
+
         public List<InitialCallType> CallTypeValues =>
-            Enum.GetValues(typeof(InitialCallType)).Cast<InitialCallType>().ToList();
+            Enum.GetValues(typeof(InitialCallType))
+                .Cast<InitialCallType>()
+                .ToList();
 
-        // Commands
         public IAsyncRelayCommand SaveCommand { get; }
+
         public IAsyncRelayCommand UseCurrentLocationCommand { get; }
 
-        // UI helpers (for your label)
-        public bool IsLocationCaptured => StudyLatitude.HasValue && StudyLongitude.HasValue;
-        [ObservableProperty] private bool isLocating;
-        [ObservableProperty] private string? locationStatus;
+        public bool IsLocationCaptured =>
+            StudyLatitude.HasValue && StudyLongitude.HasValue;
 
         public string LocationDisplay =>
             IsLocationCaptured
                 ? $"Location captured ✓ ({StudyLatitude!.Value:F6}, {StudyLongitude!.Value:F6})"
                 : string.Empty;
 
-        // Keep computed properties updated when lat/lon changes
         partial void OnStudyLatitudeChanged(double? value)
         {
             OnPropertyChanged(nameof(IsLocationCaptured));
@@ -81,19 +101,21 @@ namespace MinistryTracker.ViewModels
             OnPropertyChanged(nameof(LocationDisplay));
         }
 
-        // Called by page OnAppearing() to ensure clean slate
         public void Reset()
         {
             Name = string.Empty;
-            PreferredLanguage = null;
-            FirstContactDate = DateTime.Now; 
 
-            // Pick a sensible default (or replace with InitialCallType.HouseToHouse if preferred)
+            var uiLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
+            PreferredLanguage = uiLang == "es" ? "Español" : "English";
+
+            FirstContactDate = DateTime.Today;
             CallType = CallTypeValues.FirstOrDefault();
 
             StudyLatitude = null;
             StudyLongitude = null;
             Notes = null;
+            LocationStatus = null;
+            IsLocating = false;
         }
 
         private async Task UseCurrentLocationAsync()
@@ -103,8 +125,8 @@ namespace MinistryTracker.ViewModels
 
             try
             {
-                // ✅ Ask for permission first
                 var granted = await LocationPermissionHelper.EnsureLocationPermissionAsync();
+
                 if (!granted)
                 {
                     LocationStatus = "Location failed: permission not granted.";
@@ -119,7 +141,7 @@ namespace MinistryTracker.ViewModels
 
                 if (loc is null)
                 {
-                    LocationStatus = "Location failed: GPS unavailable (emulator location not set?).";
+                    LocationStatus = "Location failed: GPS unavailable.";
                     return;
                 }
 
@@ -130,7 +152,6 @@ namespace MinistryTracker.ViewModels
             }
             catch (Exception ex)
             {
-                // Helpful for now; we can soften later
                 LocationStatus = $"Location failed: {ex.Message}";
             }
             finally
@@ -138,7 +159,6 @@ namespace MinistryTracker.ViewModels
                 IsLocating = false;
             }
         }
-
 
         private async Task SaveStudentAsync()
         {
@@ -157,23 +177,22 @@ namespace MinistryTracker.ViewModels
                 Status = StudentStatus.Active,
                 IsDeleted = false,
                 Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes.Trim(),
-
-                // Persist GPS if captured (otherwise nulls)
                 StudyLatitude = StudyLatitude,
                 StudyLongitude = StudyLongitude
-
             };
 
             var rows = await _data.AddStudentAsync(student);
 
             if (rows > 0)
             {
-                await Application.Current.MainPage.Navigation.PopAsync();
+                await Shell.Current.GoToAsync("..");
+                return;
             }
-            else
-            {
-                await Application.Current.MainPage.DisplayAlert("Error", "Failed to add student. Please try again.", "OK");
-            }
+
+            await Shell.Current.DisplayAlert(
+                "Error",
+                "Failed to add student. Please try again.",
+                "OK");
         }
     }
 }
