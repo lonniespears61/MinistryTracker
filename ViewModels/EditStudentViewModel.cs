@@ -1,11 +1,24 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿// ---------------------------------------------------------------------------------------------------------------------
+// EditStudentViewModel.cs
+//
+// PURPOSE
+// - Handles editing an existing Student record.
+//
+// DESIGN RULES
+// - Student = identity + relationship state
+// - No visit data here
+// - Uses current Student model
+// - ViewModel owns state + save logic
+//
+// ---------------------------------------------------------------------------------------------------------------------
+
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MinistryTracker.Data;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
-using MinistryTracker.Utilities;
-using Microsoft.Maui.Devices.Sensors;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -14,33 +27,48 @@ namespace MinistryTracker.ViewModels
     public partial class EditStudentViewModel : ObservableObject
     {
         private readonly DataService _data;
-
-        // Keep reference so we preserve fields not edited on this page
         private Student? _loadedStudent;
 
         public EditStudentViewModel(DataService data) => _data = data;
 
-        // --- Bindable fields (existing) ---
+        // =====================================================================
+        // CORE FIELDS
+        // =====================================================================
+
         [ObservableProperty] private int studentId;
         [ObservableProperty] private string name = string.Empty;
         [ObservableProperty] private DateTime firstContactDate = DateTime.Today;
-        [ObservableProperty] private InitialCallType callType;
+        [ObservableProperty] private InitialContactType initialContactType;
+
+        [ObservableProperty] private string? phoneNumber;
+        [ObservableProperty] private ContactMethod? preferredContactMethod;
+        [ObservableProperty] private InterestLevel interestLevel;
+        [ObservableProperty] private StudentStatus status;
+        [ObservableProperty] private string? notes;
 
         [ObservableProperty] private bool isBusy;
+        [ObservableProperty] private string? statusMessage;
 
-        // --- Location fields (new) ---
-        [ObservableProperty] private string? studyAddress;
-        [ObservableProperty] private double? studyLatitude;
-        [ObservableProperty] private double? studyLongitude;
+        // =====================================================================
+        // PICKER SOURCES
+        // =====================================================================
 
-        [ObservableProperty] private bool isLocating;
-        [ObservableProperty] private string? locationStatus;
+        public List<InitialContactType> InitialContactTypeValues =>
+            Enum.GetValues<InitialContactType>().ToList();
 
-        public bool HasLocation => StudyLatitude.HasValue && StudyLongitude.HasValue;
+        public List<ContactMethod> ContactMethodValues =>
+            Enum.GetValues<ContactMethod>().ToList();
 
-        // -----------------------------
-        // Load
-        // -----------------------------
+        public List<InterestLevel> InterestLevelValues =>
+            Enum.GetValues<InterestLevel>().ToList();
+
+        public List<StudentStatus> StudentStatusValues =>
+            Enum.GetValues<StudentStatus>().ToList();
+
+        // =====================================================================
+        // LOAD
+        // =====================================================================
+
         public async Task LoadAsync(int id)
         {
             if (IsBusy) return;
@@ -54,28 +82,24 @@ namespace MinistryTracker.ViewModels
                 var s = await _data.GetStudentByIdAsync(id);
                 if (s is null)
                 {
-                    LocationStatus = "Student not found.";
+                    StatusMessage = "Student not found.";
                     return;
                 }
 
                 _loadedStudent = s;
 
-                // Populate bindable properties
                 Name = s.Name ?? string.Empty;
                 FirstContactDate = s.FirstContactDate;
-                CallType = s.CallType;
-
-                StudyAddress = s.StudyAddress;
-                StudyLatitude = s.StudyLatitude;
-                StudyLongitude = s.StudyLongitude;
-
-                LocationStatus = HasLocation
-                    ? $"Location ✓ ({StudyLatitude:0.000000}, {StudyLongitude:0.000000})"
-                    : "No location saved.";
+                InitialContactType = s.InitialContactType;
+                PhoneNumber = s.PhoneNumber;
+                PreferredContactMethod = s.PreferredContactMethod;
+                InterestLevel = s.InterestLevel;
+                Status = s.Status;
+                Notes = s.Notes;
             }
             catch (Exception ex)
             {
-                LocationStatus = $"Load failed: {ex.Message}";
+                StatusMessage = $"Load failed: {ex.Message}";
             }
             finally
             {
@@ -83,9 +107,10 @@ namespace MinistryTracker.ViewModels
             }
         }
 
-        // -----------------------------
-        // Save
-        // -----------------------------
+        // =====================================================================
+        // SAVE
+        // =====================================================================
+
         [RelayCommand]
         public async Task<bool> SaveAsync()
         {
@@ -93,7 +118,7 @@ namespace MinistryTracker.ViewModels
 
             if (string.IsNullOrWhiteSpace(Name))
             {
-                LocationStatus = "Name is required.";
+                StatusMessage = "Name is required.";
                 return false;
             }
 
@@ -101,7 +126,6 @@ namespace MinistryTracker.ViewModels
             {
                 IsBusy = true;
 
-                // Ensure we have the loaded student so we can preserve all other fields
                 if (_loadedStudent is null || _loadedStudent.StudentId != StudentId)
                 {
                     _loadedStudent = await _data.GetStudentByIdAsync(StudentId);
@@ -109,28 +133,27 @@ namespace MinistryTracker.ViewModels
 
                 if (_loadedStudent is null)
                 {
-                    LocationStatus = "Student not found.";
+                    StatusMessage = "Student not found.";
                     return false;
                 }
 
-                // Update only what this page owns
                 _loadedStudent.Name = Name.Trim();
                 _loadedStudent.FirstContactDate = FirstContactDate;
-                _loadedStudent.CallType = CallType;
-
-                // Location fields
-                _loadedStudent.StudyAddress = StudyAddress;
-                _loadedStudent.StudyLatitude = StudyLatitude;
-                _loadedStudent.StudyLongitude = StudyLongitude;
+                _loadedStudent.InitialContactType = InitialContactType;
+                _loadedStudent.PhoneNumber = string.IsNullOrWhiteSpace(PhoneNumber) ? null : PhoneNumber.Trim();
+                _loadedStudent.PreferredContactMethod = PreferredContactMethod;
+                _loadedStudent.InterestLevel = InterestLevel;
+                _loadedStudent.Status = Status;
+                _loadedStudent.Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes.Trim();
 
                 await _data.UpdateStudentAsync(_loadedStudent);
 
-                LocationStatus = "Saved ✓";
+                StatusMessage = "Saved ✓";
                 return true;
             }
             catch (Exception ex)
             {
-                LocationStatus = $"Save failed: {ex.Message}";
+                StatusMessage = $"Save failed: {ex.Message}";
                 return false;
             }
             finally
@@ -138,128 +161,5 @@ namespace MinistryTracker.ViewModels
                 IsBusy = false;
             }
         }
-
-        // -----------------------------
-        // Location commands
-        // -----------------------------
-        [RelayCommand]
-        private async Task UseCurrentLocationAsync()
-        {
-            if (IsLocating) return;
-
-            try
-            {
-                IsLocating = true;
-                LocationStatus = "Capturing location…";
-
-                if (!await LocationPermissionHelper.EnsureLocationPermissionAsync())
-                {
-                    LocationStatus = "Location permission denied.";
-                    return;
-                }
-
-                var req = new GeolocationRequest(GeolocationAccuracy.Medium, TimeSpan.FromSeconds(10));
-                var loc = await Geolocation.Default.GetLocationAsync(req);
-
-                if (loc is null)
-                {
-                    LocationStatus = "Location unavailable.";
-                    return;
-                }
-
-                StudyLatitude = loc.Latitude;
-                StudyLongitude = loc.Longitude;
-
-                LocationStatus = $"Location ✓ ({StudyLatitude:0.000000}, {StudyLongitude:0.000000})";
-
-                // Optional: if address is empty, try to fill it automatically
-                if (string.IsNullOrWhiteSpace(StudyAddress))
-                    await ReverseGeocodeAsync();
-            }
-            catch
-            {
-                LocationStatus = "Location failed.";
-            }
-            finally
-            {
-                IsLocating = false;
-            }
-        }
-
-        [RelayCommand]
-        private async Task ReverseGeocodeAsync()
-        {
-            if (!HasLocation)
-            {
-                LocationStatus = "No coordinates to reverse-geocode.";
-                return;
-            }
-
-            try
-            {
-                LocationStatus = "Looking up address…";
-
-                var placemarks = await Geocoding.Default.GetPlacemarksAsync(
-                    StudyLatitude!.Value, StudyLongitude!.Value);
-
-                var p = placemarks?.FirstOrDefault();
-
-                if (p is null)
-                {
-                    LocationStatus = "No address found for coordinates.";
-                    return;
-                }
-
-                StudyAddress = string.Join(", ",
-                    new[] { p.Thoroughfare, p.Locality, p.AdminArea, p.PostalCode }
-                        .Where(x => !string.IsNullOrWhiteSpace(x)));
-
-                LocationStatus = "Address updated ✓";
-            }
-            catch
-            {
-                LocationStatus = "Reverse geocode failed.";
-            }
-        }
-
-        [RelayCommand]
-        private async Task GeocodeFromAddressAsync()
-        {
-            if (string.IsNullOrWhiteSpace(StudyAddress))
-            {
-                LocationStatus = "No address to geocode.";
-                return;
-            }
-
-            try
-            {
-                LocationStatus = "Geocoding address…";
-
-                var locations = await Geocoding.Default.GetLocationsAsync(StudyAddress);
-                var loc = locations?.FirstOrDefault();
-
-                if (loc is null)
-                {
-                    LocationStatus = "Could not find coordinates for address.";
-                    return;
-                }
-
-                StudyLatitude = loc.Latitude;
-                StudyLongitude = loc.Longitude;
-
-                LocationStatus = $"Coordinates ✓ ({StudyLatitude:0.000000}, {StudyLongitude:0.000000})";
-            }
-            catch
-            {
-                LocationStatus = "Geocode failed.";
-            }
-        }
-
-        // Keep HasLocation reactive for XAML bindings (button enable/disable)
-        partial void OnStudyLatitudeChanged(double? value) =>
-            OnPropertyChanged(nameof(HasLocation));
-
-        partial void OnStudyLongitudeChanged(double? value) =>
-            OnPropertyChanged(nameof(HasLocation));
     }
 }

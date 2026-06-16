@@ -1,4 +1,17 @@
-﻿// StudentProfileViewModel.cs — Student Profile VM — 2026-02-05
+﻿// ---------------------------------------------------------------------------------------------------------------------
+// StudentProfileViewModel.cs
+//
+// PURPOSE
+// - Read-only presentation ViewModel for the Student Profile page.
+// - Wraps a Student model and exposes safe UI-friendly computed properties.
+//
+// DESIGN RULES
+// - No legacy fields (DoNotCall / NoLongerInterested)
+// - Student profile shows person-level information only
+// - Visit history / next visit belong elsewhere
+// - Keeps compatibility with older XAML via StudentModel alias
+//
+// ---------------------------------------------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
@@ -10,78 +23,80 @@ using MinistryTracker.Models.Enums;
 
 namespace MinistryTracker.ViewModels
 {
-    /// <summary>ViewModel for the Student Profile page.</summary>
     public partial class StudentProfileViewModel : ObservableObject
     {
         [ObservableProperty]
         private Student? model;
 
-        public StudentProfileViewModel() { }
+        public StudentProfileViewModel()
+        {
+        }
 
         /// <summary>
-        /// Alias for older XAML that bound to StudentModel.
-        /// Keep this to avoid breaking older bindings while we refactor pages.
+        /// Compatibility alias for older XAML that bound to StudentModel.
         /// </summary>
         public Student? StudentModel
         {
             get => Model;
-            set { if (value != null) Load(value); }
+            set
+            {
+                if (value != null)
+                    Load(value);
+            }
         }
 
-        /// <summary>Initialize/refresh the profile with a Student.</summary>
-        public void Load(Student student) => Model = student;
+        /// <summary>
+        /// Initialize or refresh the profile with a Student.
+        /// </summary>
+        public void Load(Student student)
+        {
+            Model = student;
+        }
 
-        // Auto-fire computed bindings whenever Model changes
         partial void OnModelChanged(Student? value)
         {
             OnPropertyChanged(nameof(Name));
-            OnPropertyChanged(nameof(PreferredLanguage));
-            OnPropertyChanged(nameof(StudyAddress));
+            OnPropertyChanged(nameof(PhoneNumber));
             OnPropertyChanged(nameof(FirstContactFormatted));
-            OnPropertyChanged(nameof(StudyLocationLabel));
+            OnPropertyChanged(nameof(StatusLabel));
+            OnPropertyChanged(nameof(InterestLabel));
             OnPropertyChanged(nameof(StatusColor));
             OnPropertyChanged(nameof(InterestColor));
             OnPropertyChanged(nameof(Initials));
             OnPropertyChanged(nameof(SubTitle));
-
-            // ✅ Notes support (for display)
             OnPropertyChanged(nameof(Notes));
             OnPropertyChanged(nameof(HasNotes));
         }
 
-        // ---- Display properties used by XAML ----
         public string Name => Model?.Name ?? string.Empty;
-        public string? PreferredLanguage => Model?.PreferredLanguage;
-        public string? StudyAddress => Model?.StudyAddress;
+
+        public string? PhoneNumber => Model?.PhoneNumber;
 
         public string FirstContactFormatted =>
             Model?.FirstContactDate is DateTime d && d != default
                 ? $"Contacted: {d:MMM dd, yyyy}"
                 : "Contacted: —";
 
-        public string StudyLocationLabel => Model?.StudyLocationType.ToString() ?? "—";
+        public string StatusLabel => Model?.Status.ToString() ?? "—";
 
-        // ✅ Display-only notes (may contain STUDENT + LAST/NEXT sections for now)
+        public string InterestLabel => Model?.InterestLevel.ToString() ?? "—";
+
         public string Notes => Model?.Notes ?? string.Empty;
+
         public bool HasNotes => !string.IsNullOrWhiteSpace(Model?.Notes);
 
         public Color StatusColor
         {
             get
             {
-                // Switch on the enum (not strings) so renames don’t break UI.
                 var status = Model?.Status ?? StudentStatus.Active;
 
                 return status switch
                 {
                     StudentStatus.Active => Colors.Green,
-                    StudentStatus.DoNotCall => Colors.Red,
-
-                    // If you have these values in your enum, map them.
-                    // If not, they’ll never be hit.
                     StudentStatus.Paused => Colors.Orange,
-                    StudentStatus.NotInterested => Colors.Gray,
-
+                    StudentStatus.Discontinued => Colors.DarkGray,
+                    StudentStatus.Completed => Colors.SteelBlue,
                     _ => Colors.Gray
                 };
             }
@@ -91,12 +106,13 @@ namespace MinistryTracker.ViewModels
         {
             get
             {
-                var interest = Model?.InterestLevel ?? default;
+                var interest = Model?.InterestLevel ?? InterestLevel.Promising;
 
                 return interest switch
                 {
-                    InterestLevel.Potential => Colors.LightGray,
-                    InterestLevel.Interested => Color.FromArgb("#FAFAD2"), // LightGoldenrodYellow
+                    InterestLevel.Promising => Colors.LightGray,
+                    InterestLevel.Interested => Color.FromArgb("#FAFAD2"),
+                    InterestLevel.ReturnVisit => Colors.LightBlue,
                     InterestLevel.Study => Colors.LightGreen,
                     _ => Colors.White
                 };
@@ -108,11 +124,13 @@ namespace MinistryTracker.ViewModels
             get
             {
                 var name = Model?.Name;
-                if (string.IsNullOrWhiteSpace(name)) return "?";
+                if (string.IsNullOrWhiteSpace(name))
+                    return "?";
 
-                var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                                .Where(p => p.Length > 0)
-                                .Select(p => char.ToUpperInvariant(p[0]));
+                var parts = name
+                    .Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Where(p => p.Length > 0)
+                    .Select(p => char.ToUpperInvariant(p[0]));
 
                 var two = new string(parts.Take(2).ToArray());
                 return string.IsNullOrWhiteSpace(two) ? "?" : two;
@@ -123,18 +141,18 @@ namespace MinistryTracker.ViewModels
         {
             get
             {
-                var segs = new List<string>();
+                var segments = new List<string>();
 
-                if (!string.IsNullOrWhiteSpace(PreferredLanguage))
-                    segs.Add($"Language: {PreferredLanguage}");
+                if (!string.IsNullOrWhiteSpace(PhoneNumber))
+                    segments.Add($"Phone: {PhoneNumber}");
 
                 if (Model?.FirstContactDate is DateTime d && d != default)
-                    segs.Add($"First contact: {d:MMM dd, yyyy}");
+                    segments.Add($"First contact: {d:MMM dd, yyyy}");
 
-                if (segs.Count == 0 && Model is not null)
-                    segs.Add(Model.CallType.ToString());
+                if (Model is not null)
+                    segments.Add(Model.InitialContactType.ToString());
 
-                return string.Join(" • ", segs);
+                return string.Join(" • ", segments);
             }
         }
     }

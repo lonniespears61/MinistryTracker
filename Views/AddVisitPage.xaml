@@ -1,42 +1,44 @@
-﻿<ContentPage
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
     x:Class="MinistryTracker.Views.AddVisitPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
-    xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
-    x:DataType="viewmodels:AddVisitViewModel"
+    xmlns:vm="clr-namespace:MinistryTracker.ViewModels"
+    x:DataType="vm:AddVisitViewModel"
     Title="Add Visit">
 
     <ContentPage.ToolbarItems>
-        <ToolbarItem Text="Save" Command="{Binding SaveCommand}" />
+        <ToolbarItem Text="Save" Command="{Binding SaveVisitCommand}" Priority="0" />
+        <ToolbarItem Text="Cancel" Clicked="OnCancelClicked" Priority="1" />
     </ContentPage.ToolbarItems>
 
     <ScrollView>
-        <VerticalStackLayout Padding="16" Spacing="16">
+        <VerticalStackLayout Padding="16" Spacing="14">
 
-            <Label Text="{Binding StudentName, FallbackValue='Adding Visit'}"
-                   FontSize="18"
-                   FontAttributes="Bold"
-                   LineBreakMode="TailTruncation" />
+            <Label Text="Visit Date" />
+            <DatePicker x:Name="VisitDatePicker"
+                        Date="{Binding VisitDate}"
+                        DateSelected="OnVisitDateSelected" />
 
-            <VerticalStackLayout Spacing="6">
-                <Label Text="Visit Date" />
-                <DatePicker x:Name="VisitDatePicker"
-                            Date="{Binding VisitDate, Mode=TwoWay}"
-                            DateSelected="OnVisitDateSelected"
-                            MinimumDate="2000-01-01"
-                            MaximumDate="2100-12-31" />
-            </VerticalStackLayout>
+            <Label Text="Visit Time" />
+            <TimePicker x:Name="VisitTimePicker"
+                        Time="{Binding VisitTime}" />
 
-            <VerticalStackLayout Spacing="6">
-                <Label Text="Visit Time" />
-                <TimePicker x:Name="VisitTimePicker"
-                            Time="{Binding VisitTime, Mode=TwoWay}" />
-            </VerticalStackLayout>
+            <Label Text="Method" />
+            <Picker ItemsSource="{Binding ContactMethodValues}"
+                    SelectedItem="{Binding Method}" />
 
-            <Button Text="Schedule Visit"
-                    Command="{Binding SaveCommand}"
-                    HeightRequest="48"
-                    CornerRadius="12" />
+            <Label Text="Meeting Address" />
+            <Entry Text="{Binding MeetingAddress}"
+                   Placeholder="Optional" />
+
+            <Label Text="Notes" />
+            <Editor Text="{Binding Notes}"
+                    AutoSize="TextChanges"
+                    Placeholder="Anything helpful to remember" />
+
+            <ActivityIndicator IsRunning="{Binding IsBusy}"
+                               IsVisible="{Binding IsBusy}" />
 
         </VerticalStackLayout>
     </ScrollView>

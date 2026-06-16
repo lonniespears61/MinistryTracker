@@ -1,8 +1,9 @@
-// StudentViewModel.cs — Student row + detail presentation VM — 2026-02-01
+// StudentViewModel.cs — Student row + detail presentation VM — 2026-04-15
 //
 // Purpose:
 // - Wraps Student model for UI binding (lists + details)
 // - Keeps UI-only state here (selection, alternation, next visit)
+// - Reflects current Student model after refactor
 //
 // Design rules:
 // - Uses CommunityToolkit ObservableObject (no manual INotifyPropertyChanged)
@@ -40,7 +41,7 @@ public partial class StudentViewModel : ObservableObject
 
     /// <summary>
     /// Use this when you re-load / update the student and want the UI to refresh
-    /// computed properties (Name, Subtitle, colors, etc.).
+    /// computed properties (Name, subtitle, colors, etc.).
     /// </summary>
     public void RefreshFromModel(Student updated)
     {
@@ -49,14 +50,14 @@ public partial class StudentViewModel : ObservableObject
         // Re-fire all computed bindings (cheap, simple, reliable)
         OnPropertyChanged(nameof(StudentId));
         OnPropertyChanged(nameof(Name));
-        OnPropertyChanged(nameof(StudyAddress));
+        OnPropertyChanged(nameof(PhoneNumber));
         OnPropertyChanged(nameof(FirstContactFormatted));
-        OnPropertyChanged(nameof(StudyLocationLabel));
         OnPropertyChanged(nameof(StatusBorderColor));
         OnPropertyChanged(nameof(StatusBackgroundColor));
         OnPropertyChanged(nameof(InterestColor));
         OnPropertyChanged(nameof(Initials));
         OnPropertyChanged(nameof(SubTitle));
+        OnPropertyChanged(nameof(Notes));
     }
 
     // =====================================================================
@@ -87,39 +88,44 @@ public partial class StudentViewModel : ObservableObject
 
     public string Name => _student.Name ?? string.Empty;
 
-    public string? StudyAddress => _student.StudyAddress;
+    public string? PhoneNumber => _student.PhoneNumber;
+
+    public string? Notes => _student.Notes;
 
     public string FirstContactFormatted =>
         _student.FirstContactDate == default
             ? "Contacted: —"
             : $"Contacted: {_student.FirstContactDate:MMM dd, yyyy}";
 
-    public string StudyLocationLabel => _student.StudyLocationType.ToString();
-
     // =====================================================================
     // 5) STATUS / INTEREST VISUALS
     // =====================================================================
 
-    public Color StatusBorderColor => _student.Status switch
-    {
-        StudentStatus.Active => Colors.ForestGreen,
-        StudentStatus.Paused => Colors.DarkOrange,
-        StudentStatus.NotInterested => Colors.Gray,
-        _ => Colors.LightGray
-    };
+    public Color StatusBorderColor =>
+        _student.Status switch
+        {
+            StudentStatus.Active => Colors.ForestGreen,
+            StudentStatus.Paused => Colors.DarkOrange,
+            StudentStatus.Discontinued => Colors.DarkGray,
+            StudentStatus.Completed => Colors.SteelBlue,
+            _ => Colors.LightGray
+        };
 
-    public Color StatusBackgroundColor => _student.Status switch
-    {
-        StudentStatus.Active => Color.FromArgb("#e6ffe6"),
-        StudentStatus.Paused => Color.FromArgb("#fffbe6"),
-        StudentStatus.NotInterested => Color.FromArgb("#f2f2f2"),
-        _ => Colors.White
-    };
+    public Color StatusBackgroundColor =>
+        _student.Status switch
+        {
+            StudentStatus.Active => Color.FromArgb("#e6ffe6"),
+            StudentStatus.Paused => Color.FromArgb("#fffbe6"),
+            StudentStatus.Discontinued => Color.FromArgb("#eeeeee"),
+            StudentStatus.Completed => Color.FromArgb("#e6f0ff"),
+            _ => Colors.White
+        };
 
     public Color InterestColor => _student.InterestLevel switch
     {
-        InterestLevel.Potential => Colors.LightGray,
+        InterestLevel.Promising => Colors.LightGray,
         InterestLevel.Interested => Color.FromArgb("#FAFAD2"),
+        InterestLevel.ReturnVisit => Colors.LightBlue,
         InterestLevel.Study => Colors.LightGreen,
         _ => Colors.White
     };
@@ -150,14 +156,14 @@ public partial class StudentViewModel : ObservableObject
         {
             var segments = new List<string>();
 
-            if (!string.IsNullOrWhiteSpace(_student.PreferredLanguage))
-                segments.Add($"Language: {_student.PreferredLanguage}");
+            if (!string.IsNullOrWhiteSpace(_student.PhoneNumber))
+                segments.Add($"Phone: {_student.PhoneNumber}");
 
             if (_student.FirstContactDate != default)
                 segments.Add($"First contact: {_student.FirstContactDate:MMM dd, yyyy}");
 
             if (segments.Count == 0)
-                segments.Add(_student.CallType.ToString());
+                segments.Add(_student.InitialContactType.ToString());
 
             return string.Join(" • ", segments);
         }

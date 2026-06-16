@@ -1,95 +1,147 @@
+﻿// ---------------------------------------------------------------------------------------------------------------------
+// Student.cs
+// Domain model representing a Return Visit (person + relationship).
+//
+// DESIGN INTENT
+// - This model represents WHO the person is and HOW we can reach them again.
+// - PrimaryAddress = best known reliable physical place to reach them.
+// - IsHomeAddress = indicates whether that address is their actual home.
+// - Household grouping is ONLY valid when IsHomeAddress = true.
+// - Visit records handle all interaction history and per-visit locations.
+// - This model remains language-neutral (no UI text stored here).
+// ---------------------------------------------------------------------------------------------------------------------
+
 using SQLite;
 using MinistryTracker.Models.Enums;
 
 namespace MinistryTracker.Models
 {
-    /// <summary>
-    /// Represents a Bible student with optional household linkage and contact metadata.
-    /// </summary>
     [Table("Students")]
     public class Student
     {
+        /// <summary>
+        /// Primary key for this record.
+        /// </summary>
         [PrimaryKey, AutoIncrement]
         public int StudentId { get; set; }
 
         /// <summary>
-        /// Student's full name.
+        /// Full name of the individual.
+        /// Required for all records.
         /// </summary>
         public string Name { get; set; } = string.Empty;
 
         /// <summary>
-        /// Type of initial contact (e.g., House to House, Phone, etc.)
+        /// How the first contact was made.
+        /// Historical value (does not change).
         /// </summary>
-        public InitialCallType CallType { get; set; }
+        public InitialContactType InitialContactType { get; set; }
 
         /// <summary>
-        /// When the first contact occurred.
+        /// Date of first contact.
         /// </summary>
         public DateTime FirstContactDate { get; set; }
 
         /// <summary>
-        /// Physical address where the study is conducted.
+        /// Primary phone number (call/text).
+        /// Optional but may serve as an anchor.
         /// </summary>
-        public string? StudyAddress { get; set; }
+        public string? PhoneNumber { get; set; }
 
         /// <summary>
-        /// Geolocation data for "near me" or mapping features.
+        /// Email address if available.
+        /// Optional anchor.
         /// </summary>
-        public double? StudyLatitude { get; set; }
-        public double? StudyLongitude { get; set; }
-        // Geocoding bookkeeping (helps us avoid retrying too often)
-        public GeocodeStatus GeocodeStatus { get; set; } = GeocodeStatus.None;
-
-        // Last time we attempted forward/reverse geocoding (UTC)
-        public DateTime? LastGeocodeAttemptUtc { get; set; }
-
-        public Gender? Gender { get; set; }
-        public int? Age { get; set; }
+        public string? Email { get; set; }
 
         /// <summary>
-        /// Preferred spoken or written language of the student.
+        /// Best known reliable physical location to reach this person.
+        /// May be home, work, or other consistent place.
+        /// Used for map and in-person planning.
+        /// </summary>
+        public string? PrimaryAddress { get; set; }
+
+        /// <summary>
+        /// True if PrimaryAddress is the person's actual home.
+        /// Only TRUE values are used for household grouping.
+        /// </summary>
+        public bool IsHomeAddress { get; set; } = false;
+
+        /// <summary>
+        /// Indicates the general type of location for planning context.
+        /// (Home, Work, Public)
+        /// </summary>
+        public LocationContext LocationContext { get; set; } = LocationContext.Home;
+
+        /// <summary>
+        /// Latitude for PrimaryAddress (if known).
+        /// </summary>
+        public double? PrimaryLatitude { get; set; }
+
+        /// <summary>
+        /// Longitude for PrimaryAddress (if known).
+        /// </summary>
+        public double? PrimaryLongitude { get; set; }
+
+        /// <summary>
+        /// Tracks whether geocoding has succeeded.
+        /// </summary>
+        public GeocodeStatus PrimaryGeocodeStatus { get; set; } = GeocodeStatus.None;
+
+        /// <summary>
+        /// Preferred language for communication or study.
+        /// Stored as user-entered value (not auto-translated).
         /// </summary>
         public string? PreferredLanguage { get; set; }
 
-        public ContactMethod? ContactMethod { get; set; }
+        /// <summary>
+        /// Default / most common method of contact.
+        /// Used as a convenience when scheduling visits.
+        /// </summary>
+        public ContactMethod? PreferredContactMethod { get; set; }
 
         /// <summary>
-        /// Level of spiritual interest at time of entry.
+        /// Indicates level of development (interest → study).
+        /// Lightweight guidance, not strict workflow.
         /// </summary>
         public InterestLevel InterestLevel { get; set; }
 
-        public StudyLocationType StudyLocationType { get; set; } = StudyLocationType.Home;
-
         /// <summary>
-        /// ID of the household this student is linked to.
-        /// </summary>
-        public int? HouseholdId { get; set; }
-
-        /// <summary>
-        /// Region, territory, or local area reference.
-        /// </summary>
-        public string? Region { get; set; }
-
-        /// <summary>
-        /// Notes about background, needs, or spiritual progress.
-        /// </summary>
-        public string? Notes { get; set; }
-
-        /// <summary>
-        /// Indicates whether this student is actively being visited.
+        /// Current relationship status.
+        /// Controls visibility in dashboard/map logic.
         /// </summary>
         public StudentStatus Status { get; set; } = StudentStatus.Active;
 
         /// <summary>
-        /// If true, this student is logically deleted (but still in the DB).
+        /// Optional demographic field.
         /// </summary>
-        public bool IsDeleted { get; set; } = false;
+        public Gender? Gender { get; set; }
 
         /// <summary>
-        /// [Ignored] In-memory reference to a related household object (not stored in DB).
+        /// Optional demographic field.
+        /// </summary>
+        public int? Age { get; set; }
+
+        /// <summary>
+        /// Household grouping (only valid when IsHomeAddress = true).
+        /// </summary>
+        public int? HouseholdId { get; set; }
+
+        /// <summary>
+        /// Navigation property (not stored).
         /// </summary>
         [Ignore]
         public Household? Household { get; set; }
 
+        /// <summary>
+        /// General notes about the individual.
+        /// Used for background, personality, and long-term context.
+        /// </summary>
+        public string? Notes { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Soft delete flag.
+        /// </summary>
+        public bool IsDeleted { get; set; } = false;
     }
 }

@@ -1,15 +1,4 @@
-// ---------------------------------------------------------------------------------------------------------------------
-// UiConverters.cs
-//
-// PURPOSE
-// - Small XAML value converters used by UI styling.
-// - Nullable signatures must match IValueConverter in modern .NET MAUI.
-// ---------------------------------------------------------------------------------------------------------------------
-
-using System;
 using System.Globalization;
-using Microsoft.Maui.Controls;
-using Microsoft.Maui.Graphics;
 
 namespace MinistryTracker.Views.Converters
 {
@@ -19,13 +8,7 @@ namespace MinistryTracker.Views.Converters
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             var parts = (parameter?.ToString() ?? "Black;Transparent").Split(';');
-
-            var onColor = parts.Length > 0 ? parts[0] : "Black";
-            var offColor = parts.Length > 1 ? parts[1] : "Transparent";
-
-            return value is bool b && b
-                ? Color.FromArgb(onColor)
-                : Color.FromArgb(offColor);
+            return (value is bool b && b) ? Color.FromArgb(parts[0]) : Color.FromArgb(parts[1]);
         }
 
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -36,13 +19,8 @@ namespace MinistryTracker.Views.Converters
     {
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            var thickness = parameter is string s && int.TryParse(s, out var n)
-                ? n
-                : 2;
-
-            return value is bool b && b
-                ? new Thickness(thickness)
-                : new Thickness(0);
+            var thick = parameter is string s && int.TryParse(s, out var n) ? n : 2;
+            return (value is bool b && b) ? new Thickness(thick) : new Thickness(0);
         }
 
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -54,10 +32,7 @@ namespace MinistryTracker.Views.Converters
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
             var attr = parameter?.ToString() ?? "Bold";
-
-            return value is bool b && b
-                ? Enum.Parse<FontAttributes>(attr)
-                : FontAttributes.None;
+            return (value is bool b && b) ? Enum.Parse<FontAttributes>(attr) : FontAttributes.None;
         }
 
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)

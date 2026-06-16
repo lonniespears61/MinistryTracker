@@ -1,6 +1,22 @@
 ﻿// ---------------------------------------------------------------------------------------------------------------------
 // MyCalendarViewModel.cs — Month calendar VM — 2026-02-01
 // Purpose: Month grid + agenda + optional "schedule mode" when launched from a student.
+//
+// CHANGE NOTES
+// - In scheduling mode, tapping a valid day immediately continues the schedule flow.
+// - Added agenda-item tap handling so the page can decide whether to:
+//   * schedule the current student on that date
+//   * open the tapped visit
+//   * or cancel
+// - Added reschedule mode so Calendar can be reused as a date chooser for an
+//   existing visit that should be moved without editing the original record in place.
+//
+// DESIGN NOTES
+// - The ViewModel raises intent events.
+// - The page owns prompts / alerts / navigation decisions.
+// - This keeps user-choice UX in the View and business state in the ViewModel.
+// - Schedule mode and reschedule mode intentionally share the same calendar UX;
+//   the difference is which event is raised when a valid date is chosen.
 // ---------------------------------------------------------------------------------------------------------------------
 
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -26,19 +42,47 @@ public partial class MyCalendarViewModel : ObservableObject
     private readonly Dictionary<DateTime, List<VisitWithStudent>> _visitsByDate = new();
 
     // -------------------------
-    // Schedule Mode (context)
+    // Schedule / Reschedule Mode (context)
     // -------------------------
 
     [ObservableProperty] private bool isSchedulingMode;
     [ObservableProperty] private int? schedulingStudentId;
     [ObservableProperty] private string schedulingStudentName = string.Empty;
 
-    public string SchedulingBannerText =>
-        IsSchedulingMode && SchedulingStudentId is not null
-            ? $"Scheduling a new visit for: {SchedulingStudentName}"
-            : string.Empty;
+    [ObservableProperty] private bool isRescheduleMode;
+    [ObservableProperty] private int? reschedulingVisitId;
 
+    public string SchedulingBannerText
+    {
+        get
+        {
+            if (!IsSchedulingMode || SchedulingStudentId is null)
+                return string.Empty;
+
+            return IsRescheduleMode && ReschedulingVisitId is not null
+                ? $"Rescheduling visit for: {SchedulingStudentName}"
+                : $"Scheduling a new visit for: {SchedulingStudentName}";
+        }
+    }
+
+    /// <summary>
+    /// Raised when the user has chosen a date for a NEW visit.
+    /// The page responds by navigating to AddVisitPage.
+    /// </summary>
     public event Action<int?, DateTime>? ScheduleVisitRequested;
+
+    /// <summary>
+    /// Raised when the user has chosen a date for a RESCHEDULE.
+    /// The page responds by calling the reschedule workflow for the existing visit.
+    /// </summary>
+    public event Action<int, int, DateTime>? RescheduleVisitRequested;
+
+    /// <summary>
+    /// Raised when the user taps an existing visit in the agenda list.
+    /// The page responds by deciding whether to prompt, open edit flow,
+    /// or convert the tap into "schedule current student on this date".
+    /// </summary>
+    public event Action<VisitWithStudent>? ExistingVisitTapped;
 
     // -------------------------
     // Calendar state
@@ -123,6 +167,9 @@ public partial class MyCalendarViewModel : ObservableObject
 
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
+                IsRescheduleMode = false;
+                ReschedulingVisitId = null;
+
                 IsSchedulingMode = true;
                 SchedulingStudentId = studentId;
                 SchedulingStudentName = student?.Name ?? $"Student #{studentId}";
@@ -136,6 +183,53 @@ public partial class MyCalendarViewModel : ObservableObject
             // If lookup fails, still allow scheduling, just without a name.
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
+                IsRescheduleMode = false;
+                ReschedulingVisitId = null;
+
+                IsSchedulingMode = true;
+                SchedulingStudentId = studentId;
+                SchedulingStudentName = $"Student #{studentId}";
+
+                OnPropertyChanged(nameof(SchedulingBannerText));
+                OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
+            });
+        }
+    }
+
+    /// <summary>
+    /// Starts Calendar in reschedule mode for an existing visit.
+    ///
+    /// WHY:
+    /// Reschedule is not an in-place datetime edit. Calendar acts as the date
+    /// chooser, but the page layer will ultimately call RescheduleVisitAsync
+    /// using the original visit id and the newly chosen date.
+    /// </summary>
+    public async Task BeginRescheduleAsync(int visitId, int studentId)
+    {
+        try
+        {
+            var student = await _data.GetStudentByIdAsync(studentId).ConfigureAwait(false);
+
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                IsRescheduleMode = true;
+                ReschedulingVisitId = visitId;
+
+                IsSchedulingMode = true;
+                SchedulingStudentId = studentId;
+                SchedulingStudentName = student?.Name ?? $"Student #{studentId}";
+
+                OnPropertyChanged(nameof(SchedulingBannerText));
+                OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
+            });
+        }
+        catch
+        {
+            await MainThread.InvokeOnMainThreadAsync(() =>
+            {
+                IsRescheduleMode = true;
+                ReschedulingVisitId = visitId;
+
                 IsSchedulingMode = true;
                 SchedulingStudentId = studentId;
                 SchedulingStudentName = $"Student #{studentId}";
@@ -148,11 +242,32 @@ public partial class MyCalendarViewModel : ObservableObject
 
     public void ClearSchedulingContext()
     {
+        IsRescheduleMode = false;
+        ReschedulingVisitId = null;
+
         IsSchedulingMode = false;
         SchedulingStudentId = null;
         SchedulingStudentName = string.Empty;
 
         OnPropertyChanged(nameof(SchedulingBannerText));
+        OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
+    }
+
+    /// <summary>
+    /// Clears only the transient day selection.
+    ///
+    /// WHY:
+    /// If the user backs out of Add Visit, we want to keep the student scheduling
+    /// context but release the date choice so they can pick another day cleanly.
+    ///
+    /// This also applies to reschedule mode:
+    /// keep the visit/student context, release the day choice.
+    /// </summary>
+    public void ClearSelectedDay()
+    {
+        SelectedDayCell = null;
+        SyncAgendaForSelection();
+        OnPropertyChanged(nameof(SelectedDayTitle));
         OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
     }
 
@@ -171,8 +286,32 @@ public partial class MyCalendarViewModel : ObservableObject
     {
         if (!CanAddVisitForSelectedDay) return;
         if (SelectedDayCell is null || SelectedDayCell.IsPlaceholder) return;
+        if (SelectedDayCell.Date.Date < DateTime.Today) return;
 
-        ScheduleVisitRequested?.Invoke(SchedulingStudentId, SelectedDayCell.Date.Date);
+        if (IsRescheduleMode && ReschedulingVisitId is not null)
+        {
+            if (SchedulingStudentId is null) return;
+
+            RescheduleVisitRequested?.Invoke(
+                ReschedulingVisitId.Value,
+                SchedulingStudentId.Value,
+                SelectedDayCell.Date.Date);
+        }
+        else
+        {
+            ScheduleVisitRequested?.Invoke(
+                SchedulingStudentId,
+                SelectedDayCell.Date.Date);
+        }
+    }
+
+    [RelayCommand]
+    private void OpenExistingVisit(VisitWithStudent? visit)
+    {
+        if (visit is null)
+            return;
+
+        ExistingVisitTapped?.Invoke(visit);
     }
 
     // -------------------------
@@ -191,6 +330,48 @@ public partial class MyCalendarViewModel : ObservableObject
 
         OnPropertyChanged(nameof(SelectedDayTitle));
         OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
+
+        // ---------------------------------------------------------------------
+        // SCHEDULING / RESCHEDULING TAP BEHAVIOR
+        //
+        // WHY:
+        // In normal calendar mode, tapping a day should only select it and show
+        // that day's agenda.
+        //
+        // In scheduling mode, the user already came from a known student and is
+        // using the calendar to answer: "What day works?"
+        //
+        // In reschedule mode, the user is choosing a replacement date for an
+        // existing visit.
+        //
+        // So in either schedule/reschedule mode, tapping a valid day should
+        // immediately continue the flow instead of requiring an extra button tap.
+        //
+        // NOTE:
+        // We currently pass only the selected DATE here.
+        // AddVisit / reschedule workflow will apply default time logic unless a
+        // more specific time-selection step is added later.
+        // ---------------------------------------------------------------------
+        if (IsSchedulingMode &&
+            SchedulingStudentId is not null &&
+            value is not null &&
+            !value.IsPlaceholder &&
+            value.Date.Date >= DateTime.Today)
+        {
+            if (IsRescheduleMode && ReschedulingVisitId is not null)
+            {
+                RescheduleVisitRequested?.Invoke(
+                    ReschedulingVisitId.Value,
+                    SchedulingStudentId.Value,
+                    value.Date.Date);
+            }
+            else
+            {
+                ScheduleVisitRequested?.Invoke(
+                    SchedulingStudentId.Value,
+                    value.Date.Date);
+            }
+        }
     }
 
     // -------------------------

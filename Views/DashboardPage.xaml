@@ -1,267 +1,424 @@
 <?xml version="1.0" encoding="utf-8" ?>
-<!-- DashboardPage.xaml — Publisher Today dashboard — 2026-01-22 -->
+<!--
+DashboardPage.xaml
 
+PURPOSE
+- Main decision-first dashboard for daily ministry use.
+- Helps the user decide who needs attention and what to do next.
+
+DESIGN RULES
+- Section cards stay visible even when they have no data.
+- Empty sections should reassure the user the app is working, not disappear silently.
+- All major sections use the same visual structure:
+  1) colored header band
+  2) light body tint
+  3) either a list OR a short empty-state message
+- "Quick Actions" is also a section card, not a special one-off layout pattern.
+- Comments explain WHY a visibility pattern exists, not just WHAT it does.
+-->
 <ContentPage
     x:Class="MinistryTracker.Views.DashboardPage"
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
     xmlns:dto="clr-namespace:MinistryTracker.Models.DTOs"
+    xmlns:converters="clr-namespace:MinistryTracker.Converters"
     x:DataType="viewmodels:DashboardViewModel"
     Title="Dashboard"
     BackgroundColor="{StaticResource Dashboard.BgTint}">
 
-    <!-- Shell header (works with Shell + TabBar) -->
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <!--
+            WHY THIS CONVERTER IS REGISTERED HERE:
+            XAML bindings cannot directly express logical negation like "!HasTodayVisits".
+            We use this converter when a control should be visible for the FALSE case
+            of a ViewModel boolean.
+            -->
+            <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
     <Shell.TitleView>
         <Grid
             ColumnDefinitions="*,Auto"
             Padding="0,20,0,0"
-            VerticalOptions="Center"
-            BackgroundColor="{StaticResource Dashboard.Base}">
+            VerticalOptions="Center">
 
             <Label
-                Text="Ministry Tracker"
-                FontSize="20"
+                Text="Dashboard"
+                FontSize="22"
                 FontAttributes="Bold"
-                BackgroundColor="Transparent"
                 TextColor="White"
                 VerticalOptions="Center"
-                HorizontalOptions="Center" />
+                HorizontalOptions="Start" />
 
             <HorizontalStackLayout
                 Grid.Column="1"
-                Spacing="8"
+                Spacing="10"
                 HorizontalOptions="End"
                 VerticalOptions="Center">
 
                 <ImageButton
+                    Source="icon_map.png"
+                    WidthRequest="34"
+                    HeightRequest="34"
+                    BackgroundColor="Transparent"
+                    Clicked="OnOpenMapClicked"
+                    SemanticProperties.Description="Students Nearby" />
+
+                <ImageButton
                     Source="icon_settings.png"
-                    WidthRequest="36"
-                    HeightRequest="36"
+                    WidthRequest="34"
+                    HeightRequest="34"
                     BackgroundColor="Transparent"
                     Clicked="OnSettingsClicked"
                     SemanticProperties.Description="Settings" />
-
             </HorizontalStackLayout>
         </Grid>
     </Shell.TitleView>
 
-    <Grid RowDefinitions="Auto,*">
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
 
-        <!-- Page title (you can remove this entirely if the Shell header is enough) -->
-        <Label
-            Grid.Row="0"
-            Text="Dashboard"
-            FontSize="22"
-            FontAttributes="Bold"
-            TextColor="Transparent"
-            HorizontalTextAlignment="Center"
-            Margin="0,10,0,0" />
+            <!-- QUICK ACTIONS -->
+            <Border
+                BackgroundColor="#EEF3FB"
+                Stroke="{StaticResource Dashboard.BorderTint}"
+                StrokeThickness="1"
+                Padding="0"
+                Margin="0,2">
 
-        <ScrollView Grid.Row="1">
-            <VerticalStackLayout Padding="16" Spacing="14">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18" />
+                </Border.StrokeShape>
 
-                <!-- UPCOMING -->
-                <Border
-                    BackgroundColor="{StaticResource Dashboard.CardTint}"
-                    Stroke="{StaticResource Dashboard.BorderTint}"
-                    StrokeThickness="1"
-                    Padding="16"
-                    Margin="0,2">
+                <Border.Shadow>
+                    <Shadow
+                        Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
+                        Offset="0,3"
+                        Radius="10" />
+                </Border.Shadow>
 
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="16" />
-                    </Border.StrokeShape>
+                <VerticalStackLayout Spacing="0">
 
-                    <Border.Shadow>
-                        <Shadow
-                            Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
-                            Offset="0,3"
-                            Radius="10" />
-                    </Border.Shadow>
+                    <Border
+                        BackgroundColor="{StaticResource Dashboard.Base}"
+                        Padding="16,12">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="18,18,0,0" />
+                        </Border.StrokeShape>
 
-                    <VerticalStackLayout Spacing="10">
                         <Label
-                            Text="Upcoming"
-                            FontSize="18"
+                            Text="Quick Actions"
+                            FontSize="20"
                             FontAttributes="Bold"
-                            TextColor="{StaticResource Dashboard.Base}" />
+                            TextColor="White" />
+                    </Border>
 
-                        <CollectionView
-                            ItemsSource="{Binding ThisWeekUpcoming}"
-                            SelectionMode="None">
+                    <Grid
+                        Padding="16"
+                        ColumnDefinitions="*,*"
+                        ColumnSpacing="12">
 
-                            <CollectionView.EmptyView>
-                                <Label
-                                    Text="No calls planned for today."
-                                    TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-                            </CollectionView.EmptyView>
-
-                            <CollectionView.ItemTemplate>
-                                <DataTemplate x:DataType="dto:VisitWithStudent">
-                                    <Grid
-                                        ColumnDefinitions="Auto,*"
-                                        ColumnSpacing="12"
-                                        Padding="0,6">
-
-                                        <Label
-                                            Text="{Binding ScheduledDateTime, StringFormat='{0:h:mm tt}'}"
-                                            FontAttributes="Bold"
-                                            WidthRequest="90"
-                                            TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-
-                                        <Label
-                                            Grid.Column="1"
-                                            Text="{Binding StudentName}"
-                                            LineBreakMode="TailTruncation"
-                                            TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-                                    </Grid>
-                                </DataTemplate>
-                            </CollectionView.ItemTemplate>
-                        </CollectionView>
-
-                        <Label
-                            Text="Use the My Calendar tab for the full schedule."
-                            FontSize="12"
-                            TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-                    </VerticalStackLayout>
-                </Border>
-
-                <!-- CHECK ON -->
-                <Border
-                    BackgroundColor="{StaticResource Dashboard.CardTint}"
-                    Stroke="{StaticResource Dashboard.BorderTint}"
-                    StrokeThickness="1"
-                    Padding="16"
-                    Margin="0,2">
-
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="16" />
-                    </Border.StrokeShape>
-
-                    <Border.Shadow>
-                        <Shadow
-                            Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
-                            Offset="0,3"
-                            Radius="10" />
-                    </Border.Shadow>
-
-                    <VerticalStackLayout Spacing="8">
-                        <Label
-                            Text="Let's Check On"
-                            FontSize="18"
-                            FontAttributes="Bold"
-                            TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-
-                        <CollectionView
-                            ItemsSource="{Binding CheckOnStudents}"
-                            SelectionMode="Single"
-                            SelectionChanged="OnCheckOnSelectionChanged">
-
-                            <CollectionView.EmptyView>
-                                <Label
-                                    Text="No follow-up suggestions right now."
-                                    FontSize="12"
-                                    TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-                            </CollectionView.EmptyView>
-
-                            <CollectionView.ItemTemplate>
-                                <DataTemplate x:DataType="dto:CheckOnStudentSuggestion">
-                                    <Grid
-                                        ColumnDefinitions="*,Auto"
-                                        RowDefinitions="Auto,Auto"
-                                        Padding="0,8"
-                                        ColumnSpacing="12">
-
-                                        <Label
-                                            Text="{Binding StudentName}"
-                                            FontAttributes="Bold"
-                                            TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
-
-                                        <Label
-                                            Grid.Row="1"
-                                            Text="{Binding LastVisitDisplay}"
-                                            FontSize="12"
-                                            TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
-
-                                        <Label
-                                            Grid.Column="1"
-                                            Grid.RowSpan="2"
-                                            Text="Schedule"
-                                            VerticalOptions="Center"
-                                            TextColor="{StaticResource Dashboard.Base}" />
-                                    </Grid>
-                                </DataTemplate>
-                            </CollectionView.ItemTemplate>
-                        </CollectionView>
-                    </VerticalStackLayout>
-                </Border>
-
-                <!-- NEW CALL (primary action) -->
-                <Border
-                    BackgroundColor="{StaticResource Dashboard.CardTint}"
-                    Stroke="{StaticResource Dashboard.BorderTint}"
-                    StrokeThickness="1"
-                    Padding="16"
-                    Margin="0,2"
-                    MinimumHeightRequest="84">
-
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="16" />
-                    </Border.StrokeShape>
-
-                    <Border.Shadow>
-                        <Shadow
-                            Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
-                            Offset="0,3"
-                            Radius="10" />
-                    </Border.Shadow>
-
-                    <VerticalStackLayout Spacing="10">
                         <Button
-                            Text="Add New Call"
+                            Text="Add Student"
                             Clicked="OnAddNewCallClicked"
-                            CornerRadius="12"
+                            CornerRadius="14"
+                            HeightRequest="54"
                             BackgroundColor="{StaticResource Dashboard.Base}"
                             TextColor="White" />
-                    </VerticalStackLayout>
-                </Border>
 
-                <!-- NEAR ME (less crowded) -->
-                <Border
-                    BackgroundColor="{StaticResource Dashboard.CardTint}"
-                    Stroke="{StaticResource Dashboard.BorderTint}"
-                    StrokeThickness="1"
-                    Padding="16"
-                    Margin="0,2"
-                    MinimumHeightRequest="84">
-
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="16" />
-                    </Border.StrokeShape>
-
-                    <Border.Shadow>
-                        <Shadow
-                            Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
-                            Offset="0,3"
-                            Radius="10" />
-                    </Border.Shadow>
-
-                    <VerticalStackLayout Spacing="8">
-
-                                              
                         <Button
-                            Text="Find Nearby Calls"
+                            Grid.Column="1"
+                            Text="Students Nearby"
                             Clicked="OnOpenMapClicked"
-                            CornerRadius="12"
-                            BackgroundColor="{StaticResource Dashboard.Base}"
-                            TextColor="White"
-                            Margin="0,6,0,0" />
+                            CornerRadius="14"
+                            HeightRequest="54"
+                            BackgroundColor="#4D9B4A"
+                            TextColor="White" />
+                    </Grid>
+                </VerticalStackLayout>
+            </Border>
 
-                    </VerticalStackLayout>
-                </Border>
+            <!-- TODAY -->
+            <Border
+                BackgroundColor="#EEF7EA"
+                Stroke="{StaticResource Dashboard.BorderTint}"
+                StrokeThickness="1"
+                Padding="0"
+                Margin="0,2">
 
-            </VerticalStackLayout>
-        </ScrollView>
-    </Grid>
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18" />
+                </Border.StrokeShape>
+
+                <Border.Shadow>
+                    <Shadow
+                        Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
+                        Offset="0,3"
+                        Radius="10" />
+                </Border.Shadow>
+
+                <VerticalStackLayout Spacing="0">
+
+                    <Border
+                        BackgroundColor="#6FAE5D"
+                        Padding="16,12">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="18,18,0,0" />
+                        </Border.StrokeShape>
+
+                        <Label
+                            Text="Today"
+                            FontSize="20"
+                            FontAttributes="Bold"
+                            TextColor="White" />
+                    </Border>
+
+                    <!--
+                    WHY THE LIST AND EMPTY MESSAGE BOTH EXIST:
+                    We keep the section card visible even when there is no data so the
+                    dashboard still feels complete and trustworthy. The list renders when
+                    HasTodayVisits is true. The empty-state message renders for the false case.
+                    -->
+                    <CollectionView
+                        ItemsSource="{Binding TodayVisits}"
+                        SelectionMode="None"
+                        Margin="0"
+                        BackgroundColor="Transparent"
+                        IsVisible="{Binding HasTodayVisits}">
+
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="dto:VisitWithStudent">
+                                <Grid
+                                    Padding="16,14"
+                                    ColumnDefinitions="*,Auto"
+                                    ColumnSpacing="12">
+
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label
+                                            Text="{Binding StudentName}"
+                                            FontSize="18"
+                                            FontAttributes="Bold"
+                                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+
+                                        <Label
+                                            Text="{Binding NotesPreview}"
+                                            FontSize="13"
+                                            MaxLines="2"
+                                            LineBreakMode="TailTruncation"
+                                            TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                                    </VerticalStackLayout>
+
+                                    <Label
+                                        Grid.Column="1"
+                                        Text="{Binding ScheduledDateTime, StringFormat='{0:h:mm tt}'}"
+                                        FontSize="16"
+                                        FontAttributes="Bold"
+                                        VerticalOptions="Center"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <!--
+                    Visible ONLY when there are no visits today.
+                    We invert HasTodayVisits because IsVisible must evaluate to TRUE
+                    in order for this message to render.
+                    -->
+                    <Label
+                        Text="No visits scheduled today."
+                        IsVisible="{Binding HasTodayVisits, Converter={StaticResource InverseBoolConverter}}"
+                        Padding="16,14"
+                        FontSize="14"
+                        TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- FOLLOW UP -->
+            <Border
+                BackgroundColor="#FFF6E8"
+                Stroke="{StaticResource Dashboard.BorderTint}"
+                StrokeThickness="1"
+                Padding="0"
+                Margin="0,2">
+
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18" />
+                </Border.StrokeShape>
+
+                <Border.Shadow>
+                    <Shadow
+                        Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
+                        Offset="0,3"
+                        Radius="10" />
+                </Border.Shadow>
+
+                <VerticalStackLayout Spacing="0">
+
+                    <Border
+                        BackgroundColor="#E3A033"
+                        Padding="16,12">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="18,18,0,0" />
+                        </Border.StrokeShape>
+
+                        <Label
+                            Text="Follow Up"
+                            FontSize="20"
+                            FontAttributes="Bold"
+                            TextColor="White" />
+                    </Border>
+
+                    <!--
+                    Same visibility pattern as Today:
+                    - list when data exists
+                    - explanatory message when it does not
+                    This keeps the dashboard structure stable and understandable.
+                    -->
+                    <CollectionView
+                        ItemsSource="{Binding MissedRecently}"
+                        SelectionMode="None"
+                        Margin="0"
+                        BackgroundColor="Transparent"
+                        IsVisible="{Binding HasMissedRecently}">
+
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="dto:VisitWithStudent">
+                                <Grid
+                                    Padding="16,14"
+                                    ColumnDefinitions="*,Auto"
+                                    ColumnSpacing="12">
+
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label
+                                            Text="{Binding StudentName}"
+                                            FontSize="18"
+                                            FontAttributes="Bold"
+                                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+
+                                        <Label
+                                            Text="{Binding NotesPreview}"
+                                            FontSize="13"
+                                            MaxLines="2"
+                                            LineBreakMode="TailTruncation"
+                                            TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                                    </VerticalStackLayout>
+
+                                    <Label
+                                        Grid.Column="1"
+                                        Text="{Binding ScheduledDateTime, StringFormat='{0:ddd h:mm tt}'}"
+                                        FontSize="14"
+                                        FontAttributes="Bold"
+                                        VerticalOptions="Center"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <Label
+                        Text="Nothing needing follow-up right now."
+                        IsVisible="{Binding HasMissedRecently, Converter={StaticResource InverseBoolConverter}}"
+                        Padding="16,14"
+                        FontSize="14"
+                        TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                </VerticalStackLayout>
+            </Border>
+
+            <!-- IT'S BEEN AWHILE -->
+            <Border
+                BackgroundColor="#F1F2F4"
+                Stroke="{StaticResource Dashboard.BorderTint}"
+                StrokeThickness="1"
+                Padding="0"
+                Margin="0,2">
+
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="18" />
+                </Border.StrokeShape>
+
+                <Border.Shadow>
+                    <Shadow
+                        Brush="{AppThemeBinding Light=#25000000, Dark=#66000000}"
+                        Offset="0,3"
+                        Radius="10" />
+                </Border.Shadow>
+
+                <VerticalStackLayout Spacing="0">
+
+                    <Border
+                        BackgroundColor="#7B8694"
+                        Padding="16,12">
+                        <Border.StrokeShape>
+                            <RoundRectangle CornerRadius="18,18,0,0" />
+                        </Border.StrokeShape>
+
+                        <Label
+                            Text="It’s Been Awhile"
+                            FontSize="20"
+                            FontAttributes="Bold"
+                            TextColor="White" />
+                    </Border>
+
+                    <!--
+                    This section stays visible even when empty.
+                    WHY:
+                    If the header disappears, the user may think the page failed rather than
+                    correctly reporting "nothing here right now."
+                    -->
+                    <CollectionView
+                        ItemsSource="{Binding LongOverdue}"
+                        SelectionMode="None"
+                        Margin="0"
+                        BackgroundColor="Transparent"
+                        IsVisible="{Binding HasLongOverdue}">
+
+                        <CollectionView.ItemTemplate>
+                            <DataTemplate x:DataType="dto:VisitWithStudent">
+                                <Grid
+                                    Padding="16,14"
+                                    ColumnDefinitions="*,Auto"
+                                    ColumnSpacing="12">
+
+                                    <VerticalStackLayout Spacing="4">
+                                        <Label
+                                            Text="{Binding StudentName}"
+                                            FontSize="18"
+                                            FontAttributes="Bold"
+                                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+
+                                        <Label
+                                            Text="{Binding NotesPreview}"
+                                            FontSize="13"
+                                            MaxLines="2"
+                                            LineBreakMode="TailTruncation"
+                                            TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                                    </VerticalStackLayout>
+
+                                    <Label
+                                        Grid.Column="1"
+                                        Text="{Binding ScheduledDateTime, StringFormat='{0:MMM d}'}"
+                                        FontSize="14"
+                                        FontAttributes="Bold"
+                                        VerticalOptions="Center"
+                                        TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                                </Grid>
+                            </DataTemplate>
+                        </CollectionView.ItemTemplate>
+                    </CollectionView>
+
+                    <Label
+                        Text="No one needs a check-in right now."
+                        IsVisible="{Binding HasLongOverdue, Converter={StaticResource InverseBoolConverter}}"
+                        Padding="16,14"
+                        FontSize="14"
+                        TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                </VerticalStackLayout>
+            </Border>
+
+        </VerticalStackLayout>
+    </ScrollView>
 </ContentPage>

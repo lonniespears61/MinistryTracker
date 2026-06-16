@@ -4,7 +4,6 @@
     xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
     xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
     xmlns:vm="clr-namespace:MinistryTracker.ViewModels"
-    xmlns:enums="clr-namespace:MinistryTracker.Models.Enums;assembly=MinistryTracker"
     x:DataType="vm:EditStudentViewModel"
     Title="Edit Student">
 
@@ -16,101 +15,60 @@
     <ScrollView>
         <VerticalStackLayout Padding="16" Spacing="12">
 
-            <!-- Required -->
             <Label Text="Name" />
-            <Entry Text="{Binding Name}" Placeholder="Required" />
+            <Entry
+                Text="{Binding Name}"
+                Placeholder="Required" />
 
             <Label Text="First Contact Date" />
             <DatePicker Date="{Binding FirstContactDate}" />
 
-            <Label Text="Initial Call Type" />
-            <Picker ItemsSource="{x:Static enums:InitialCallTypeValues.All}"
-                    SelectedItem="{Binding CallType}" />
+            <Label Text="Initial Contact Type" />
+            <Picker
+                ItemsSource="{Binding InitialContactTypeValues}"
+                SelectedItem="{Binding InitialContactType}" />
 
-            <!-- Divider -->
-            <BoxView HeightRequest="1" Opacity="0.2" Margin="0,12,0,6" />
+            <Label Text="Phone Number" />
+            <Entry
+                Text="{Binding PhoneNumber}"
+                Placeholder="Optional"
+                Keyboard="Telephone" />
 
-            <!-- LOCATION (v1) -->
-            <Label Text="Location"
-                   FontAttributes="Bold"
-                   FontSize="16" />
+            <Label Text="Preferred Contact Method" />
+            <Picker
+                ItemsSource="{Binding ContactMethodValues}"
+                SelectedItem="{Binding PreferredContactMethod}" />
 
-            <!-- Status (only shows when non-empty via trigger) -->
-            <Label Text="{Binding LocationStatus}"
-                   FontSize="12"
-                   TextColor="Green">
+            <Label Text="Interest Level" />
+            <Picker
+                ItemsSource="{Binding InterestLevelValues}"
+                SelectedItem="{Binding InterestLevel}" />
+
+            <Label Text="Status" />
+            <Picker
+                ItemsSource="{Binding StudentStatusValues}"
+                SelectedItem="{Binding Status}" />
+
+            <Label Text="Notes" />
+            <Editor
+                Text="{Binding Notes}"
+                AutoSize="TextChanges"
+                Placeholder="Background, needs, personality, or other notes" />
+
+            <Label
+                Text="{Binding StatusMessage}"
+                FontSize="12"
+                TextColor="Green">
                 <Label.Triggers>
-                    <DataTrigger TargetType="Label" Binding="{Binding LocationStatus}" Value="">
+                    <DataTrigger TargetType="Label" Binding="{Binding StatusMessage}" Value="">
                         <Setter Property="IsVisible" Value="False" />
                     </DataTrigger>
-                    <DataTrigger TargetType="Label" Binding="{Binding LocationStatus}" Value="{x:Null}">
+                    <DataTrigger TargetType="Label" Binding="{Binding StatusMessage}" Value="{x:Null}">
                         <Setter Property="IsVisible" Value="False" />
                     </DataTrigger>
                 </Label.Triggers>
             </Label>
 
-            <!-- Coordinates -->
-            <Grid ColumnDefinitions="Auto,*"
-                  RowDefinitions="Auto,Auto"
-                  ColumnSpacing="10"
-                  RowSpacing="8">
-
-                <Label Grid.Row="0" Grid.Column="0"
-                       Text="Latitude"
-                       VerticalOptions="Center" />
-
-                <Entry Grid.Row="0" Grid.Column="1"
-                       Text="{Binding StudyLatitude, StringFormat='{0:F6}'}"
-                       IsReadOnly="True"
-                       Placeholder="(not set)" />
-
-                <Label Grid.Row="1" Grid.Column="0"
-                       Text="Longitude"
-                       VerticalOptions="Center" />
-
-                <Entry Grid.Row="1" Grid.Column="1"
-                       Text="{Binding StudyLongitude, StringFormat='{0:F6}'}"
-                       IsReadOnly="True"
-                       Placeholder="(not set)" />
-            </Grid>
-
-            <!-- Address -->
-            <Label Text="Address / Notes"
-                   FontSize="12"
-                   Margin="0,6,0,0" />
-
-            <Entry Text="{Binding StudyAddress}"
-                   Placeholder="Optional: enter address or rural directions"
-                   ClearButtonVisibility="WhileEditing" />
-
-            <!-- Buttons row 1 -->
-            <HorizontalStackLayout Spacing="10" Margin="0,8,0,0">
-                <Button Text="Use current"
-                        Command="{Binding UseCurrentLocationCommand}"
-                        IsEnabled="{Binding IsLocating}">
-                    <Button.Triggers>
-                        <DataTrigger TargetType="Button" Binding="{Binding IsLocating}" Value="True">
-                            <Setter Property="IsEnabled" Value="False" />
-                        </DataTrigger>
-                    </Button.Triggers>
-                </Button>
-
-                <Button Text="Coords → Address"
-                        Command="{Binding ReverseGeocodeCommand}"
-                        IsEnabled="{Binding HasLocation}" />
-            </HorizontalStackLayout>
-
-            <!-- Buttons row 2 -->
-            <HorizontalStackLayout Spacing="10" Margin="0,6,0,0">
-                <Button Text="Address → Coords"
-                        Command="{Binding GeocodeFromAddressCommand}" />
-
-                <ActivityIndicator IsRunning="{Binding IsLocating}"
-                                   IsVisible="{Binding IsLocating}"
-                                   VerticalOptions="Center" />
-            </HorizontalStackLayout>
-
-            <!-- Spacer -->
             <BoxView HeightRequest="20" />
 
         </VerticalStackLayout>

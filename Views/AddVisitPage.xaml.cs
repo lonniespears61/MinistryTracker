@@ -1,68 +1,110 @@
-// FileName: AddVisitPage.xaml.cs � Add visit page (cross-platform only) � 2026-01-24
-
-using Microsoft.Maui.Controls;
+﻿using Microsoft.Maui.Controls;
+using MinistryTracker.ViewModels;
+using System;
 using System.Threading.Tasks;
+using Microsoft.Maui.ApplicationModel; // ✅ REQUIRED
 
-namespace MinistryTracker.Views
+namespace MinistryTracker.Views;
+
+public partial class AddVisitPage : ContentPage
 {
-    public partial class AddVisitPage : ContentPage
+    private readonly AddVisitViewModel _vm;
+    private bool _dateRequested;
+    private bool _timeRequested;
+
+    public AddVisitPage(AddVisitViewModel vm)
     {
-        private bool _dateRequested;
-        private bool _timeRequested;
+        InitializeComponent();
+        _vm = vm;
+        BindingContext = _vm;
 
-        public AddVisitPage(ViewModels.AddVisitViewModel vm)
+        Loaded += (_, __) => TryOpenDateAsync();
+        VisitDatePicker.HandlerChanged += (_, __) => TryOpenDateAsync();
+        VisitTimePicker.HandlerChanged += (_, __) =>
         {
-            InitializeComponent();
-            BindingContext = vm;
+            if (_timeRequested) TryOpenTimeAsync();
+        };
+    }
 
-            Loaded += (_, __) => TryOpenDateAsync();
-            VisitDatePicker.HandlerChanged += (_, __) => TryOpenDateAsync();
-            VisitTimePicker.HandlerChanged += (_, __) => { if (_timeRequested) TryOpenTimeAsync(); };
-        }
+    protected override void OnAppearing()
+    {
+        base.OnAppearing();
 
-        protected override void OnAppearing()
+        TryOpenDateAsync();
+
+        _vm.SaveCompleted += OnSaveCompleted;
+        _vm.SaveFailed += OnSaveFailed; // ✅ added consistency
+    }
+
+    protected override void OnDisappearing()
+    {
+        base.OnDisappearing();
+
+        _vm.SaveCompleted -= OnSaveCompleted;
+        _vm.SaveFailed -= OnSaveFailed; // ✅ added consistency
+    }
+
+    private async void OnSaveCompleted()
+    {
+        // ✅ Ensure UI thread
+        await MainThread.InvokeOnMainThreadAsync(async () =>
         {
-            base.OnAppearing();
-            TryOpenDateAsync();
-        }
-
-        private async void TryOpenDateAsync()
-        {
-            if (_dateRequested) return;
-            _dateRequested = true;
-
-            await Task.Delay(200);
-
-            // Best-effort and safe: only attempt if handler exists
-            if (VisitDatePicker?.Handler is null)
+            if (string.Equals(_vm.ReturnTo, "calendar", StringComparison.OrdinalIgnoreCase))
             {
-                _dateRequested = false;
+                await Shell.Current.GoToAsync($"//{MinistryTracker.AppShell.CalendarTabRoute}");
                 return;
             }
 
-            VisitDatePicker.Focus();
-        }
+            await Shell.Current.GoToAsync("..");
+        });
+    }
 
-        private async void TryOpenTimeAsync()
+    private async void OnSaveFailed(string message)
+    {
+        // ✅ Ensure UI thread
+        await MainThread.InvokeOnMainThreadAsync(async () =>
         {
-            await Task.Delay(150);
+            await DisplayAlert("Error", message, "OK");
+        });
+    }
 
-            if (VisitTimePicker?.Handler is null)
-                return;
+    private async void TryOpenDateAsync()
+    {
+        if (_dateRequested) return;
 
-            VisitTimePicker.Focus();
-        }
+        _dateRequested = true;
+        await Task.Delay(200);
 
-        private void OnVisitDateSelected(object sender, DateChangedEventArgs e)
+        if (VisitDatePicker?.Handler is null)
         {
-            if (BindingContext is not ViewModels.AddVisitViewModel vm)
-                return;
-
-            vm.VisitDate = e.NewDate.Date;
-
-            VisitTimePicker.IsEnabled = true;
-            _timeRequested = true;
-            TryOpenTimeAsync();
+            _dateRequested = false;
+            return;
         }
+
+        VisitDatePicker.Focus();
+    }
+
+    private async void TryOpenTimeAsync()
+    {
+        await Task.Delay(150);
+
+        if (VisitTimePicker?.Handler is null) return;
+
+        VisitTimePicker.Focus();
+    }
+
+    private void OnVisitDateSelected(object sender, DateChangedEventArgs e)
+    {
+        if (BindingContext is not AddVisitViewModel vm) return;
+
+        vm.VisitDate = e.NewDate.Date;
+        VisitTimePicker.IsEnabled = true;
+
+        _timeRequested = true;
+        TryOpenTimeAsync();
+    }
+    private async void OnCancelClicked(object sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync("..");
     }
 }

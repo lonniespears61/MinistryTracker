@@ -2,51 +2,42 @@
 using Android.Content.PM;
 using Android.OS;
 
-namespace MinistryTracker
+namespace MinistryTracker.Platforms.Android;
+
+[Activity(
+    Theme = "@style/Maui.SplashTheme",
+    MainLauncher = true,
+    LaunchMode = LaunchMode.SingleTop,
+    ConfigurationChanges = ConfigChanges.ScreenSize |
+                           ConfigChanges.Orientation |
+                           ConfigChanges.UiMode |
+                           ConfigChanges.ScreenLayout |
+                           ConfigChanges.SmallestScreenSize |
+                           ConfigChanges.Density)]
+public class MainActivity : MauiAppCompatActivity
 {
-    [Activity(Theme = "@style/Maui.SplashTheme",
-        MainLauncher = true,
-        LaunchMode = LaunchMode.SingleTop,
-        ConfigurationChanges = ConfigChanges.ScreenSize |
-        ConfigChanges.Orientation |
-        ConfigChanges.UiMode |
-        ConfigChanges.ScreenLayout |
-        ConfigChanges.SmallestScreenSize |
-        ConfigChanges.Density)]
-    public class MainActivity : MauiAppCompatActivity
+    protected override void OnCreate(Bundle? savedInstanceState)
     {
-        protected override void OnCreate(Bundle? savedInstanceState)
+        base.OnCreate(savedInstanceState);
+
+        if (Window is null)
+            return;
+
+        // Edge-to-edge is supported on Android 11 / API 30+.
+        // Using OperatingSystem guards helps the analyzer understand
+        // the platform/version check more reliably than raw Build.VERSION checks.
+        if (OperatingSystem.IsAndroidVersionAtLeast(30) &&
+            !OperatingSystem.IsAndroidVersionAtLeast(35))
         {
-            base.OnCreate(savedInstanceState);
+            Window.SetDecorFitsSystemWindows(false);
+        }
 
-            // -----------------------------------------------------------------------------------------------------------------
-            // EDGE-TO-EDGE HANDLING (ANDROID API SAFE)
-            //
-            // RULES:
-            // - API < 30 → method does NOT exist
-            // - API 30–34 → safe to use
-            // - API 35+ → obsolete (Android 15 forces edge-to-edge automatically)
-            // -----------------------------------------------------------------------------------------------------------------
-
-            if (OperatingSystem.IsAndroidVersionAtLeast(30) &&
-                !OperatingSystem.IsAndroidVersionAtLeast(35))
-            {
-                Window?.SetDecorFitsSystemWindows(false);
-            }
-
-            // -----------------------------------------------------------------------------------------------------------------
-            // STATUS BAR COLOR
-            //
-            // - API < 21 → not supported
-            // - API 21–34 → safe
-            // - API 35+ → obsolete (system handles it)
-            // -----------------------------------------------------------------------------------------------------------------
-
-            if (OperatingSystem.IsAndroidVersionAtLeast(21) &&
-                !OperatingSystem.IsAndroidVersionAtLeast(35))
-            {
-                Window?.SetStatusBarColor(Android.Graphics.Color.Transparent);
-            }
+        // setStatusBarColor is deprecated and has no effect on Android 15 / API 35+.
+        // Keep it only for older supported Android versions.
+        if (OperatingSystem.IsAndroidVersionAtLeast(21) &&
+            !OperatingSystem.IsAndroidVersionAtLeast(35))
+        {
+            Window.SetStatusBarColor(global::Android.Graphics.Color.Transparent);
         }
     }
 }

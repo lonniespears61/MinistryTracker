@@ -1,11 +1,7 @@
-// SettingsPage.xaml.cs — Settings (modal) — 2026-01-22
+// SettingsPage.xaml.cs — Settings (modal) — 04/12/2026
 
-using System;
-using System.Linq;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Mvvm.Messaging;
-using Microsoft.Maui.ApplicationModel;
-using Microsoft.Maui.Controls;
 using MinistryTracker.ViewModels;
 using MinistryTracker.ViewModels.Messages;
 
@@ -29,6 +25,9 @@ public partial class SettingsPage : ContentPage
     protected override void OnAppearing()
     {
         base.OnAppearing();
+
+        // Added so schema/version display is refreshed whenever Settings opens.
+        _ = _vm.InitializeSchemaInfoAsync();
 
         if (_messengerRegistered) return;
         _messengerRegistered = true;

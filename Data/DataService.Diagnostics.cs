@@ -1,55 +1,112 @@
 ﻿// ---------------------------------------------------------------------------------------------------------------------
 // DataService.Diagnostics.cs (DROP-IN)
 //
-// PURPOSE:
+// PURPOSE
 // - Diagnostics helpers (safe wrappers used by Settings/Diagnostics UI)
 // - Keeps destructive or debug-only helpers grouped away from core CRUD
 //
-// IMPORTANT:
+// CHANGE NOTES (04/12/2026)
+// - Added schema version visibility (DB vs App)
+// - Added migration detection flag
+// - Extended schema health report to include version mismatch info
+// - Added full database reset methods (delete DB file)
+// - Hardened full reset so the live SQLite connection is closed before file delete
+// - Fixed deadlock by reinitializing AFTER releasing the shared DB gate
+// - Renamed local file-delete helper to avoid partial-class ambiguity
+//
+// IMPORTANT
 // - This file MUST NOT re-define SeedDemoDataAsync.
-//   It only CALLS it (implemented in DataService.Seeding.cs).
+// - It only CALLS it (implemented in DataService.Seeding.cs).
 // ---------------------------------------------------------------------------------------------------------------------
 
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-using SQLite;
 using MinistryTracker.Models;
+using SQLite;
+using System.IO;
 
 namespace MinistryTracker.Data
 {
     public partial class DataService
     {
-        /// <summary>
-        /// Runs demo seeding (idempotent).
-        /// Safe to expose behind a "Seed Demo Data" button.
-        /// </summary>
         public Task RunSeedDemoDataAsync(CancellationToken ct = default)
             => SeedDemoDataAsync(ct);
 
-        /// <summary>
-        /// Deletes all rows from Student + Visit tables (hard reset).
-        /// Use behind a "Reset DB" button.
-        /// </summary>
         public Task ResetDatabaseAsync(CancellationToken ct = default)
         {
             return EnsureInitThen(async () =>
             {
                 ct.ThrowIfCancellationRequested();
 
-                // Delete child rows first to avoid FK issues.
                 await Db.DeleteAllAsync<Visit>().ConfigureAwait(false);
                 await Db.DeleteAllAsync<Student>().ConfigureAwait(false);
-
-                // Optional: vacuum can be slow on mobile; keep it off unless needed.
-                // await Db.ExecuteAsync("VACUUM;").ConfigureAwait(false);
 
             }, ct);
         }
 
-        /// <summary>
-        /// Quick health check you can display in UI.
-        /// </summary>
+        // -----------------------------------------------------------------------------------------------------------------
+        // FULL RESET
+        // -----------------------------------------------------------------------------------------------------------------
+        // WHY:
+        // - Row deletes are not enough when schema must be rebuilt
+        // - Closing the live connection first avoids "reset looked successful but old data is still there"
+        // - WAL/SHM sidecars must also be removed so the next startup is a truly clean DB
+        // - InitializeAsync must happen AFTER releasing _gate or we deadlock on the same lock
+
+        public async Task FullResetDatabaseAsync(CancellationToken ct = default)
+        {
+            ct.ThrowIfCancellationRequested();
+
+            var path = GetDatabasePath();
+            var walPath = path + "-wal";
+            var shmPath = path + "-shm";
+
+            await _gate.WaitAsync(ct).ConfigureAwait(false);
+            try
+            {
+                ct.ThrowIfCancellationRequested();
+
+                if (_database is not null)
+                {
+                    try
+                    {
+                        await _database.CloseAsync().ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        // Best effort. We still reset pool + clear local state below.
+                    }
+                }
+
+                SQLiteAsyncConnection.ResetPool();
+
+                _database = null;
+                _initialized = false;
+
+                DeleteFileIfExists(path);
+                DeleteFileIfExists(walPath);
+                DeleteFileIfExists(shmPath);
+            }
+            finally
+            {
+                _gate.Release();
+            }
+
+            await InitializeAsync().ConfigureAwait(false);
+        }
+
+        public async Task FullResetDatabaseAndSeedAsync(CancellationToken ct = default)
+        {
+            await FullResetDatabaseAsync(ct).ConfigureAwait(false);
+            await SeedDemoDataAsync(ct).ConfigureAwait(false);
+        }
+
+        private static void DeleteFileIfExists(string path)
+        {
+            if (!File.Exists(path))
+                return;
+
+            File.Delete(path);
+        }
+
         public Task<(string DbPath, int StudentCount, int VisitCount)> GetDatabaseHealthAsync(CancellationToken ct = default)
         {
             return EnsureInitThen(async () =>
@@ -63,33 +120,15 @@ namespace MinistryTracker.Data
             }, ct);
         }
 
-        /// <summary>
-        /// Optional WAL checkpoint. Usually not needed; here for troubleshooting.
-        /// </summary>
-        public Task ForceWalCheckpointAsync(CancellationToken ct = default)
-        {
-            return EnsureInitThen(async () =>
-            {
-                ct.ThrowIfCancellationRequested();
-
-                try
-                {
-                    await Db.ExecuteAsync("PRAGMA wal_checkpoint(TRUNCATE);").ConfigureAwait(false);
-                }
-                catch (SQLiteException)
-                {
-                    // Ignore; not all platforms/configs support WAL the same way.
-                }
-            }, ct);
-        }
-
-        // -------------------------------------------------------------------------------------------------------------
-        // Schema diagnostics (authoritative: reads SQLite's own metadata)
-        // -------------------------------------------------------------------------------------------------------------
+        // -----------------------------------------------------------------------------------------------------------------
+        // SCHEMA DIAGNOSTICS
+        // -----------------------------------------------------------------------------------------------------------------
 
         public sealed record DatabaseSchemaHealth(
             string DbPath,
-            int UserVersion,
+            int DbSchemaVersion,
+            int AppSchemaVersion,
+            bool MigrationRequired,
             IReadOnlyList<TableSchemaHealth> Tables,
             string ReportText,
             DateTime GeneratedAtUtc
@@ -126,15 +165,6 @@ namespace MinistryTracker.Data
             public int pk { get; set; }
         }
 
-        /// <summary>
-        /// Authoritative schema snapshot:
-        /// - PRAGMA user_version
-        /// - All user tables
-        /// - Column definitions per table (PRAGMA table_info)
-        /// - Row counts per table
-        ///
-        /// Use this when debugging migrations / "does column exist?" questions.
-        /// </summary>
         public Task<DatabaseSchemaHealth> GetDatabaseSchemaHealthAsync(CancellationToken ct = default)
         {
             return EnsureInitThen(async () =>
@@ -142,14 +172,15 @@ namespace MinistryTracker.Data
                 ct.ThrowIfCancellationRequested();
 
                 var dbPath = GetDatabasePath();
-                var userVersion = await Db.ExecuteScalarAsync<int>("PRAGMA user_version;").ConfigureAwait(false);
 
-                // List all non-internal tables
+                var dbVersion = await Db.ExecuteScalarAsync<int>("PRAGMA user_version;").ConfigureAwait(false);
+                var appVersion = GetAppSchemaVersion();
+
+                var migrationRequired = dbVersion < appVersion;
+
                 var tables = await Db.QueryAsync<SqliteMasterRow>(
                     "SELECT name, type FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name;"
                 ).ConfigureAwait(false);
-
-                ct.ThrowIfCancellationRequested();
 
                 var tableHealth = new System.Collections.Generic.List<TableSchemaHealth>();
 
@@ -157,56 +188,67 @@ namespace MinistryTracker.Data
                 {
                     var tableName = t.name;
 
-                    // Columns
                     var cols = await Db.QueryAsync<PragmaTableInfoRow>(
-                        $"PRAGMA table_info({EscapeIdentifier(tableName)});"
+                        $"PRAGMA table_info(\"{tableName}\");"
                     ).ConfigureAwait(false);
 
                     var mappedCols = cols
                         .OrderBy(c => c.cid)
                         .Select(c => new ColumnSchemaHealth(
-                            Ordinal: c.cid,
-                            Name: c.name,
-                            Type: c.type,
-                            IsNotNull: c.notnull == 1,
-                            IsPrimaryKey: c.pk == 1,
-                            DefaultValue: c.dflt_value
+                            c.cid,
+                            c.name,
+                            c.type,
+                            c.notnull == 1,
+                            c.pk == 1,
+                            c.dflt_value
                         ))
                         .ToList();
 
-                    // Row count
                     var rowCount = await Db.ExecuteScalarAsync<int>(
-                        $"SELECT COUNT(*) FROM {EscapeIdentifier(tableName)};"
+                        $"SELECT COUNT(*) FROM \"{tableName}\";"
                     ).ConfigureAwait(false);
 
                     tableHealth.Add(new TableSchemaHealth(
-                        Name: tableName,
-                        RowCount: rowCount,
-                        Columns: mappedCols
+                        tableName,
+                        rowCount,
+                        mappedCols
                     ));
-
-                    ct.ThrowIfCancellationRequested();
                 }
 
-                var report = BuildSchemaReportText(dbPath, userVersion, tableHealth);
+                var report = BuildSchemaReportText(
+                    dbPath,
+                    dbVersion,
+                    appVersion,
+                    migrationRequired,
+                    tableHealth
+                );
 
                 return new DatabaseSchemaHealth(
-                    DbPath: dbPath,
-                    UserVersion: userVersion,
-                    Tables: tableHealth,
-                    ReportText: report,
-                    GeneratedAtUtc: DateTime.UtcNow
+                    dbPath,
+                    dbVersion,
+                    appVersion,
+                    migrationRequired,
+                    tableHealth,
+                    report,
+                    DateTime.UtcNow
                 );
             }, ct);
         }
 
-        private static string BuildSchemaReportText(string dbPath, int userVersion, IReadOnlyList<TableSchemaHealth> tables)
+        private static string BuildSchemaReportText(
+            string dbPath,
+            int dbVersion,
+            int appVersion,
+            bool migrationRequired,
+            IReadOnlyList<TableSchemaHealth> tables)
         {
             var sb = new System.Text.StringBuilder();
 
             sb.AppendLine("=== DB Schema Health ===");
             sb.AppendLine($"DB Path: {dbPath}");
-            sb.AppendLine($"PRAGMA user_version: {userVersion}");
+            sb.AppendLine($"DB Schema Version: {dbVersion}");
+            sb.AppendLine($"App Schema Version: {appVersion}");
+            sb.AppendLine($"Migration Required: {migrationRequired}");
             sb.AppendLine($"Generated (UTC): {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}");
             sb.AppendLine();
 
@@ -231,27 +273,7 @@ namespace MinistryTracker.Data
                 sb.AppendLine();
             }
 
-            // Helpful quick checks (expand later as needed)
-            var students = tables.FirstOrDefault(t => string.Equals(t.Name, "Students", StringComparison.OrdinalIgnoreCase));
-            if (students is not null)
-            {
-                var hasNotes = students.Columns.Any(c => string.Equals(c.Name, "Notes", StringComparison.OrdinalIgnoreCase));
-                sb.AppendLine($"Students.Notes column present: {hasNotes}");
-            }
-
             return sb.ToString();
         }
-
-        /// <summary>
-        /// SQLite-safe identifier quoting.
-        /// Uses double quotes; also escapes embedded quotes.
-        /// </summary>
-        private static string EscapeIdentifier(string identifier)
-        {
-            var safe = identifier.Replace("\"", "\"\"");
-            return $"\"{safe}\"";
-        }
-
     }
-
 }

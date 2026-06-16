@@ -2,19 +2,19 @@
 // AddStudentViewModel.cs
 //
 // PURPOSE
-// - ViewModel for AddStudentPage.
-// - Collects required student fields.
-// - Optionally captures current GPS location.
-// - Saves a new Student record through DataService.
+// - Handles creation of a new Student record.
+// - Keeps Add Student focused on first-entry person data only.
+// - Leaves household linking, Do Not Call, deletion, and broader relationship management for later workflows.
 //
-// NOTES
-// - This project uses Shell navigation.
-// - Do not use Application.Current.MainPage; it is obsolete in modern .NET MAUI.
+// WHY THIS VERSION CHANGED
+// - Student now has real address/location fields, so address is no longer folded into Notes.
+// - Add Student only collects Tier 1 and Tier 2 fields agreed in review.
+// - InterestLevel remains editable on Add because the app must support backfilling existing students.
+// - GPS capture stores coordinates now, but address replacement stays user-confirmed.
 // ---------------------------------------------------------------------------------------------------------------------
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Microsoft.Maui.Controls;
 using Microsoft.Maui.Devices.Sensors;
 using MinistryTracker.Data;
 using MinistryTracker.Models;
@@ -22,8 +22,8 @@ using MinistryTracker.Models.Enums;
 using MinistryTracker.Utilities;
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace MinistryTracker.ViewModels
@@ -32,127 +32,308 @@ namespace MinistryTracker.ViewModels
     {
         private readonly DataService _data;
 
+        // Captured GPS state for this Add flow.
+        private double? _capturedLatitude;
+        private double? _capturedLongitude;
+        private GeocodeStatus _capturedGeocodeStatus = GeocodeStatus.None;
+
+        // Allow readable identifiers and common punctuation.
+        // Reject obvious symbol soup / bad input.
+        private static readonly Regex ValidNamePattern = new(
+            @"^[\p{L}\p{N}\s'\-.,/&]+$",
+            RegexOptions.Compiled);
+
         public AddStudentViewModel(DataService data)
         {
             _data = data ?? throw new ArgumentNullException(nameof(data));
-
-            SaveCommand = new AsyncRelayCommand(SaveStudentAsync);
-            UseCurrentLocationCommand = new AsyncRelayCommand(UseCurrentLocationAsync);
-
-            CallType = CallTypeValues.FirstOrDefault();
-
-            var uiLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-            PreferredLanguage = uiLang == "es" ? "Español" : "English";
+            Reset();
         }
 
+        // =====================================================================
+        // EVENTS
+        // =====================================================================
+
+        /// <summary>
+        /// Fired when a student is saved successfully.
+        /// The View can respond by prompting for next steps such as scheduling a visit.
+        /// </summary>
+        public event Action? SaveCompleted;
+
+        /// <summary>
+        /// Fired when save fails.
+        /// The View should respond by showing an alert.
+        /// </summary>
+        public event Action<string>? SaveFailed;
+
+        /// <summary>
+        /// Fired when GPS capture produced a suggested address that differs from
+        /// the current typed address. The View can prompt the user to confirm
+        /// whether the suggested address should replace the typed one.
+        /// </summary>
+        public event Action<string?, string>? AddressReplacementSuggested;
+
+        // =====================================================================
+        // FORM FIELDS
+        // =====================================================================
+
+        /// <summary>
+        /// User-facing identifier for the person.
+        /// This may be a real name or a meaningful placeholder entered by the user.
+        /// If left blank, save falls back to "Name Unknown".
+        /// </summary>
         [ObservableProperty]
-        private string name = string.Empty;
+        private string _name = string.Empty;
 
+        /// <summary>
+        /// User-facing address field for Add Student.
+        /// This maps to Student.PrimaryAddress when saved.
+        /// The property name is kept as Address here to minimize ripple into the page.
+        /// </summary>
         [ObservableProperty]
-        private InitialCallType callType;
+        private string? _address;
 
+        /// <summary>
+        /// True when the address is the student's home address.
+        /// </summary>
         [ObservableProperty]
-        private DateTime firstContactDate = DateTime.Today;
+        private bool _isHomeAddress;
 
+        /// <summary>
+        /// Date of first contact.
+        /// This is intended to be the historical first contact date, not app-entry date.
+        /// </summary>
         [ObservableProperty]
-        private string? preferredLanguage;
+        private DateTime _firstContactDate = DateTime.Now;
 
+        /// <summary>
+        /// How the first contact was made.
+        /// This is historical and remains editable on Add for accurate backfill.
+        /// </summary>
         [ObservableProperty]
-        private string? notes;
+        private InitialContactType _initialContactType;
 
+        /// <summary>
+        /// Optional phone number or contact number.
+        /// </summary>
         [ObservableProperty]
-        private double? studyLatitude;
+        private string? _phoneNumber;
 
+        /// <summary>
+        /// Current ministry standing / progression.
+        /// Defaults to Promising, but stays editable on Add to support backfill.
+        /// </summary>
         [ObservableProperty]
-        private double? studyLongitude;
+        private InterestLevel _interestLevel = InterestLevel.Promising;
 
+        /// <summary>
+        /// Optional demographic field.
+        /// </summary>
         [ObservableProperty]
-        private bool isLocating;
+        private Gender? _selectedGender;
 
+        /// <summary>
+        /// Optional demographic field.
+        /// </summary>
         [ObservableProperty]
-        private string? locationStatus;
+        private int? _studentAge;
 
-        public List<InitialCallType> CallTypeValues =>
-            Enum.GetValues(typeof(InitialCallType))
-                .Cast<InitialCallType>()
-                .ToList();
+        /// <summary>
+        /// Optional notes captured during entry.
+        /// </summary>
+        [ObservableProperty]
+        private string? _notes;
 
-        public IAsyncRelayCommand SaveCommand { get; }
+        /// <summary>
+        /// True while location capture is in progress.
+        /// </summary>
+        [ObservableProperty]
+        private bool _isLocating;
 
-        public IAsyncRelayCommand UseCurrentLocationCommand { get; }
+        /// <summary>
+        /// Prevents duplicate save attempts and supports loading UI.
+        /// </summary>
+        [ObservableProperty]
+        private bool _isBusy;
 
-        public bool IsLocationCaptured =>
-            StudyLatitude.HasValue && StudyLongitude.HasValue;
+        /// <summary>
+        /// Holds a GPS-derived address suggestion when it differs from the typed address.
+        /// The View can use this to prompt the user before replacing Address.
+        /// </summary>
+        [ObservableProperty]
+        private string? _gpsSuggestedAddress;
 
-        public string LocationDisplay =>
-            IsLocationCaptured
-                ? $"Location captured ✓ ({StudyLatitude!.Value:F6}, {StudyLongitude!.Value:F6})"
-                : string.Empty;
+        /// <summary>
+        /// Exposes the last saved student ID when sqlite populates it on insert.
+        /// This gives the View a clean way to branch into scheduling later.
+        /// </summary>
+        [ObservableProperty]
+        private int? _savedStudentId;
 
-        partial void OnStudyLatitudeChanged(double? value)
-        {
-            OnPropertyChanged(nameof(IsLocationCaptured));
-            OnPropertyChanged(nameof(LocationDisplay));
-        }
+        // =====================================================================
+        // PICKER SOURCES
+        // =====================================================================
 
-        partial void OnStudyLongitudeChanged(double? value)
-        {
-            OnPropertyChanged(nameof(IsLocationCaptured));
-            OnPropertyChanged(nameof(LocationDisplay));
-        }
+        public List<InitialContactType> InitialContactTypeValues =>
+            Enum.GetValues<InitialContactType>().ToList();
 
+        public List<InterestLevel> InterestLevelValues =>
+            Enum.GetValues<InterestLevel>().ToList();
+
+        public List<Gender> GenderValues =>
+            Enum.GetValues<Gender>().ToList();
+
+        // =====================================================================
+        // RESET
+        // =====================================================================
+
+        /// <summary>
+        /// Returns the form to a clean Add Student state.
+        /// Only Add-stage fields are reset here.
+        /// </summary>
         public void Reset()
         {
             Name = string.Empty;
-
-            var uiLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-            PreferredLanguage = uiLang == "es" ? "Español" : "English";
-
-            FirstContactDate = DateTime.Today;
-            CallType = CallTypeValues.FirstOrDefault();
-
-            StudyLatitude = null;
-            StudyLongitude = null;
+            Address = null;
+            IsHomeAddress = false;
+            PhoneNumber = null;
+            FirstContactDate = DateTime.Now;
+            InitialContactType = InitialContactTypeValues.FirstOrDefault();
+            InterestLevel = InterestLevel.Promising;
+            SelectedGender = null;
+            StudentAge = null;
             Notes = null;
-            LocationStatus = null;
+
             IsLocating = false;
+            IsBusy = false;
+
+            GpsSuggestedAddress = null;
+            SavedStudentId = null;
+
+            _capturedLatitude = null;
+            _capturedLongitude = null;
+            _capturedGeocodeStatus = GeocodeStatus.None;
         }
 
+        // =====================================================================
+        // LOCATION
+        // =====================================================================
+
+        /// <summary>
+        /// Captures the current device location.
+        /// GPS coordinates are treated as the best return point when captured on site.
+        /// If reverse geocoding produces a usable address, the View is asked to confirm
+        /// before replacing any typed address that already exists.
+        /// </summary>
+        [RelayCommand]
         private async Task UseCurrentLocationAsync()
         {
-            IsLocating = true;
-            LocationStatus = "Getting location...";
+            if (IsLocating)
+                return;
 
             try
             {
-                var granted = await LocationPermissionHelper.EnsureLocationPermissionAsync();
+                IsLocating = true;
+
+                var granted = await LocationPermissionHelper
+                    .EnsureLocationPermissionAsync()
+                    .ConfigureAwait(false);
 
                 if (!granted)
-                {
-                    LocationStatus = "Location failed: permission not granted.";
                     return;
-                }
 
                 var request = new GeolocationRequest(
                     GeolocationAccuracy.Medium,
                     TimeSpan.FromSeconds(10));
 
-                var loc = await Geolocation.Default.GetLocationAsync(request);
+                var location = await Geolocation.Default
+                    .GetLocationAsync(request)
+                    .ConfigureAwait(false);
 
-                if (loc is null)
+                if (location is null)
+                    return;
+
+                _capturedLatitude = location.Latitude;
+                _capturedLongitude = location.Longitude;
+                _capturedGeocodeStatus = ResolveGeocodeStatusOrDefault(
+                    fallback: GeocodeStatus.None,
+                    preferredNames: new[]
+                    {
+                        "GpsCaptured",
+                        "GPSCaptured",
+                        "CoordinatesCaptured",
+                        "Captured",
+                        "Resolved",
+                        "Success"
+                    });
+
+                string? suggestedAddress = null;
+
+                try
                 {
-                    LocationStatus = "Location failed: GPS unavailable.";
+                    var placemarks = await Geocoding.Default
+                        .GetPlacemarksAsync(location.Latitude, location.Longitude)
+                        .ConfigureAwait(false);
+
+                    var place = placemarks?.FirstOrDefault();
+
+                    if (place is not null)
+                    {
+                        suggestedAddress = BuildAddressFromPlacemark(place);
+
+                        if (!string.IsNullOrWhiteSpace(suggestedAddress))
+                        {
+                            _capturedGeocodeStatus = ResolveGeocodeStatusOrDefault(
+                                fallback: _capturedGeocodeStatus,
+                                preferredNames: new[]
+                                {
+                                    "Resolved",
+                                    "Success",
+                                    "GpsCaptured",
+                                    "GPSCaptured",
+                                    "CoordinatesCaptured",
+                                    "Captured"
+                                });
+                        }
+                    }
+                }
+                catch
+                {
+                    // Keep captured coordinates even if reverse geocoding fails.
+                }
+
+                if (string.IsNullOrWhiteSpace(suggestedAddress))
+                {
+                    GpsSuggestedAddress = null;
                     return;
                 }
 
-                StudyLatitude = loc.Latitude;
-                StudyLongitude = loc.Longitude;
+                if (string.IsNullOrWhiteSpace(Address))
+                {
+                    Address = suggestedAddress;
+                    GpsSuggestedAddress = null;
+                    return;
+                }
 
-                LocationStatus = $"Captured ✓ ({StudyLatitude.Value:F6}, {StudyLongitude.Value:F6})";
+                if (AddressesMatch(Address, suggestedAddress))
+                {
+                    GpsSuggestedAddress = null;
+                    return;
+                }
+
+                GpsSuggestedAddress = suggestedAddress;
+                AddressReplacementSuggested?.Invoke(Address, suggestedAddress);
+            }
+            catch (FeatureNotSupportedException)
+            {
+                SaveFailed?.Invoke("Location is not supported on this device.");
+            }
+            catch (PermissionException)
+            {
+                SaveFailed?.Invoke("Location permission was denied.");
             }
             catch (Exception ex)
             {
-                LocationStatus = $"Location failed: {ex.Message}";
+                SaveFailed?.Invoke(ex.Message);
             }
             finally
             {
@@ -160,39 +341,202 @@ namespace MinistryTracker.ViewModels
             }
         }
 
+        /// <summary>
+        /// Called by the View after prompting the user.
+        /// Replaces the typed address with the GPS-derived suggested address.
+        /// </summary>
+        public void ApplySuggestedGpsAddress()
+        {
+            if (!string.IsNullOrWhiteSpace(GpsSuggestedAddress))
+            {
+                Address = GpsSuggestedAddress;
+            }
+
+            GpsSuggestedAddress = null;
+        }
+
+        /// <summary>
+        /// Called by the View after prompting the user.
+        /// Keeps the typed address and clears the pending suggestion.
+        /// </summary>
+        public void KeepTypedAddress()
+        {
+            GpsSuggestedAddress = null;
+        }
+
+        // =====================================================================
+        // SAVE
+        // =====================================================================
+
+        /// <summary>
+        /// Saves the new Student.
+        /// Only Add-stage fields are mapped here.
+        /// Relationship admin fields remain in later workflows.
+        /// </summary>
+        [RelayCommand]
         private async Task SaveStudentAsync()
         {
-            if (string.IsNullOrWhiteSpace(Name))
-            {
-                var uiLang = CultureInfo.CurrentUICulture.TwoLetterISOLanguageName;
-                Name = uiLang == "es" ? "Desconocido" : "Unknown";
-            }
-
-            var student = new Student
-            {
-                Name = Name.Trim(),
-                CallType = CallType,
-                FirstContactDate = FirstContactDate,
-                PreferredLanguage = PreferredLanguage,
-                Status = StudentStatus.Active,
-                IsDeleted = false,
-                Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes.Trim(),
-                StudyLatitude = StudyLatitude,
-                StudyLongitude = StudyLongitude
-            };
-
-            var rows = await _data.AddStudentAsync(student);
-
-            if (rows > 0)
-            {
-                await Shell.Current.GoToAsync("..");
+            if (IsBusy)
                 return;
+
+            try
+            {
+                IsBusy = true;
+
+                var cleanedName = NormalizeNameOrFallback(Name);
+
+                if (!IsValidIdentifier(cleanedName))
+                {
+                    SaveFailed?.Invoke("Name contains unsupported characters.");
+                    return;
+                }
+
+                if (StudentAge is < 0)
+                {
+                    SaveFailed?.Invoke("Age cannot be negative.");
+                    return;
+                }
+
+                var student = new Student
+                {
+                    Name = cleanedName,
+                    InitialContactType = InitialContactType,
+                    FirstContactDate = FirstContactDate,
+                    PhoneNumber = NormalizeOptionalText(PhoneNumber),
+                    PrimaryAddress = NormalizeOptionalText(Address),
+                    IsHomeAddress = IsHomeAddress,
+                    PrimaryLatitude = _capturedLatitude,
+                    PrimaryLongitude = _capturedLongitude,
+                    PrimaryGeocodeStatus = _capturedGeocodeStatus,
+                    InterestLevel = InterestLevel,
+                    Gender = SelectedGender,
+                    Age = StudentAge,
+                    Notes = NormalizeOptionalText(Notes)
+                };
+
+                var rows = await _data.AddStudentAsync(student).ConfigureAwait(false);
+
+                if (rows > 0)
+                {
+                    SavedStudentId = student.StudentId;
+                    SaveCompleted?.Invoke();
+                }
+                else
+                {
+                    SaveFailed?.Invoke("Failed to add student. Please try again.");
+                }
+            }
+            catch (Exception ex)
+            {
+                SaveFailed?.Invoke(ex.Message);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
+        // =====================================================================
+        // HELPERS
+        // =====================================================================
+
+        private static string NormalizeNameOrFallback(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return "Name Unknown";
+
+            var cleaned = CollapseWhitespace(value.Trim());
+            return string.IsNullOrWhiteSpace(cleaned) ? "Name Unknown" : cleaned;
+        }
+
+        private static string? NormalizeOptionalText(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return null;
+
+            var cleaned = CollapseWhitespace(value.Trim());
+            return string.IsNullOrWhiteSpace(cleaned) ? null : cleaned;
+        }
+
+        private static string CollapseWhitespace(string value)
+        {
+            return Regex.Replace(value, @"\s+", " ").Trim();
+        }
+
+        private static bool IsValidIdentifier(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            return ValidNamePattern.IsMatch(value);
+        }
+
+        private static bool AddressesMatch(string currentAddress, string suggestedAddress)
+        {
+            var left = NormalizeAddressForCompare(currentAddress);
+            var right = NormalizeAddressForCompare(suggestedAddress);
+
+            return string.Equals(left, right, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string NormalizeAddressForCompare(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return string.Empty;
+
+            var cleaned = value.Trim().ToUpperInvariant();
+
+            cleaned = cleaned.Replace(".", string.Empty)
+                             .Replace(",", string.Empty);
+
+            cleaned = Regex.Replace(cleaned, @"\s+", " ");
+
+            return cleaned;
+        }
+
+        private static string? BuildAddressFromPlacemark(Placemark place)
+        {
+            var line1Parts = new[]
+            {
+                place.SubThoroughfare,
+                place.Thoroughfare
+            }
+            .Where(p => !string.IsNullOrWhiteSpace(p));
+
+            var line2Parts = new[]
+            {
+                place.Locality,
+                place.AdminArea,
+                place.PostalCode
+            }
+            .Where(p => !string.IsNullOrWhiteSpace(p));
+
+            var line1 = string.Join(" ", line1Parts);
+            var line2 = string.Join(", ", line2Parts);
+
+            if (!string.IsNullOrWhiteSpace(line1) && !string.IsNullOrWhiteSpace(line2))
+                return $"{line1}, {line2}";
+
+            if (!string.IsNullOrWhiteSpace(line1))
+                return line1;
+
+            if (!string.IsNullOrWhiteSpace(line2))
+                return line2;
+
+            return null;
+        }
+
+        private static GeocodeStatus ResolveGeocodeStatusOrDefault(
+            GeocodeStatus fallback,
+            IEnumerable<string> preferredNames)
+        {
+            foreach (var name in preferredNames)
+            {
+                if (Enum.TryParse<GeocodeStatus>(name, ignoreCase: true, out var parsed))
+                    return parsed;
             }
 
-            await Shell.Current.DisplayAlert(
-                "Error",
-                "Failed to add student. Please try again.",
-                "OK");
+            return fallback;
         }
     }
-}
+}  

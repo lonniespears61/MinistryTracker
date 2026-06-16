@@ -9,4 +9,4 @@ namespace MinistryTracker.Models.Enums
         SMPW,
         Other
     }
-}
+}   

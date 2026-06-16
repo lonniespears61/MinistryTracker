@@ -1,23 +1,23 @@
 ﻿// ---------------------------------------------------------------------------------------------------------------------
-// StudentsListViewModel.cs — Students list orchestration VM — 2026-05-02
+// StudentsListViewModel.cs
 //
 // PURPOSE
-// - Loads students for StudentsListPage.
-// - Enriches each student with next scheduled visit info.
-// - Handles search/filter behavior.
-// - Handles schedule/edit/replace visit flow from the student list.
+// - Orchestrates the student list: load, filter, and schedule visit flow.
 //
-// NOTES
-// - This project uses Shell navigation.
-// - Do not use Application.Current.MainPage; it is obsolete in modern .NET MAUI.
+// DESIGN RULES
+// - ViewModel owns data/state logic
+// - View owns UI prompts and navigation execution
+// - Scheduling conflicts are surfaced to the View through an event/callback pattern
+// - ViewModel must not directly call UI display APIs
+//
 // ---------------------------------------------------------------------------------------------------------------------
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
-using Microsoft.Maui.Controls;
 using MinistryTracker.Data;
+using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
 using System;
 using System.Collections.Generic;
@@ -37,22 +37,38 @@ public partial class StudentsListViewModel : ObservableObject
     [ObservableProperty]
     private ObservableCollection<StudentViewModel> filteredStudents = new();
 
-    [ObservableProperty]
-    private string? searchText;
-
-    [ObservableProperty]
-    private bool isActiveOnly = true;
-
-    [ObservableProperty]
-    private bool isBusy;
+    [ObservableProperty] private string? searchText;
+    [ObservableProperty] private bool isActiveOnly = true;
+    [ObservableProperty] private bool isBusy;
 
     public int VisibleCount => FilteredStudents.Count;
 
     public StudentsListViewModel(DataService data, ILogger<StudentsListViewModel>? log = null)
     {
-        _data = data ?? throw new ArgumentNullException(nameof(data));
+        _data = data;
         _log = log;
     }
+
+    // =========================================================================
+    // EVENTS
+    // =========================================================================
+
+    /// <summary>
+    /// Fired when a student already has a scheduled visit.
+    /// Parameters: conflict message, student id, existing visit id, callback(choice).
+    /// The View shows an action sheet and calls the callback with the chosen option.
+    /// </summary>
+    public event Action<string, int, int, Action<string?>>? ScheduleConflictDetected;
+
+    /// <summary>
+    /// Fired when the VM wants navigation to occur.
+    /// The View performs the actual navigation.
+    /// </summary>
+    public event Action<string>? RequestNavigate;
+
+    // =========================================================================
+    // LOAD
+    // =========================================================================
 
     public async Task LoadAsync()
     {
@@ -64,37 +80,35 @@ public partial class StudentsListViewModel : ObservableObject
 
             var allStudents = await _data.GetStudentsAsync().ConfigureAwait(false);
 
-            var nextVisitTasks = allStudents.Select(async student =>
+            var tasks = allStudents.Select(async student =>
             {
-                var nextVisit = await _data
-                    .GetNextFutureVisitForStudentAsync(student.StudentId)
-                    .ConfigureAwait(false);
-
-                return (Student: student, NextVisit: nextVisit);
+                var next = await _data.GetNextFutureVisitForStudentAsync(student.StudentId)
+                                      .ConfigureAwait(false);
+                return (Student: student, NextVisit: next);
             });
 
-            var enrichedStudents = await Task.WhenAll(nextVisitTasks).ConfigureAwait(false);
+            var enriched = await Task.WhenAll(tasks).ConfigureAwait(false);
 
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
                 Students.Clear();
 
-                foreach (var item in enrichedStudents)
+                foreach (var item in enriched)
                 {
-                    var studentViewModel = new StudentViewModel(item.Student);
+                    var svm = new StudentViewModel(item.Student);
 
                     if (item.NextVisit is not null)
                     {
-                        studentViewModel.NextFutureVisitId = item.NextVisit.Id;
-                        studentViewModel.NextFutureVisitDisplay = $"Next: {item.NextVisit.ScheduledDateTime:g}";
+                        svm.NextFutureVisitId = item.NextVisit.Id;
+                        svm.NextFutureVisitDisplay = $"Next: {item.NextVisit.ScheduledDateTime:g}";
                     }
                     else
                     {
-                        studentViewModel.NextFutureVisitId = null;
-                        studentViewModel.NextFutureVisitDisplay = "No visit scheduled";
+                        svm.NextFutureVisitId = null;
+                        svm.NextFutureVisitDisplay = "No visit scheduled";
                     }
 
-                    Students.Add(studentViewModel);
+                    Students.Add(svm);
                 }
 
                 ApplyFilter();
@@ -110,65 +124,60 @@ public partial class StudentsListViewModel : ObservableObject
         }
     }
 
-    [RelayCommand]
-    private async Task Refresh()
-    {
-        await LoadAsync();
-    }
+    // =========================================================================
+    // REFRESH
+    // =========================================================================
 
     [RelayCommand]
-    private async Task ScheduleVisit(StudentViewModel? studentViewModel)
+    private async Task Refresh()
+        => await LoadAsync();
+
+    // =========================================================================
+    // SCHEDULE VISIT
+    // =========================================================================
+
+    [RelayCommand]
+    private async Task ScheduleVisit(StudentViewModel? svm)
     {
-        if (studentViewModel?.Model is null)
-            return;
+        if (svm?.Model is null) return;
 
         try
         {
-            var studentId = studentViewModel.Model.StudentId;
+            var studentId = svm.Model.StudentId;
+            var existing = await _data.GetNextFutureVisitForStudentAsync(studentId)
+                                      .ConfigureAwait(false);
 
-            var existingVisit = await _data
-                .GetNextFutureVisitForStudentAsync(studentId)
-                .ConfigureAwait(false);
-
-            if (existingVisit is null)
+            if (existing is null)
             {
-                await MainThread.InvokeOnMainThreadAsync(async () =>
-                {
-                    await Shell.Current.GoToAsync($"AddVisitPage?studentId={studentId}");
-                });
-
+                RequestNavigate?.Invoke($"AddVisitPage?studentId={studentId}");
                 return;
             }
 
-            var scheduledTime = existingVisit.ScheduledDateTime;
+            var when = existing.ScheduledDateTime;
+            var message = $"Scheduled for {when:ddd, MMM d} at {when:h:mm tt}.";
 
-            var choice = await MainThread.InvokeOnMainThreadAsync(() =>
-                Shell.Current.DisplayActionSheet(
-                    "Visit already scheduled",
-                    "Cancel",
-                    null,
-                    "Edit existing",
-                    "Replace it"));
+            var tcs = new TaskCompletionSource<string?>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            ScheduleConflictDetected?.Invoke(message, studentId, existing.Id, choice =>
+            {
+                tcs.TrySetResult(choice);
+            });
+
+            var choice = await tcs.Task.ConfigureAwait(false);
 
             switch (choice)
             {
                 case "Edit existing":
-                    await MainThread.InvokeOnMainThreadAsync(async () =>
-                    {
-                        await Shell.Current.GoToAsync($"UpdateVisitPage?visitId={existingVisit.Id}");
-                    });
+                    RequestNavigate?.Invoke($"UpdateVisitPage?visitId={existing.Id}");
                     break;
 
                 case "Replace it":
-                    await _data
-                        .CancelVisitAsync(existingVisit.Id, reason: "Replaced by new scheduled visit")
-                        .ConfigureAwait(false);
-
-                    await MainThread.InvokeOnMainThreadAsync(async () =>
-                    {
-                        await Shell.Current.GoToAsync($"AddVisitPage?studentId={studentId}");
-                    });
+                    await _data.CancelVisitByMeAsync(existing.Id, "Replaced by new visit")
+                               .ConfigureAwait(false);
+                    RequestNavigate?.Invoke($"AddVisitPage?studentId={studentId}");
                     break;
+
+                    // "Cancel" or null = do nothing
             }
         }
         catch (Exception ex)
@@ -177,8 +186,11 @@ public partial class StudentsListViewModel : ObservableObject
         }
     }
 
-    partial void OnSearchTextChanged(string? value) => ApplyFilter();
+    // =========================================================================
+    // FILTERING
+    // =========================================================================
 
+    partial void OnSearchTextChanged(string? value) => ApplyFilter();
     partial void OnIsActiveOnlyChanged(bool value) => ApplyFilter();
 
     private void ApplyFilter()
@@ -190,21 +202,18 @@ public partial class StudentsListViewModel : ObservableObject
         }
 
         var term = (SearchText ?? string.Empty).Trim();
-
         IEnumerable<StudentViewModel> query = Students;
 
         if (IsActiveOnly)
-        {
             query = query.Where(s => s.Model.Status == StudentStatus.Active);
-        }
 
         if (!string.IsNullOrEmpty(term))
         {
             query = query.Where(s =>
                 (!string.IsNullOrEmpty(s.Name) &&
                  s.Name.Contains(term, StringComparison.OrdinalIgnoreCase)) ||
-                (!string.IsNullOrEmpty(s.Model.PreferredLanguage) &&
-                 s.Model.PreferredLanguage.Contains(term, StringComparison.OrdinalIgnoreCase)));
+                (!string.IsNullOrEmpty(s.PhoneNumber) &&
+                 s.PhoneNumber.Contains(term, StringComparison.OrdinalIgnoreCase)));
         }
 
         query = query.OrderBy(s => s.Name ?? string.Empty);
@@ -212,10 +221,9 @@ public partial class StudentsListViewModel : ObservableObject
         FilteredStudents.Clear();
 
         var index = 0;
-
         foreach (var student in query)
         {
-            student.IsAlternate = index % 2 == 1;
+            student.IsAlternate = (index % 2 == 1);
             FilteredStudents.Add(student);
             index++;
         }
