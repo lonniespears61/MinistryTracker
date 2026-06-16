@@ -31,4 +31,20 @@ This software is provided “as is”, without warranty of any kind, express or 
 
 LIMITATION OF LIABILITY
 In no event shall the developer be liable for any claim, damages, or other liability arising from the use of the software.";
+
+    public string BetaTesterAgreementText { get; } =
+@"BETA TESTING
+You understand this is a beta version. Features may be incomplete, change, or fail. Please keep your own backup of any important information.
+
+FEEDBACK
+You may choose to send feedback to the developer from your email app. You can review and edit the message before sending.
+
+DIAGNOSTICS
+If you enable diagnostics, the feedback message may include app version, device/platform version, database schema information, and table row counts. It should not include student names, notes, addresses, or visit details.
+
+NO AUTOMATIC ERROR REPORTING
+The app does not automatically send crash reports, errors, or personal data. Feedback is sent only when you tap Send Feedback and complete sending from your email app.
+
+PERSONAL DATA
+Do not include sensitive student details in feedback unless you intentionally choose to share them.";
 }

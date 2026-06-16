@@ -22,6 +22,8 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Maui.ApplicationModel;
+using Microsoft.Maui.ApplicationModel.Communication;
 using MinistryTracker.Data;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
@@ -62,6 +64,15 @@ namespace MinistryTracker.ViewModels
         [ObservableProperty]
         private bool isDeveloperMode;
 
+        [ObservableProperty]
+        private bool betaTesterAgreementAccepted;
+
+        [ObservableProperty]
+        private bool includeDiagnosticsInFeedback;
+
+        [ObservableProperty]
+        private string? feedbackText;
+
         // =====================================================================
         // SCHEMA VERSION DISPLAY
         // =====================================================================
@@ -96,6 +107,7 @@ namespace MinistryTracker.ViewModels
             IsDeveloperMode = false;
 
             LoadServiceDaySettings();
+            LoadBetaFeedbackSettings();
         }
 
         // =====================================================================
@@ -132,6 +144,12 @@ namespace MinistryTracker.ViewModels
             ServiceDays = _settingsService.GetServiceDaySettings();
         }
 
+        private void LoadBetaFeedbackSettings()
+        {
+            BetaTesterAgreementAccepted = _settingsService.GetBetaTesterAgreementAccepted();
+            IncludeDiagnosticsInFeedback = _settingsService.GetIncludeDiagnosticsInFeedback();
+        }
+
         [RelayCommand]
         private void SaveServiceDaySettings()
         {
@@ -150,6 +168,27 @@ namespace MinistryTracker.ViewModels
         {
             if (!value)
                 HealthExpanded = false;
+        }
+
+        partial void OnBetaTesterAgreementAcceptedChanged(bool value)
+        {
+            _settingsService.SaveBetaTesterAgreementAccepted(value);
+
+            if (!value)
+                IncludeDiagnosticsInFeedback = false;
+        }
+
+        partial void OnIncludeDiagnosticsInFeedbackChanged(bool value)
+        {
+            if (value && !BetaTesterAgreementAccepted)
+            {
+                IncludeDiagnosticsInFeedback = false;
+                WeakReferenceMessenger.Default.Send(
+                    new UiToastMessage("Accept the beta agreement before including diagnostics."));
+                return;
+            }
+
+            _settingsService.SaveIncludeDiagnosticsInFeedback(value);
         }
 
         public void DisableDeveloperMode()
@@ -441,6 +480,86 @@ namespace MinistryTracker.ViewModels
             // Real migration flow stays in DataService.cs, not in diagnostics helpers.
 
             await Task.CompletedTask;
+        }
+
+        [RelayCommand(AllowConcurrentExecutions = false)]
+        private async Task SendFeedback()
+        {
+            if (!BetaTesterAgreementAccepted)
+            {
+                WeakReferenceMessenger.Default.Send(
+                    new UiAlertMessage("Beta Agreement Required", "Please accept the beta tester agreement before sending feedback."));
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(FeedbackText))
+            {
+                WeakReferenceMessenger.Default.Send(
+                    new UiToastMessage("Add a short note before sending feedback."));
+                return;
+            }
+
+            try
+            {
+                var body = await BuildFeedbackBodyAsync().ConfigureAwait(false);
+
+                var message = new EmailMessage
+                {
+                    Subject = $"Ministry Tracker Beta Feedback - {AppInfo.Current.VersionString}",
+                    Body = body,
+                    BodyFormat = EmailBodyFormat.PlainText
+                };
+
+                await Email.Default.ComposeAsync(message).ConfigureAwait(false);
+            }
+            catch (FeatureNotSupportedException)
+            {
+                WeakReferenceMessenger.Default.Send(
+                    new UiAlertMessage("Email Not Available", "This device does not have an email app available."));
+            }
+            catch (Exception ex)
+            {
+                WeakReferenceMessenger.Default.Send(
+                    new UiAlertMessage("Feedback Failed", ex.Message));
+            }
+        }
+
+        private async Task<string> BuildFeedbackBodyAsync()
+        {
+            var acceptedOn = _settingsService.GetBetaTesterAgreementAcceptedOnUtc();
+            var sb = new System.Text.StringBuilder();
+
+            sb.AppendLine("Ministry Tracker Beta Feedback");
+            sb.AppendLine();
+            sb.AppendLine("Feedback:");
+            sb.AppendLine(FeedbackText?.Trim());
+            sb.AppendLine();
+            sb.AppendLine("Beta tester agreement accepted: Yes");
+
+            if (acceptedOn is not null)
+                sb.AppendLine($"Accepted UTC: {acceptedOn:yyyy-MM-dd HH:mm:ss}");
+
+            sb.AppendLine($"App version: {AppInfo.Current.VersionString} (Build {AppInfo.Current.BuildString})");
+            sb.AppendLine($"Platform: {DeviceInfo.Current.Platform} {DeviceInfo.Current.VersionString}");
+            sb.AppendLine($"Device: {DeviceInfo.Current.Manufacturer} {DeviceInfo.Current.Model}");
+
+            if (IncludeDiagnosticsInFeedback)
+            {
+                sb.AppendLine();
+                sb.AppendLine("Diagnostics included by tester opt-in:");
+                sb.AppendLine("This diagnostic section contains schema/version/table counts, not student or visit row contents.");
+                sb.AppendLine();
+
+                var schema = await _data.GetDatabaseSchemaHealthAsync().ConfigureAwait(false);
+                sb.AppendLine(schema.ReportText);
+            }
+            else
+            {
+                sb.AppendLine();
+                sb.AppendLine("Diagnostics included: No");
+            }
+
+            return sb.ToString();
         }
 
         // =====================================================================
