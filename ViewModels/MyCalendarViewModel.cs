@@ -22,7 +22,7 @@ public partial class MyCalendarViewModel : ObservableObject
     private readonly DataService _data;
     private readonly ILogger<MyCalendarViewModel>? _log;
 
-    private List<VisitWithStudent> _allFutureVisits = new();
+    private List<VisitWithStudent> _visibleMonthVisits = new();
     private readonly Dictionary<DateTime, List<VisitWithStudent>> _visitsByDate = new();
 
     // -------------------------
@@ -89,9 +89,14 @@ public partial class MyCalendarViewModel : ObservableObject
         {
             IsBusy = true;
 
-            _allFutureVisits = await _data.GetFutureVisitsWithStudentsAsync().ConfigureAwait(false);
+            var monthStart = DisplayedMonth.Date;
+            var nextMonthStart = monthStart.AddMonths(1);
 
-            BuildVisitsLookup(_allFutureVisits);
+            _visibleMonthVisits = await _data
+                .GetVisitsWithStudentsInRangeAsync(monthStart, nextMonthStart, includeCanceled: false)
+                .ConfigureAwait(false);
+
+            BuildVisitsLookup(_visibleMonthVisits);
 
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
@@ -157,9 +162,9 @@ public partial class MyCalendarViewModel : ObservableObject
 
     [RelayCommand] private async Task Refresh() => await LoadAsync();
 
-    [RelayCommand] private void PrevMonth() => SetDisplayedMonth(DisplayedMonth.AddMonths(-1));
-    [RelayCommand] private void NextMonth() => SetDisplayedMonth(DisplayedMonth.AddMonths(1));
-    [RelayCommand] private void GoToToday() => SetDisplayedMonth(DateTime.Today);
+    [RelayCommand] private async Task PrevMonth() => await SetDisplayedMonthAsync(DisplayedMonth.AddMonths(-1));
+    [RelayCommand] private async Task NextMonth() => await SetDisplayedMonthAsync(DisplayedMonth.AddMonths(1));
+    [RelayCommand] private async Task GoToToday() => await SetDisplayedMonthAsync(DateTime.Today);
 
     [RelayCommand]
     private void AddVisitForSelectedDay()
@@ -245,24 +250,11 @@ public partial class MyCalendarViewModel : ObservableObject
             SelectedDayCell = null;
     }
 
-    private void SetDisplayedMonth(DateTime anyDateInMonth)
+    private async Task SetDisplayedMonthAsync(DateTime anyDateInMonth)
     {
         DisplayedMonth = new DateTime(anyDateInMonth.Year, anyDateInMonth.Month, 1);
 
-        if (!MainThread.IsMainThread)
-        {
-            MainThread.BeginInvokeOnMainThread(() =>
-            {
-                BuildMonthGrid();
-                SyncAgendaForSelection();
-                RaiseHeaderProps();
-            });
-            return;
-        }
-
-        BuildMonthGrid();
-        SyncAgendaForSelection();
-        RaiseHeaderProps();
+        await LoadAsync();
     }
 
     private void SyncAgendaForSelection()
