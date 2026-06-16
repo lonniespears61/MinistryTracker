@@ -31,6 +31,7 @@ using MinistryTracker.Services;
 using MinistryTracker.ViewModels.Messages;
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -51,6 +52,8 @@ namespace MinistryTracker.ViewModels
 
         [ObservableProperty]
         private ServiceDaySettings serviceDays = new();
+
+        public ObservableCollection<ServiceDaySettingRowViewModel> ActiveServiceDays { get; } = new();
 
         [ObservableProperty]
         private bool isBusy;
@@ -138,6 +141,8 @@ namespace MinistryTracker.ViewModels
         public List<ServicePeriod> ServicePeriodValues =>
             Enum.GetValues<ServicePeriod>().ToList();
 
+        public bool CanAddServiceDay => ActiveServiceDays.Count < 7;
+
         // =====================================================================
         // SETTINGS LOAD / SAVE
         // =====================================================================
@@ -145,6 +150,18 @@ namespace MinistryTracker.ViewModels
         public void LoadServiceDaySettings()
         {
             ServiceDays = _settingsService.GetServiceDaySettings();
+
+            ActiveServiceDays.Clear();
+
+            AddServiceDayRowIfConfigured(DayOfWeek.Saturday, ServiceDays.Saturday);
+            AddServiceDayRowIfConfigured(DayOfWeek.Sunday, ServiceDays.Sunday);
+            AddServiceDayRowIfConfigured(DayOfWeek.Monday, ServiceDays.Monday);
+            AddServiceDayRowIfConfigured(DayOfWeek.Tuesday, ServiceDays.Tuesday);
+            AddServiceDayRowIfConfigured(DayOfWeek.Wednesday, ServiceDays.Wednesday);
+            AddServiceDayRowIfConfigured(DayOfWeek.Thursday, ServiceDays.Thursday);
+            AddServiceDayRowIfConfigured(DayOfWeek.Friday, ServiceDays.Friday);
+
+            OnPropertyChanged(nameof(CanAddServiceDay));
         }
 
         private void LoadBetaFeedbackSettings()
@@ -157,8 +174,115 @@ namespace MinistryTracker.ViewModels
         [RelayCommand]
         private void SaveServiceDaySettings()
         {
+            var duplicateDay = ActiveServiceDays
+                .GroupBy(x => x.Day)
+                .FirstOrDefault(g => g.Count() > 1)
+                ?.Key;
+
+            if (duplicateDay is not null)
+            {
+                WeakReferenceMessenger.Default.Send(
+                    new UiAlertMessage("Duplicate Service Day", $"{duplicateDay} is listed more than once. Remove or change the duplicate before saving."));
+                return;
+            }
+
+            ServiceDays = BuildServiceDaySettingsFromRows();
             _settingsService.SaveServiceDaySettings(ServiceDays);
             WeakReferenceMessenger.Default.Send(new UiToastMessage("Service day settings saved."));
+        }
+
+        [RelayCommand]
+        private void AddServiceDay()
+        {
+            var nextDay = GetNextUnusedServiceDay();
+
+            if (nextDay is null)
+            {
+                WeakReferenceMessenger.Default.Send(new UiToastMessage("All days are already added."));
+                return;
+            }
+
+            ActiveServiceDays.Add(new ServiceDaySettingRowViewModel(nextDay.Value, ServicePeriod.Morning));
+            OnPropertyChanged(nameof(CanAddServiceDay));
+        }
+
+        [RelayCommand]
+        private void RemoveServiceDay(ServiceDaySettingRowViewModel? row)
+        {
+            if (row is null)
+                return;
+
+            ActiveServiceDays.Remove(row);
+            OnPropertyChanged(nameof(CanAddServiceDay));
+        }
+
+        private void AddServiceDayRowIfConfigured(DayOfWeek day, ServicePeriod period)
+        {
+            if (period == ServicePeriod.None)
+                return;
+
+            ActiveServiceDays.Add(new ServiceDaySettingRowViewModel(day, period));
+        }
+
+        private DayOfWeek? GetNextUnusedServiceDay()
+        {
+            var usedDays = ActiveServiceDays
+                .Select(x => x.Day)
+                .ToHashSet();
+
+            var preferredOrder = new[]
+            {
+                DayOfWeek.Saturday,
+                DayOfWeek.Sunday,
+                DayOfWeek.Monday,
+                DayOfWeek.Tuesday,
+                DayOfWeek.Wednesday,
+                DayOfWeek.Thursday,
+                DayOfWeek.Friday
+            };
+
+            foreach (var day in preferredOrder)
+            {
+                if (!usedDays.Contains(day))
+                    return day;
+            }
+
+            return null;
+        }
+
+        private ServiceDaySettings BuildServiceDaySettingsFromRows()
+        {
+            var settings = new ServiceDaySettings();
+
+            foreach (var row in ActiveServiceDays)
+            {
+                switch (row.Day)
+                {
+                    case DayOfWeek.Sunday:
+                        settings.Sunday = row.Period;
+                        break;
+                    case DayOfWeek.Monday:
+                        settings.Monday = row.Period;
+                        break;
+                    case DayOfWeek.Tuesday:
+                        settings.Tuesday = row.Period;
+                        break;
+                    case DayOfWeek.Wednesday:
+                        settings.Wednesday = row.Period;
+                        break;
+                    case DayOfWeek.Thursday:
+                        settings.Thursday = row.Period;
+                        break;
+                    case DayOfWeek.Friday:
+                        settings.Friday = row.Period;
+                        break;
+                    case DayOfWeek.Saturday:
+                        settings.Saturday = row.Period;
+                        break;
+                }
+            }
+
+            return settings;
         }
 
         // =====================================================================

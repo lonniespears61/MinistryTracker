@@ -111,6 +111,15 @@ public partial class SettingsPage : ContentPage
         await Shell.Current.GoToAsync(nameof(FeedbackPage));
     }
 
+    private void OnRemoveServiceDayClicked(object sender, EventArgs e)
+    {
+        if (sender is Button { BindingContext: ServiceDaySettingRowViewModel row } &&
+            _vm.RemoveServiceDayCommand.CanExecute(row))
+        {
+            _vm.RemoveServiceDayCommand.Execute(row);
+        }
+    }
+
     private async void OnVersionTapped(object sender, TappedEventArgs e)
     {
         if (_vm.IsDeveloperMode)

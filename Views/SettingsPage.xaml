@@ -150,83 +150,38 @@
                                FontAttributes="Bold"
                                TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
 
-                        <Label Text="Choose the usual ministry period for each day. These defaults are used when scheduling new visits."
+                        <Label Text="Add only the days you normally use. These defaults are used when scheduling new visits."
                                FontSize="12"
                                TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
-                        <Grid ColumnDefinitions="*,Auto"
-                              RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto"
-                              RowSpacing="10"
-                              ColumnSpacing="12">
+                        <CollectionView x:Name="ServiceDaysList"
+                                        ItemsSource="{Binding ActiveServiceDays}"
+                                        EmptyView="No service days set. New visits will default to the next Saturday morning.">
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ServiceDaySettingRowViewModel">
+                                    <Grid ColumnDefinitions="*,*,Auto"
+                                          ColumnSpacing="8"
+                                          Padding="0,4">
+                                        <Picker ItemsSource="{Binding DayValues}"
+                                                SelectedItem="{Binding Day, Mode=TwoWay}" />
 
-                            <Label Text="Sunday"
-                                   VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
-                            <Picker Grid.Column="1"
-                                    ItemsSource="{Binding ServicePeriodValues}"
-                                    SelectedItem="{Binding ServiceDays.Sunday}"
-                                    WidthRequest="160" />
+                                        <Picker Grid.Column="1"
+                                                ItemsSource="{Binding PeriodValues}"
+                                                SelectedItem="{Binding Period, Mode=TwoWay}" />
 
-                            <Label Grid.Row="1"
-                                   Text="Monday"
-                                   VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
-                            <Picker Grid.Row="1"
-                                    Grid.Column="1"
-                                    ItemsSource="{Binding ServicePeriodValues}"
-                                    SelectedItem="{Binding ServiceDays.Monday}"
-                                    WidthRequest="160" />
+                                        <Button Grid.Column="2"
+                                                Text="Remove"
+                                                Padding="10,6"
+                                                Clicked="OnRemoveServiceDayClicked" />
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
 
-                            <Label Grid.Row="2"
-                                   Text="Tuesday"
-                                   VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
-                            <Picker Grid.Row="2"
-                                    Grid.Column="1"
-                                    ItemsSource="{Binding ServicePeriodValues}"
-                                    SelectedItem="{Binding ServiceDays.Tuesday}"
-                                    WidthRequest="160" />
-
-                            <Label Grid.Row="3"
-                                   Text="Wednesday"
-                                   VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
-                            <Picker Grid.Row="3"
-                                    Grid.Column="1"
-                                    ItemsSource="{Binding ServicePeriodValues}"
-                                    SelectedItem="{Binding ServiceDays.Wednesday}"
-                                    WidthRequest="160" />
-
-                            <Label Grid.Row="4"
-                                   Text="Thursday"
-                                   VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
-                            <Picker Grid.Row="4"
-                                    Grid.Column="1"
-                                    ItemsSource="{Binding ServicePeriodValues}"
-                                    SelectedItem="{Binding ServiceDays.Thursday}"
-                                    WidthRequest="160" />
-
-                            <Label Grid.Row="5"
-                                   Text="Friday"
-                                   VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
-                            <Picker Grid.Row="5"
-                                    Grid.Column="1"
-                                    ItemsSource="{Binding ServicePeriodValues}"
-                                    SelectedItem="{Binding ServiceDays.Friday}"
-                                    WidthRequest="160" />
-
-                            <Label Grid.Row="6"
-                                   Text="Saturday"
-                                   VerticalOptions="Center"
-                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
-                            <Picker Grid.Row="6"
-                                    Grid.Column="1"
-                                    ItemsSource="{Binding ServicePeriodValues}"
-                                    SelectedItem="{Binding ServiceDays.Saturday}"
-                                    WidthRequest="160" />
-                        </Grid>
+                        <Button Text="+ Add Service Day"
+                                Command="{Binding AddServiceDayCommand}"
+                                IsEnabled="{Binding CanAddServiceDay}"
+                                CornerRadius="12" />
 
                         <Button Text="Save Service Day Settings"
                                 Command="{Binding SaveServiceDaySettingsCommand}"

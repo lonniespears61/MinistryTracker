@@ -1,4 +1,5 @@
 ﻿using MinistryTracker.Models;
+using MinistryTracker.Models.Enums;
 using System.Text.Json;
 using Microsoft.Maui.Storage;
 
@@ -19,7 +20,10 @@ namespace MinistryTracker.Services
             var json = Preferences.Get(ServiceDaySettingsKey, null);
 
             if (string.IsNullOrWhiteSpace(json))
-                return new ServiceDaySettings();
+                return new ServiceDaySettings
+                {
+                    Saturday = ServicePeriod.Morning
+                };
 
             return JsonSerializer.Deserialize<ServiceDaySettings>(json)
                    ?? new ServiceDaySettings();
@@ -81,3 +85,4 @@ namespace MinistryTracker.Services
         }
     }
 }
+

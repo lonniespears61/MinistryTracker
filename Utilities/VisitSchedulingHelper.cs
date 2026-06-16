@@ -34,11 +34,17 @@ namespace MinistryTracker.Utilities
 
             // ------------------------------------------------------------
             // Rule 2:
-            // If no days are configured, use tomorrow at 10:00 AM.
+            // If no days are configured, use the next Saturday at 10:00 AM.
             // ------------------------------------------------------------
             if (!settings.HasAnyConfiguredDay())
             {
-                return today.AddDays(1) + DefaultFallbackTime;
+                for (int i = 1; i <= 7; i++)
+                {
+                    var candidate = today.AddDays(i);
+
+                    if (candidate.DayOfWeek == DayOfWeek.Saturday)
+                        return candidate + DefaultFallbackTime;
+                }
             }
 
             // ------------------------------------------------------------
