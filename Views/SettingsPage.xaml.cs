@@ -1,6 +1,4 @@
-// SettingsPage.xaml.cs — Settings (modal) — 04/12/2026
-
-using CommunityToolkit.Maui.Alerts;
+ï»¿using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Mvvm.Messaging;
 using MinistryTracker.ViewModels;
 using MinistryTracker.ViewModels.Messages;
@@ -26,7 +24,6 @@ public partial class SettingsPage : ContentPage
     {
         base.OnAppearing();
 
-        // Added so schema/version display is refreshed whenever Settings opens.
         _ = _vm.InitializeSchemaInfoAsync();
 
         if (_messengerRegistered) return;
@@ -59,8 +56,7 @@ public partial class SettingsPage : ContentPage
                 {
                     if (_vm.ShowDbHealthCommand.CanExecute(null))
                         _ = _vm.ShowDbHealthCommand.ExecuteAsync(null);
-                }
-                ,
+                },
                 _ => null
             };
 
@@ -83,6 +79,27 @@ public partial class SettingsPage : ContentPage
 
             msg.SetResult(ok);
         });
+
+        WeakReferenceMessenger.Default.Register<UiPromptMessage>(this, async (_, msg) =>
+        {
+            var result = await MainThread.InvokeOnMainThreadAsync(async () =>
+            {
+                var page = GetCurrentPage();
+                if (page is null) return null;
+
+                return await page.DisplayPromptAsync(
+                    msg.Title,
+                    msg.Message,
+                    msg.Accept,
+                    msg.Cancel,
+                    msg.Placeholder,
+                    msg.MaxLength,
+                    null,
+                    msg.InitialValue);
+            });
+
+            msg.SetResult(result);
+        });
     }
 
     protected override void OnDisappearing()
@@ -90,11 +107,13 @@ public partial class SettingsPage : ContentPage
         base.OnDisappearing();
 
         _vm.CancelActiveOperation();
+        _vm.DisableDeveloperMode();
 
         WeakReferenceMessenger.Default.Unregister<UiToastMessage>(this);
         WeakReferenceMessenger.Default.Unregister<UiAlertMessage>(this);
         WeakReferenceMessenger.Default.Unregister<UiSnackbarMessage>(this);
         WeakReferenceMessenger.Default.Unregister<UiConfirmMessage>(this);
+        WeakReferenceMessenger.Default.Unregister<UiPromptMessage>(this);
 
         _messengerRegistered = false;
     }

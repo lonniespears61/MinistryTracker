@@ -22,7 +22,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
-using Microsoft.Maui.Storage;
 using MinistryTracker.Data;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
@@ -43,8 +42,6 @@ namespace MinistryTracker.ViewModels
         private readonly SettingsService _settingsService;
 
         private CancellationTokenSource? _activeCts;
-
-        private const string DevModeKey = "IsDeveloperMode";
 
         // =====================================================================
         // SETTINGS BINDABLES
@@ -87,15 +84,7 @@ namespace MinistryTracker.ViewModels
             _data = data ?? throw new ArgumentNullException(nameof(data));
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
 
-            try
-            {
-                IsDeveloperMode = Preferences.Get(DevModeKey, false);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine("Preferences.Get failed: " + ex);
-                IsDeveloperMode = false;
-            }
+            IsDeveloperMode = false;
 
             LoadServiceDaySettings();
         }
@@ -150,7 +139,13 @@ namespace MinistryTracker.ViewModels
 
         partial void OnIsDeveloperModeChanged(bool value)
         {
-            Preferences.Set(DevModeKey, value);
+            if (!value)
+                HealthExpanded = false;
+        }
+
+        public void DisableDeveloperMode()
+        {
+            IsDeveloperMode = false;
         }
 
         // =====================================================================
@@ -228,16 +223,11 @@ namespace MinistryTracker.ViewModels
         {
             if (IsBusy) return;
 
-            var tcs = new TaskCompletionSource<bool>();
-
-            WeakReferenceMessenger.Default.Send(new UiConfirmMessage(
+            var proceed = await ConfirmTypedAsync(
                 "Delete & Reseed Test Data",
-                "This will delete all students and visits, then reseed test data.\nContinue?",
-                confirmed => tcs.TrySetResult(confirmed),
-                "Yes",
-                "No"));
+                "This will delete all students and visits, then reseed test data.\n\nType DELETE to continue.",
+                "DELETE").ConfigureAwait(false);
 
-            var proceed = await tcs.Task.ConfigureAwait(false);
             if (!proceed) return;
 
             var ct = StartOperation();
@@ -251,7 +241,7 @@ namespace MinistryTracker.ViewModels
                     new UiToastMessage("Delete + reseed complete"));
 
                 WeakReferenceMessenger.Default.Send(
-                    new UiSnackbarMessage("🧹 Delete + Reseed complete.", "View health", UiSnackbarAction.ShowDbHealth));
+                    new UiSnackbarMessage("Delete + Reseed complete.", "View health", UiSnackbarAction.ShowDbHealth));
 
                 WeakReferenceMessenger.Default.Send(
                     new DatabaseResetMessage(DateTime.UtcNow));
@@ -284,16 +274,11 @@ namespace MinistryTracker.ViewModels
         {
             if (IsBusy) return;
 
-            var tcs = new TaskCompletionSource<bool>();
-
-            WeakReferenceMessenger.Default.Send(new UiConfirmMessage(
+            var proceed = await ConfirmTypedAsync(
                 "Reset DB (Schema + Data)",
-                "This will delete the local database, rebuild the schema, and reseed test data.\nContinue?",
-                confirmed => tcs.TrySetResult(confirmed),
-                "Yes",
-                "No"));
+                "This will delete the local database, rebuild the schema, and reseed test data.\n\nType RESET to continue.",
+                "RESET").ConfigureAwait(false);
 
-            var proceed = await tcs.Task.ConfigureAwait(false);
             if (!proceed) return;
 
             var ct = StartOperation();
@@ -306,7 +291,7 @@ namespace MinistryTracker.ViewModels
                     new UiToastMessage("Schema reset + seed complete"));
 
                 WeakReferenceMessenger.Default.Send(
-                    new UiSnackbarMessage("🧱 Reset DB (Schema + Data) complete.", "View health", UiSnackbarAction.ShowDbHealth));
+                    new UiSnackbarMessage("Reset DB (Schema + Data) complete.", "View health", UiSnackbarAction.ShowDbHealth));
 
                 WeakReferenceMessenger.Default.Send(
                     new DatabaseResetMessage(DateTime.UtcNow));
@@ -340,16 +325,11 @@ namespace MinistryTracker.ViewModels
         {
             if (IsBusy) return;
 
-            var tcs = new TaskCompletionSource<bool>();
-
-            WeakReferenceMessenger.Default.Send(new UiConfirmMessage(
+            var proceed = await ConfirmTypedAsync(
                 "Reset DB (Schema Only)",
-                "This will delete the local database and rebuild the schema without inserting test data.\nContinue?",
-                confirmed => tcs.TrySetResult(confirmed),
-                "Yes",
-                "No"));
+                "This will delete the local database and rebuild the schema without inserting test data.\n\nType RESET to continue.",
+                "RESET").ConfigureAwait(false);
 
-            var proceed = await tcs.Task.ConfigureAwait(false);
             if (!proceed) return;
 
             var ct = StartOperation();
@@ -362,7 +342,7 @@ namespace MinistryTracker.ViewModels
                     new UiToastMessage("Schema-only reset complete"));
 
                 WeakReferenceMessenger.Default.Send(
-                    new UiSnackbarMessage("🧱 Reset DB (Schema Only) complete.", "View health", UiSnackbarAction.ShowDbHealth));
+                    new UiSnackbarMessage("Reset DB (Schema Only) complete.", "View health", UiSnackbarAction.ShowDbHealth));
 
                 WeakReferenceMessenger.Default.Send(
                     new DatabaseResetMessage(DateTime.UtcNow));
@@ -449,6 +429,24 @@ namespace MinistryTracker.ViewModels
             // Real migration flow stays in DataService.cs, not in diagnostics helpers.
 
             await Task.CompletedTask;
+        }
+
+        private async Task<bool> ConfirmTypedAsync(string title, string message, string requiredText)
+        {
+            var tcs = new TaskCompletionSource<string?>();
+
+            WeakReferenceMessenger.Default.Send(new UiPromptMessage(
+                title,
+                message,
+                response => tcs.TrySetResult(response),
+                accept: "Continue",
+                cancel: "Cancel",
+                placeholder: requiredText,
+                maxLength: requiredText.Length));
+
+            var response = await tcs.Task.ConfigureAwait(false);
+
+            return string.Equals(response?.Trim(), requiredText, StringComparison.OrdinalIgnoreCase);
         }
 
         // =====================================================================
