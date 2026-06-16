@@ -106,6 +106,11 @@ public partial class SettingsPage : ContentPage
         await Navigation.PopModalAsync();
     }
 
+    private async void OnFeedbackClicked(object sender, EventArgs e)
+    {
+        await Shell.Current.GoToAsync(nameof(FeedbackPage));
+    }
+
     private async void OnVersionTapped(object sender, TappedEventArgs e)
     {
         if (_vm.IsDeveloperMode)

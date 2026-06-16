@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MinistryTracker.Views.FeedbackPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    xmlns:vm="clr-namespace:MinistryTracker.ViewModels"
+    x:DataType="vm:SettingsViewModel"
+    Title="Beta Feedback">
+
+    <ScrollView>
+        <VerticalStackLayout Padding="16" Spacing="16">
+
+            <Border BackgroundColor="{StaticResource Settings.CardTint}"
+                    Stroke="{StaticResource Settings.BorderTint}"
+                    StrokeThickness="1"
+                    Padding="14">
+                <Border.StrokeShape>
+                    <RoundRectangle CornerRadius="16" />
+                </Border.StrokeShape>
+
+                <VerticalStackLayout Spacing="12">
+                    <Label Text="Beta Testing &amp; Feedback"
+                           FontSize="18"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+
+                    <Label Text="Send feedback when something crashes, looks wrong, feels confusing, or when you have an idea that would make the app easier to use."
+                           FontSize="12"
+                           TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+
+                    <toolkit:Expander>
+                        <toolkit:Expander.Header>
+                            <Grid ColumnDefinitions="*,Auto"
+                                  VerticalOptions="Center">
+                                <Label Text="Beta Tester Agreement"
+                                       FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                                <Label Grid.Column="1"
+                                       Text="Tap to read"
+                                       FontSize="12"
+                                       TextColor="{AppThemeBinding Light=#64748B, Dark=#9CA3AF}" />
+                            </Grid>
+                        </toolkit:Expander.Header>
+
+                        <toolkit:Expander.Content>
+                            <Border BackgroundColor="{AppThemeBinding Light=#F1F5F9, Dark=#161616}"
+                                    Padding="12"
+                                    Margin="0,8,0,0">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="12" />
+                                </Border.StrokeShape>
+
+                                <Label Text="{Binding BetaTesterAgreementText}"
+                                       FontSize="12"
+                                       LineBreakMode="WordWrap"
+                                       TextColor="{AppThemeBinding Light=#334155, Dark=#D1D5DB}" />
+                            </Border>
+                        </toolkit:Expander.Content>
+                    </toolkit:Expander>
+
+                    <Grid ColumnDefinitions="Auto,*"
+                          ColumnSpacing="10">
+                        <CheckBox IsChecked="{Binding BetaTesterAgreementAccepted}"
+                                  VerticalOptions="Center" />
+                        <Label Grid.Column="1"
+                               Text="I accept the beta tester agreement"
+                               FontAttributes="Bold"
+                               VerticalOptions="Center"
+                               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                    </Grid>
+
+                    <Grid ColumnDefinitions="*,Auto"
+                          RowDefinitions="Auto,Auto"
+                          RowSpacing="4">
+                        <Label Text="Include diagnostics"
+                               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                        <Switch Grid.Column="1"
+                                IsToggled="{Binding IncludeDiagnosticsInFeedback}" />
+                        <Label Grid.Row="1"
+                               Grid.ColumnSpan="2"
+                               Text="Includes app/device version and database schema/counts, not student or visit details."
+                               FontSize="12"
+                               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+                    </Grid>
+
+                    <Editor Text="{Binding FeedbackText}"
+                            Placeholder="Tell me what happened, what confused you, or what you wish it did."
+                            AutoSize="TextChanges"
+                            MinimumHeightRequest="140" />
+
+                    <Button Text="Send Feedback"
+                            Command="{Binding SendFeedbackCommand}"
+                            BackgroundColor="{StaticResource Settings.Base}"
+                            TextColor="White"
+                            CornerRadius="12" />
+                </VerticalStackLayout>
+            </Border>
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

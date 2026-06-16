@@ -41,6 +41,39 @@
         <ScrollView>
             <VerticalStackLayout Padding="16" Spacing="16">
 
+                <!-- BETA FEEDBACK -->
+                <Border BackgroundColor="{StaticResource Settings.CardTint}"
+                        Stroke="{StaticResource Settings.BorderTint}"
+                        StrokeThickness="1"
+                        Padding="14">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16" />
+                    </Border.StrokeShape>
+
+                    <Grid ColumnDefinitions="Auto,*,Auto"
+                          ColumnSpacing="10"
+                          VerticalOptions="Center">
+                        <CheckBox IsChecked="{Binding BetaTesterAgreementAccepted}"
+                                  VerticalOptions="Center" />
+
+                        <VerticalStackLayout Grid.Column="1"
+                                             Spacing="2"
+                                             VerticalOptions="Center">
+                            <Label Text="Beta tester"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                            <Label Text="Accept agreement and send feedback"
+                                   FontSize="12"
+                                   TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+                        </VerticalStackLayout>
+
+                        <Button Grid.Column="2"
+                                Text="Feedback"
+                                Padding="12,6"
+                                Clicked="OnFeedbackClicked" />
+                    </Grid>
+                </Border>
+
                 <!-- NORMAL SERVICE DAYS -->
                 <Border BackgroundColor="{StaticResource Settings.CardTint}"
                         Stroke="{StaticResource Settings.BorderTint}"
@@ -136,96 +169,6 @@
 
                         <Button Text="Save Service Day Settings"
                                 Command="{Binding SaveServiceDaySettingsCommand}"
-                                BackgroundColor="{StaticResource Settings.Base}"
-                                TextColor="White"
-                                CornerRadius="12" />
-                    </VerticalStackLayout>
-                </Border>
-
-                <!-- BETA FEEDBACK -->
-                <Border BackgroundColor="{StaticResource Settings.CardTint}"
-                        Stroke="{StaticResource Settings.BorderTint}"
-                        StrokeThickness="1"
-                        Padding="14">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="16" />
-                    </Border.StrokeShape>
-
-                    <VerticalStackLayout Spacing="12">
-                        <Label Text="Beta Testing &amp; Feedback"
-                               FontSize="18"
-                               FontAttributes="Bold"
-                               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
-
-                        <Label Text="Send feedback from your email app. You can choose whether to include basic diagnostics."
-                               FontSize="12"
-                               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
-
-                        <toolkit:Expander>
-                            <toolkit:Expander.Header>
-                                <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">
-                                    <Label Text="Beta Tester Agreement"
-                                           FontAttributes="Bold"
-                                           TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
-                                    <Label Grid.Column="1"
-                                           Text="Tap to read"
-                                           FontSize="12"
-                                           TextColor="{AppThemeBinding Light=#64748B, Dark=#9CA3AF}" />
-                                </Grid>
-                            </toolkit:Expander.Header>
-
-                            <toolkit:Expander.Content>
-                                <Border BackgroundColor="{AppThemeBinding Light=#F1F5F9, Dark=#161616}"
-                                        Padding="12"
-                                        Margin="0,8,0,0">
-                                    <Border.StrokeShape>
-                                        <RoundRectangle CornerRadius="12" />
-                                    </Border.StrokeShape>
-
-                                    <Label Text="{Binding BetaTesterAgreementText}"
-                                           FontSize="12"
-                                           LineBreakMode="WordWrap"
-                                           TextColor="{AppThemeBinding Light=#334155, Dark=#D1D5DB}" />
-                                </Border>
-                            </toolkit:Expander.Content>
-                        </toolkit:Expander>
-
-                        <Grid ColumnDefinitions="*,Auto"
-                              RowDefinitions="Auto,Auto"
-                              RowSpacing="4">
-                            <Label Text="I accept the beta tester agreement"
-                                   FontAttributes="Bold"
-                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
-                            <Switch Grid.Column="1"
-                                    IsToggled="{Binding BetaTesterAgreementAccepted}" />
-                            <Label Grid.Row="1"
-                                   Grid.ColumnSpan="2"
-                                   Text="Feedback and diagnostics are sent only when you choose to send them."
-                                   FontSize="12"
-                                   TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
-                        </Grid>
-
-                        <Grid ColumnDefinitions="*,Auto"
-                              RowDefinitions="Auto,Auto"
-                              RowSpacing="4">
-                            <Label Text="Include diagnostics"
-                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
-                            <Switch Grid.Column="1"
-                                    IsToggled="{Binding IncludeDiagnosticsInFeedback}" />
-                            <Label Grid.Row="1"
-                                   Grid.ColumnSpan="2"
-                                   Text="Includes app/device version and database schema/counts, not student or visit details."
-                                   FontSize="12"
-                                   TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
-                        </Grid>
-
-                        <Editor Text="{Binding FeedbackText}"
-                                Placeholder="What happened? What should work better?"
-                                AutoSize="TextChanges"
-                                MinimumHeightRequest="110" />
-
-                        <Button Text="Send Feedback"
-                                Command="{Binding SendFeedbackCommand}"
                                 BackgroundColor="{StaticResource Settings.Base}"
                                 TextColor="White"
                                 CornerRadius="12" />

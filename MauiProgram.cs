@@ -63,6 +63,7 @@ public static class MauiProgram
         builder.Services.AddTransient<AddVisitPage>();
         builder.Services.AddTransient<StudentProfilePage>();
         builder.Services.AddTransient<SettingsPage>();
+        builder.Services.AddTransient<FeedbackPage>();
         builder.Services.AddTransient<MyCalendarPage>();
         builder.Services.AddTransient<SelectStudentForVisitPage>();
         builder.Services.AddTransient<UpdateVisitPage>();
