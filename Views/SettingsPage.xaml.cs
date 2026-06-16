@@ -7,8 +7,11 @@ namespace MinistryTracker.Views;
 
 public partial class SettingsPage : ContentPage
 {
+    private const int DeveloperUnlockTapCount = 7;
+
     private readonly SettingsViewModel _vm;
     private bool _messengerRegistered;
+    private int _versionTapCount;
 
     public SettingsPage(SettingsViewModel vm)
     {
@@ -80,26 +83,6 @@ public partial class SettingsPage : ContentPage
             msg.SetResult(ok);
         });
 
-        WeakReferenceMessenger.Default.Register<UiPromptMessage>(this, async (_, msg) =>
-        {
-            var result = await MainThread.InvokeOnMainThreadAsync(async () =>
-            {
-                var page = GetCurrentPage();
-                if (page is null) return null;
-
-                return await page.DisplayPromptAsync(
-                    msg.Title,
-                    msg.Message,
-                    msg.Accept,
-                    msg.Cancel,
-                    msg.Placeholder,
-                    msg.MaxLength,
-                    null,
-                    msg.InitialValue);
-            });
-
-            msg.SetResult(result);
-        });
     }
 
     protected override void OnDisappearing()
@@ -113,13 +96,35 @@ public partial class SettingsPage : ContentPage
         WeakReferenceMessenger.Default.Unregister<UiAlertMessage>(this);
         WeakReferenceMessenger.Default.Unregister<UiSnackbarMessage>(this);
         WeakReferenceMessenger.Default.Unregister<UiConfirmMessage>(this);
-        WeakReferenceMessenger.Default.Unregister<UiPromptMessage>(this);
 
         _messengerRegistered = false;
+        _versionTapCount = 0;
     }
 
     private async void OnDoneClicked(object sender, EventArgs e)
     {
         await Navigation.PopModalAsync();
+    }
+
+    private async void OnVersionTapped(object sender, TappedEventArgs e)
+    {
+        if (_vm.IsDeveloperMode)
+            return;
+
+        _versionTapCount++;
+        var remaining = DeveloperUnlockTapCount - _versionTapCount;
+
+        if (remaining <= 0)
+        {
+            _vm.IsDeveloperMode = true;
+            _versionTapCount = 0;
+            await Toast.Make("Developer tools unlocked for this session.").Show();
+            return;
+        }
+
+        if (remaining <= 3)
+        {
+            await Toast.Make($"{remaining} taps away from developer tools.").Show();
+        }
     }
 }

@@ -169,9 +169,14 @@
                                FontAttributes="Bold"
                                TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
 
-                        <Label Text="{Binding VersionDisplay}"
+                        <Label x:Name="VersionLabel"
+                               Text="{Binding VersionDisplay}"
                                FontSize="12"
-                               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+                               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}">
+                            <Label.GestureRecognizers>
+                                <TapGestureRecognizer Tapped="OnVersionTapped" />
+                            </Label.GestureRecognizers>
+                        </Label>
 
                         <Label Text="{Binding Copyright}"
                                FontSize="12"
@@ -214,33 +219,6 @@
                             </toolkit:Expander.Content>
                         </toolkit:Expander>
                     </VerticalStackLayout>
-                </Border>
-
-                <!-- DEV MODE TOGGLE -->
-                <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}"
-                        Padding="14">
-                    <Border.StrokeShape>
-                        <RoundRectangle CornerRadius="16" />
-                    </Border.StrokeShape>
-
-                    <Grid ColumnDefinitions="*,Auto"
-                          RowDefinitions="Auto,Auto"
-                          RowSpacing="6">
-
-                        <Label Text="Developer Mode"
-                               FontSize="18"
-                               FontAttributes="Bold"
-                               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
-
-                        <Switch Grid.Column="1"
-                                IsToggled="{Binding IsDeveloperMode}" />
-
-                        <Label Grid.Row="1"
-                               Grid.ColumnSpan="2"
-                               Text="Shows local DB tools (health, seed, reset)."
-                               FontSize="12"
-                               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
-                    </Grid>
                 </Border>
 
                 <!-- DEV TOOLS -->
@@ -364,8 +342,14 @@
                                    FontSize="12"
                                    TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
-                            <Button Text="Delete &amp; Reseed Test Data"
-                                    Command="{Binding DeleteAndReseedTestDataCommand}" />
+                            <Label Text="Slide all the way right to delete and reseed."
+                                   FontSize="12"
+                                   FontAttributes="Bold"
+                                   TextColor="#b00020" />
+                            <Slider Minimum="0"
+                                    Maximum="100"
+                                    Value="{Binding DeleteAndReseedSliderValue, Mode=TwoWay}"
+                                    HorizontalOptions="FillAndExpand" />
                         </VerticalStackLayout>
                     </Border>
 
@@ -384,10 +368,14 @@
                                    FontSize="12"
                                    TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
-                            <Button Text="Reset DB (Schema + Data)"
-                                    BackgroundColor="#b00020"
-                                    TextColor="White"
-                                    Command="{Binding ResetDbSchemaAndDataCommand}" />
+                            <Label Text="Slide all the way right to reset schema and data."
+                                   FontSize="12"
+                                   FontAttributes="Bold"
+                                   TextColor="#b00020" />
+                            <Slider Minimum="0"
+                                    Maximum="100"
+                                    Value="{Binding ResetSchemaAndDataSliderValue, Mode=TwoWay}"
+                                    HorizontalOptions="FillAndExpand" />
                         </VerticalStackLayout>
                     </Border>
 
@@ -406,10 +394,14 @@
                                    FontSize="12"
                                    TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
-                            <Button Text="Reset DB (Schema Only)"
-                                    BackgroundColor="#7f1d1d"
-                                    TextColor="White"
-                                    Command="{Binding ResetDbSchemaOnlyCommand}" />
+                            <Label Text="Slide all the way right to reset schema only."
+                                   FontSize="12"
+                                   FontAttributes="Bold"
+                                   TextColor="#7f1d1d" />
+                            <Slider Minimum="0"
+                                    Maximum="100"
+                                    Value="{Binding ResetSchemaOnlySliderValue, Mode=TwoWay}"
+                                    HorizontalOptions="FillAndExpand" />
                         </VerticalStackLayout>
                     </Border>
 

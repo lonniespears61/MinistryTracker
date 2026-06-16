@@ -75,6 +75,15 @@ namespace MinistryTracker.ViewModels
         [ObservableProperty]
         private bool isMigrationRequired;
 
+        [ObservableProperty]
+        private double deleteAndReseedSliderValue;
+
+        [ObservableProperty]
+        private double resetSchemaAndDataSliderValue;
+
+        [ObservableProperty]
+        private double resetSchemaOnlySliderValue;
+
         // =====================================================================
         // CONSTRUCTOR
         // =====================================================================
@@ -146,6 +155,30 @@ namespace MinistryTracker.ViewModels
         public void DisableDeveloperMode()
         {
             IsDeveloperMode = false;
+        }
+
+        partial void OnDeleteAndReseedSliderValueChanged(double value)
+        {
+            if (value < 100 || IsBusy) return;
+
+            DeleteAndReseedSliderValue = 0;
+            _ = DeleteAndReseedTestData();
+        }
+
+        partial void OnResetSchemaAndDataSliderValueChanged(double value)
+        {
+            if (value < 100 || IsBusy) return;
+
+            ResetSchemaAndDataSliderValue = 0;
+            _ = ResetDbSchemaAndData();
+        }
+
+        partial void OnResetSchemaOnlySliderValueChanged(double value)
+        {
+            if (value < 100 || IsBusy) return;
+
+            ResetSchemaOnlySliderValue = 0;
+            _ = ResetDbSchemaOnly();
         }
 
         // =====================================================================
@@ -223,13 +256,6 @@ namespace MinistryTracker.ViewModels
         {
             if (IsBusy) return;
 
-            var proceed = await ConfirmTypedAsync(
-                "Delete & Reseed Test Data",
-                "This will delete all students and visits, then reseed test data.\n\nType DELETE to continue.",
-                "DELETE").ConfigureAwait(false);
-
-            if (!proceed) return;
-
             var ct = StartOperation();
 
             try
@@ -274,13 +300,6 @@ namespace MinistryTracker.ViewModels
         {
             if (IsBusy) return;
 
-            var proceed = await ConfirmTypedAsync(
-                "Reset DB (Schema + Data)",
-                "This will delete the local database, rebuild the schema, and reseed test data.\n\nType RESET to continue.",
-                "RESET").ConfigureAwait(false);
-
-            if (!proceed) return;
-
             var ct = StartOperation();
 
             try
@@ -324,13 +343,6 @@ namespace MinistryTracker.ViewModels
         private async Task ResetDbSchemaOnly()
         {
             if (IsBusy) return;
-
-            var proceed = await ConfirmTypedAsync(
-                "Reset DB (Schema Only)",
-                "This will delete the local database and rebuild the schema without inserting test data.\n\nType RESET to continue.",
-                "RESET").ConfigureAwait(false);
-
-            if (!proceed) return;
 
             var ct = StartOperation();
 
@@ -429,24 +441,6 @@ namespace MinistryTracker.ViewModels
             // Real migration flow stays in DataService.cs, not in diagnostics helpers.
 
             await Task.CompletedTask;
-        }
-
-        private async Task<bool> ConfirmTypedAsync(string title, string message, string requiredText)
-        {
-            var tcs = new TaskCompletionSource<string?>();
-
-            WeakReferenceMessenger.Default.Send(new UiPromptMessage(
-                title,
-                message,
-                response => tcs.TrySetResult(response),
-                accept: "Continue",
-                cancel: "Cancel",
-                placeholder: requiredText,
-                maxLength: requiredText.Length));
-
-            var response = await tcs.Task.ConfigureAwait(false);
-
-            return string.Equals(response?.Trim(), requiredText, StringComparison.OrdinalIgnoreCase);
         }
 
         // =====================================================================
