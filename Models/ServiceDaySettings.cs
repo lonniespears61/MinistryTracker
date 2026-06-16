@@ -4,6 +4,8 @@ namespace MinistryTracker.Models
 {
     public class ServiceDaySettings
     {
+        public List<ServiceDayRule> ActiveDays { get; set; } = new();
+
         public ServicePeriod Sunday { get; set; } = ServicePeriod.None;
         public ServicePeriod Monday { get; set; } = ServicePeriod.None;
         public ServicePeriod Tuesday { get; set; } = ServicePeriod.None;
@@ -14,7 +16,21 @@ namespace MinistryTracker.Models
 
         public ServicePeriod GetPeriod(DayOfWeek day)
         {
-            return day switch
+            return GetPeriods(day).FirstOrDefault();
+        }
+
+        public IReadOnlyList<ServicePeriod> GetPeriods(DayOfWeek day)
+        {
+            var periods = ActiveDays
+                .Where(x => x.Day == day && x.Period != ServicePeriod.None)
+                .Select(x => x.Period)
+                .Distinct()
+                .ToList();
+
+            if (periods.Count > 0)
+                return periods;
+
+            var legacyPeriod = day switch
             {
                 DayOfWeek.Sunday => Sunday,
                 DayOfWeek.Monday => Monday,
@@ -25,11 +41,16 @@ namespace MinistryTracker.Models
                 DayOfWeek.Saturday => Saturday,
                 _ => ServicePeriod.None
             };
+
+            return legacyPeriod == ServicePeriod.None
+                ? Array.Empty<ServicePeriod>()
+                : new[] { legacyPeriod };
         }
 
         public bool HasAnyConfiguredDay()
         {
-            return Sunday != ServicePeriod.None ||
+            return ActiveDays.Any(x => x.Period != ServicePeriod.None) ||
+                   Sunday != ServicePeriod.None ||
                    Monday != ServicePeriod.None ||
                    Tuesday != ServicePeriod.None ||
                    Wednesday != ServicePeriod.None ||

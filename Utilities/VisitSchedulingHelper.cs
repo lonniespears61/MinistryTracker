@@ -24,7 +24,7 @@ namespace MinistryTracker.Utilities
             if (selectedDate.HasValue)
             {
                 var date = selectedDate.Value.Date;
-                var period = settings.GetPeriod(date.DayOfWeek);
+                var period = GetFirstPeriod(settings, date.DayOfWeek);
                 var time = ToTime(period);
 
                 return date + time;
@@ -52,7 +52,7 @@ namespace MinistryTracker.Utilities
             // If today is a configured service day, do NOT use today.
             // Use the same day one week ahead at that day's default time.
             // ------------------------------------------------------------
-            var todayPeriod = settings.GetPeriod(today.DayOfWeek);
+            var todayPeriod = GetFirstPeriod(settings, today.DayOfWeek);
             if (todayPeriod != ServicePeriod.None)
             {
                 var nextWeek = today.AddDays(7);
@@ -67,7 +67,7 @@ namespace MinistryTracker.Utilities
             for (int i = 1; i <= 7; i++)
             {
                 var candidate = today.AddDays(i);
-                var period = settings.GetPeriod(candidate.DayOfWeek);
+                var period = GetFirstPeriod(settings, candidate.DayOfWeek);
 
                 if (period != ServicePeriod.None)
                 {
@@ -90,6 +90,24 @@ namespace MinistryTracker.Utilities
                 ServicePeriod.Afternoon => new TimeSpan(13, 0, 0),
                 ServicePeriod.Evening => new TimeSpan(18, 0, 0),
                 _ => DefaultFallbackTime
+            };
+        }
+
+        private static ServicePeriod GetFirstPeriod(ServiceDaySettings settings, DayOfWeek day)
+        {
+            return settings.GetPeriods(day)
+                .OrderBy(GetPeriodSortOrder)
+                .FirstOrDefault();
+        }
+
+        private static int GetPeriodSortOrder(ServicePeriod period)
+        {
+            return period switch
+            {
+                ServicePeriod.Morning => 0,
+                ServicePeriod.Afternoon => 1,
+                ServicePeriod.Evening => 2,
+                _ => 3
             };
         }
     }

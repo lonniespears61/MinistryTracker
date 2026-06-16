@@ -141,7 +141,7 @@ namespace MinistryTracker.ViewModels
         public List<ServicePeriod> ServicePeriodValues =>
             Enum.GetValues<ServicePeriod>().ToList();
 
-        public bool CanAddServiceDay => ActiveServiceDays.Count < 7;
+        public bool CanAddServiceDay => ActiveServiceDays.Count < 21;
 
         // =====================================================================
         // SETTINGS LOAD / SAVE
@@ -153,13 +153,27 @@ namespace MinistryTracker.ViewModels
 
             ActiveServiceDays.Clear();
 
-            AddServiceDayRowIfConfigured(DayOfWeek.Saturday, ServiceDays.Saturday);
-            AddServiceDayRowIfConfigured(DayOfWeek.Sunday, ServiceDays.Sunday);
-            AddServiceDayRowIfConfigured(DayOfWeek.Monday, ServiceDays.Monday);
-            AddServiceDayRowIfConfigured(DayOfWeek.Tuesday, ServiceDays.Tuesday);
-            AddServiceDayRowIfConfigured(DayOfWeek.Wednesday, ServiceDays.Wednesday);
-            AddServiceDayRowIfConfigured(DayOfWeek.Thursday, ServiceDays.Thursday);
-            AddServiceDayRowIfConfigured(DayOfWeek.Friday, ServiceDays.Friday);
+            var rules = ServiceDays.ActiveDays
+                .Where(x => x.Period != ServicePeriod.None)
+                .OrderBy(x => GetDaySortOrder(x.Day))
+                .ThenBy(x => x.Period)
+                .ToList();
+
+            if (rules.Count > 0)
+            {
+                foreach (var rule in rules)
+                    ActiveServiceDays.Add(new ServiceDaySettingRowViewModel(rule.Day, rule.Period));
+            }
+            else
+            {
+                AddServiceDayRowIfConfigured(DayOfWeek.Saturday, ServiceDays.Saturday);
+                AddServiceDayRowIfConfigured(DayOfWeek.Sunday, ServiceDays.Sunday);
+                AddServiceDayRowIfConfigured(DayOfWeek.Monday, ServiceDays.Monday);
+                AddServiceDayRowIfConfigured(DayOfWeek.Tuesday, ServiceDays.Tuesday);
+                AddServiceDayRowIfConfigured(DayOfWeek.Wednesday, ServiceDays.Wednesday);
+                AddServiceDayRowIfConfigured(DayOfWeek.Thursday, ServiceDays.Thursday);
+                AddServiceDayRowIfConfigured(DayOfWeek.Friday, ServiceDays.Friday);
+            }
 
             OnPropertyChanged(nameof(CanAddServiceDay));
         }
@@ -174,15 +188,15 @@ namespace MinistryTracker.ViewModels
         [RelayCommand]
         private void SaveServiceDaySettings()
         {
-            var duplicateDay = ActiveServiceDays
-                .GroupBy(x => x.Day)
+            var duplicateRule = ActiveServiceDays
+                .GroupBy(x => new { x.Day, x.Period })
                 .FirstOrDefault(g => g.Count() > 1)
                 ?.Key;
 
-            if (duplicateDay is not null)
+            if (duplicateRule is not null)
             {
                 WeakReferenceMessenger.Default.Send(
-                    new UiAlertMessage("Duplicate Service Day", $"{duplicateDay} is listed more than once. Remove or change the duplicate before saving."));
+                    new UiAlertMessage("Duplicate Service Time", $"{duplicateRule.Day} {duplicateRule.Period} is listed more than once. Remove or change the duplicate before saving."));
                 return;
             }
 
@@ -202,7 +216,7 @@ namespace MinistryTracker.ViewModels
                 return;
             }
 
-            ActiveServiceDays.Add(new ServiceDaySettingRowViewModel(nextDay.Value, ServicePeriod.Morning));
+            ActiveServiceDays.Add(new ServiceDaySettingRowViewModel(nextDay.Value.Day, nextDay.Value.Period));
             OnPropertyChanged(nameof(CanAddServiceDay));
         }
 
@@ -224,10 +238,10 @@ namespace MinistryTracker.ViewModels
             ActiveServiceDays.Add(new ServiceDaySettingRowViewModel(day, period));
         }
 
-        private DayOfWeek? GetNextUnusedServiceDay()
+        private (DayOfWeek Day, ServicePeriod Period)? GetNextUnusedServiceDay()
         {
-            var usedDays = ActiveServiceDays
-                .Select(x => x.Day)
+            var usedRules = ActiveServiceDays
+                .Select(x => (x.Day, x.Period))
                 .ToHashSet();
 
             var preferredOrder = new[]
@@ -243,8 +257,18 @@ namespace MinistryTracker.ViewModels
 
             foreach (var day in preferredOrder)
             {
-                if (!usedDays.Contains(day))
-                    return day;
+                var periods = new[]
+                {
+                    ServicePeriod.Morning,
+                    ServicePeriod.Afternoon,
+                    ServicePeriod.Evening
+                };
+
+                foreach (var period in periods)
+                {
+                    if (!usedRules.Contains((day, period)))
+                        return (day, period);
+                }
             }
 
             return null;
@@ -256,6 +280,15 @@ namespace MinistryTracker.ViewModels
 
             foreach (var row in ActiveServiceDays)
             {
+                if (row.Period == ServicePeriod.None)
+                    continue;
+
+                settings.ActiveDays.Add(new ServiceDayRule
+                {
+                    Day = row.Day,
+                    Period = row.Period
+                });
+
                 switch (row.Day)
                 {
                     case DayOfWeek.Sunday:
@@ -283,6 +316,21 @@ namespace MinistryTracker.ViewModels
             }
 
             return settings;
+        }
+
+        private static int GetDaySortOrder(DayOfWeek day)
+        {
+            return day switch
+            {
+                DayOfWeek.Saturday => 0,
+                DayOfWeek.Sunday => 1,
+                DayOfWeek.Monday => 2,
+                DayOfWeek.Tuesday => 3,
+                DayOfWeek.Wednesday => 4,
+                DayOfWeek.Thursday => 5,
+                DayOfWeek.Friday => 6,
+                _ => 7
+            };
         }
 
         // =====================================================================
