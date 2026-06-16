@@ -56,12 +56,10 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.7" />
 		<PackageReference Include="Microsoft.Maui.Controls.Maps" Version="9.0.90" />
 		<PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
+		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />
 	</ItemGroup>
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Maui.Controls" Version="9.0.120" />
-		<PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.2" />
-		<PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />
-		<PackageReference Include="SQLitePCLRaw.core" Version="3.0.2" />
 	</ItemGroup>
 	
 	<ItemGroup>
@@ -75,6 +73,9 @@
 	  </Compile>
 	  <Compile Update="Views\MyCalendarPage.xaml.cs">
 	    <DependentUpon>MyCalendarPage.xaml</DependentUpon>
+	  </Compile>
+	  <Compile Update="Views\SelectStudentForVisitPage.xaml.cs">
+	    <DependentUpon>SelectStudentForVisitPage.xaml</DependentUpon>
 	  </Compile>
 	  <Compile Update="Views\StudentsListPage.xaml.cs">
 	    <DependentUpon>StudentsListPage.xaml</DependentUpon>
@@ -98,6 +99,9 @@
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	  <MauiXaml Update="Views\MyCalendarPage.xaml">
+	    <Generator>MSBuild:Compile</Generator>
+	  </MauiXaml>
+	  <MauiXaml Update="Views\SelectStudentForVisitPage.xaml">
 	    <Generator>MSBuild:Compile</Generator>
 	  </MauiXaml>
 	  <MauiXaml Update="Views\SettingsPage.xaml">

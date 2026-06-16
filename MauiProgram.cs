@@ -47,6 +47,7 @@ public static class MauiProgram
         builder.Services.AddTransient<SettingsViewModel>();
      
         builder.Services.AddTransient<MyCalendarViewModel>();
+        builder.Services.AddTransient<SelectStudentForVisitViewModel>();
         builder.Services.AddTransient<UpdateVisitViewModel>();
         builder.Services.AddTransient<StudentsMapViewModel>();
 
@@ -60,6 +61,7 @@ public static class MauiProgram
         builder.Services.AddTransient<StudentProfilePage>();
         builder.Services.AddTransient<SettingsPage>();
         builder.Services.AddTransient<MyCalendarPage>();
+        builder.Services.AddTransient<SelectStudentForVisitPage>();
         builder.Services.AddTransient<UpdateVisitPage>();
         builder.Services.AddTransient<StudentsMapPage>();
 

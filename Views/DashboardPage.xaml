@@ -94,7 +94,7 @@
                             <CollectionView.EmptyView>
                                 <Label
                                     Text="No calls planned for today."
-                                    TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                                    TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
                             </CollectionView.EmptyView>
 
                             <CollectionView.ItemTemplate>
@@ -108,13 +108,13 @@
                                             Text="{Binding ScheduledDateTime, StringFormat='{0:h:mm tt}'}"
                                             FontAttributes="Bold"
                                             WidthRequest="90"
-                                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                                            TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
 
                                         <Label
                                             Grid.Column="1"
                                             Text="{Binding StudentName}"
                                             LineBreakMode="TailTruncation"
-                                            TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                                            TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
                                     </Grid>
                                 </DataTemplate>
                             </CollectionView.ItemTemplate>
@@ -123,7 +123,7 @@
                         <Label
                             Text="Use the My Calendar tab for the full schedule."
                             FontSize="12"
-                            TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                            TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
                     </VerticalStackLayout>
                 </Border>
 
@@ -148,15 +148,52 @@
 
                     <VerticalStackLayout Spacing="8">
                         <Label
-                            Text="Let’s Check On"
+                            Text="Let's Check On"
                             FontSize="18"
                             FontAttributes="Bold"
-                            TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
+                            TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
 
-                        <Label
-                            Text="Next session: suggestions based on time since last visit."
-                            FontSize="12"
-                            TextColor="{AppThemeBinding Light={StaticResource TextSecondaryLight}, Dark={StaticResource TextSecondaryDark}}" />
+                        <CollectionView
+                            ItemsSource="{Binding CheckOnStudents}"
+                            SelectionMode="Single"
+                            SelectionChanged="OnCheckOnSelectionChanged">
+
+                            <CollectionView.EmptyView>
+                                <Label
+                                    Text="No follow-up suggestions right now."
+                                    FontSize="12"
+                                    TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                            </CollectionView.EmptyView>
+
+                            <CollectionView.ItemTemplate>
+                                <DataTemplate x:DataType="dto:CheckOnStudentSuggestion">
+                                    <Grid
+                                        ColumnDefinitions="*,Auto"
+                                        RowDefinitions="Auto,Auto"
+                                        Padding="0,8"
+                                        ColumnSpacing="12">
+
+                                        <Label
+                                            Text="{Binding StudentName}"
+                                            FontAttributes="Bold"
+                                            TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+
+                                        <Label
+                                            Grid.Row="1"
+                                            Text="{Binding LastVisitDisplay}"
+                                            FontSize="12"
+                                            TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+
+                                        <Label
+                                            Grid.Column="1"
+                                            Grid.RowSpan="2"
+                                            Text="Schedule"
+                                            VerticalOptions="Center"
+                                            TextColor="{StaticResource Dashboard.Base}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </CollectionView.ItemTemplate>
+                        </CollectionView>
                     </VerticalStackLayout>
                 </Border>
 

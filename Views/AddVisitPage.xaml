@@ -30,8 +30,7 @@
             <VerticalStackLayout Spacing="6">
                 <Label Text="Visit Time" />
                 <TimePicker x:Name="VisitTimePicker"
-                            Time="{Binding VisitTime, Mode=TwoWay}"
-                            IsEnabled="False" />
+                            Time="{Binding VisitTime, Mode=TwoWay}" />
             </VerticalStackLayout>
 
             <Button Text="Schedule Visit"

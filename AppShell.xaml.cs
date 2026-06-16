@@ -7,6 +7,8 @@ namespace MinistryTracker;
 
 public partial class AppShell : Shell
 {
+    public const string CalendarTabRoute = "CalendarTab";
+
     private readonly IServiceProvider _services;
 
     public AppShell(IServiceProvider services)
@@ -50,6 +52,7 @@ public partial class AppShell : Shell
 
         tabs.Items.Add(new ShellContent
         {
+            Route = CalendarTabRoute,
             Title = "My Calendar",
             Icon = "icon_calendar.png",
             ContentTemplate = new DataTemplate(() => _services.GetRequiredService<MyCalendarPage>())
@@ -66,6 +69,7 @@ public partial class AppShell : Shell
         Routing.RegisterRoute(nameof(AddStudentPage), typeof(AddStudentPage));
         Routing.RegisterRoute(nameof(StudentsMapPage), typeof(StudentsMapPage));
         Routing.RegisterRoute(nameof(MyCalendarPage), typeof(MyCalendarPage));
+        Routing.RegisterRoute(nameof(SelectStudentForVisitPage), typeof(SelectStudentForVisitPage));
 
 
         // Visit-related pages

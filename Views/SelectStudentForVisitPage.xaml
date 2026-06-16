@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MinistryTracker.Views.SelectStudentForVisitPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
+    x:DataType="viewmodels:SelectStudentForVisitViewModel"
+    Title="Choose Student">
+
+    <Grid RowDefinitions="Auto,Auto,*"
+          Padding="16,12"
+          RowSpacing="12">
+
+        <VerticalStackLayout Grid.Row="0" Spacing="4">
+            <Label Text="Choose Student"
+                   FontSize="22"
+                   FontAttributes="Bold" />
+
+            <Label Text="{Binding VisitDateTitle}"
+                   FontSize="13"
+                   TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+        </VerticalStackLayout>
+
+        <SearchBar Grid.Row="1"
+                   Placeholder="Search students"
+                   Text="{Binding SearchText}" />
+
+        <CollectionView x:Name="StudentsCollection"
+                        Grid.Row="2"
+                        ItemsSource="{Binding FilteredStudents}"
+                        SelectionMode="Single"
+                        SelectionChanged="OnStudentSelectionChanged"
+                        EmptyView="No active students found.">
+
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="viewmodels:StudentViewModel">
+                    <Border Stroke="{AppThemeBinding Light={StaticResource Gray200}, Dark={StaticResource Gray600}}"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 14"
+                            Padding="12,10"
+                            Margin="0,0,0,10">
+
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                            <Border WidthRequest="36"
+                                    HeightRequest="36"
+                                    BackgroundColor="#EEF2FF"
+                                    StrokeThickness="0">
+                                <Border.StrokeShape>
+                                    <RoundRectangle CornerRadius="18" />
+                                </Border.StrokeShape>
+
+                                <Label Text="{Binding Initials}"
+                                       FontAttributes="Bold"
+                                       HorizontalOptions="Center"
+                                       VerticalOptions="Center"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource Gray900}}" />
+                            </Border>
+
+                            <VerticalStackLayout Grid.Column="1" Spacing="2">
+                                <Label Text="{Binding Name}"
+                                       FontSize="17"
+                                       FontAttributes="Bold"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray900}, Dark={StaticResource White}}" />
+
+                                <Label Text="{Binding SubTitle}"
+                                       FontSize="12"
+                                       TextColor="{AppThemeBinding Light={StaticResource Gray600}, Dark={StaticResource Gray300}}" />
+                            </VerticalStackLayout>
+
+                            <Label Grid.Column="2"
+                                   Text="Select"
+                                   VerticalOptions="Center"
+                                   TextColor="{StaticResource Primary}" />
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

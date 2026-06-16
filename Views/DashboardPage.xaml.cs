@@ -1,7 +1,9 @@
-ï»¿// DashboardPage.xaml.cs â€” Dashboard interactions â€” 2026-01-22
+// DashboardPage.xaml.cs — Dashboard interactions — 2026-01-22
 
 using System;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
+using MinistryTracker.Models.DTOs;
 using MinistryTracker.ViewModels;
 
 namespace MinistryTracker.Views;
@@ -36,6 +38,23 @@ public partial class DashboardPage : ContentPage
 
     private async void OnAddNewCallClicked(object sender, EventArgs e)
         => await Shell.Current.GoToAsync(nameof(AddStudentPage));
+
+    private async void OnCheckOnSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is CollectionView collectionView)
+            collectionView.SelectedItem = null;
+
+        var suggestion = e.CurrentSelection
+            .OfType<CheckOnStudentSuggestion>()
+            .FirstOrDefault();
+
+        if (suggestion is null)
+            return;
+
+        var today = DateTime.Today.ToString("yyyy-MM-dd");
+        await Shell.Current.GoToAsync(
+            $"{nameof(AddVisitPage)}?studentId={suggestion.StudentId}&date={today}");
+    }
 
     private async void OnOpenMapClicked(object sender, EventArgs e)
         => await Shell.Current.GoToAsync(nameof(StudentsMapPage));

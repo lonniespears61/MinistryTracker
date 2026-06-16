@@ -187,5 +187,62 @@ ORDER BY v.ScheduledDateTime ASC;";
 
             }, ct);
         }
+
+        public Task<List<CheckOnStudentSuggestion>> GetCheckOnStudentSuggestionsAsync(
+            int take = 5,
+            int minDaysSinceVisit = 30,
+            CancellationToken ct = default)
+            => EnsureInitThen(async () =>
+            {
+                ct.ThrowIfCancellationRequested();
+
+                var now = DateTime.Now;
+                var cutoff = DateTime.Today.AddDays(-minDaysSinceVisit);
+
+                var students = await Db.Table<Student>()
+                    .Where(s => !s.IsDeleted && s.Status == StudentStatus.Active)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+
+                if (students.Count == 0)
+                    return new List<CheckOnStudentSuggestion>();
+
+                var visits = await Db.Table<Visit>()
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+
+                var futureScheduledStudentIds = visits
+                    .Where(v => v.Status == VisitStatus.Scheduled && v.ScheduledDateTime >= now)
+                    .Select(v => v.StudentId)
+                    .Distinct()
+                    .ToHashSet();
+
+                var suggestions = students
+                    .Where(s => !futureScheduledStudentIds.Contains(s.StudentId))
+                    .Select(s =>
+                    {
+                        var lastVisit = visits
+                            .Where(v =>
+                                v.StudentId == s.StudentId &&
+                                v.ScheduledDateTime < now &&
+                                v.Status != VisitStatus.Canceled)
+                            .OrderByDescending(v => v.ScheduledDateTime)
+                            .FirstOrDefault();
+
+                        return new CheckOnStudentSuggestion
+                        {
+                            StudentId = s.StudentId,
+                            StudentName = s.Name ?? "(Unnamed)",
+                            LastVisitDate = lastVisit?.ScheduledDateTime
+                        };
+                    })
+                    .Where(x => x.LastVisitDate is null || x.LastVisitDate.Value.Date <= cutoff)
+                    .OrderBy(x => x.LastVisitDate ?? DateTime.MinValue)
+                    .ThenBy(x => x.StudentName)
+                    .Take(Math.Clamp(take, 3, 5))
+                    .ToList();
+
+                return suggestions;
+            }, ct);
     }
 }

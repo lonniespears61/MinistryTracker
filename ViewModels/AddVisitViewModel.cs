@@ -1,4 +1,4 @@
-﻿// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
 // AddVisitViewModel.cs
 //
 // PURPOSE
@@ -19,6 +19,7 @@ using MinistryTracker.Data;
 using MinistryTracker.Models;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Threading.Tasks;
 
 namespace MinistryTracker.ViewModels
@@ -55,6 +56,9 @@ namespace MinistryTracker.ViewModels
         [ObservableProperty]
         private bool isBusy;
 
+        [ObservableProperty]
+        private string? returnTo;
+
         public IAsyncRelayCommand SaveCommand { get; }
 
         public async void ApplyQueryAttributes(IDictionary<string, object> query)
@@ -69,6 +73,25 @@ namespace MinistryTracker.ViewModels
                 {
                     StudentId = parsed;
                 }
+            }
+
+            if (query.TryGetValue("date", out var rawDate) && rawDate is not null)
+            {
+                if (rawDate is DateTime date)
+                {
+                    VisitDate = date.Date;
+                }
+                else if (rawDate is string s &&
+                         (DateTime.TryParseExact(s, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var parsed) ||
+                          DateTime.TryParse(s, CultureInfo.CurrentCulture, DateTimeStyles.None, out parsed)))
+                {
+                    VisitDate = parsed.Date;
+                }
+            }
+
+            if (query.TryGetValue("returnTo", out var rawReturnTo) && rawReturnTo is not null)
+            {
+                ReturnTo = rawReturnTo.ToString();
             }
 
             await LoadStudentNameAsync();
@@ -115,6 +138,12 @@ namespace MinistryTracker.ViewModels
                 };
 
                 await _data.AddVisitAsync(visit);
+
+                if (string.Equals(ReturnTo, "calendar", StringComparison.OrdinalIgnoreCase))
+                {
+                    await Shell.Current.GoToAsync($"//{MinistryTracker.AppShell.CalendarTabRoute}");
+                    return;
+                }
 
                 await Shell.Current.GoToAsync("..");
             }

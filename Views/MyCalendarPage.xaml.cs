@@ -83,12 +83,19 @@ public partial class MyCalendarPage : ContentPage
         }
     }
 
-    private async void OnScheduleVisitRequested(int studentId, DateTime date)
+    private async void OnScheduleVisitRequested(int? studentId, DateTime date)
     {
         try
         {
             var dateString = date.ToString("yyyy-MM-dd");
-            await Shell.Current.GoToAsync($"{nameof(AddVisitPage)}?studentId={studentId}&date={dateString}");
+
+            if (studentId is int sid && sid > 0)
+            {
+                await Shell.Current.GoToAsync($"{nameof(AddVisitPage)}?studentId={sid}&date={dateString}&returnTo=calendar");
+                return;
+            }
+
+            await Shell.Current.GoToAsync($"{nameof(SelectStudentForVisitPage)}?date={dateString}");
         }
         catch (Exception ex)
         {

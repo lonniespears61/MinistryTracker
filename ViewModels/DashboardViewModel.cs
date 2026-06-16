@@ -1,4 +1,4 @@
-ï»¿// ViewModels/DashboardViewModel.cs
+// ViewModels/DashboardViewModel.cs
 using System;
 using System.IO;
 using System.Collections.ObjectModel;
@@ -33,6 +33,7 @@ namespace MinistryTracker.ViewModels
         public ObservableCollection<VisitWithStudent> ThisWeekScheduled { get; } = new();
         // Optional: top 5 upcoming from "now"
         public ObservableCollection<VisitWithStudent> ThisWeekUpcoming { get; } = new();
+        public ObservableCollection<CheckOnStudentSuggestion> CheckOnStudents { get; } = new();
 
         [ObservableProperty] private bool isBusy;
 
@@ -58,7 +59,7 @@ namespace MinistryTracker.ViewModels
                 // --- Students ---
                 // Prefer a clear rule: Active only. If your Student model uses IsDeleted instead,
                 // change the predicate to: s => !s.IsDeleted
-                var students = await _data.GetStudentsAsync().ConfigureAwait(false);
+                var students = await _data.GetStudentsAsync();
                 ActiveStudentsCount = students.Count(s => s.Status == StudentStatus.Active);
 
                 // --- Date bounds for "this week" (Sunday..Saturday) ---
@@ -69,11 +70,10 @@ namespace MinistryTracker.ViewModels
                 var weekEnd = weekStart.AddDays(7);            // next Sunday 00:00 (exclusive)
 
                 // ---- Visits this week (all statuses) ----
-                // Prefer a single â€œflattenedâ€ query that already joins students.
-                // If you donâ€™t have these methods in DataService yet, see notes below.
+                // Prefer a single “flattened” query that already joins students.
+                // If you don’t have these methods in DataService yet, see notes below.
                 var allThisWeek = await _data
-                    .GetVisitsWithStudentsInRangeAsync(weekStart, weekEnd)
-                    .ConfigureAwait(false);
+                    .GetVisitsWithStudentsInRangeAsync(weekStart, weekEnd);
 
                 ThisWeekScheduledCount = allThisWeek.Count(v => v.Status == VisitStatus.Scheduled);
                 ThisWeekCompletedCount = allThisWeek.Count(v => v.Status == VisitStatus.Completed);
@@ -99,12 +99,20 @@ namespace MinistryTracker.ViewModels
                 ThisWeekUpcoming.Clear();
                 foreach (var v in upcoming)
                     ThisWeekUpcoming.Add(v);
+
+                var checkOn = await _data
+                    .GetCheckOnStudentSuggestionsAsync(take: 5, minDaysSinceVisit: 30);
+
+                CheckOnStudents.Clear();
+                foreach (var student in checkOn)
+                    CheckOnStudents.Add(student);
             }
             catch (Exception ex)
             {
-                // Donâ€™t crash the page; you can surface ex.Message via a toast if you like
+                // Don’t crash the page; you can surface ex.Message via a toast if you like
                 ThisWeekScheduled.Clear();
                 ThisWeekUpcoming.Clear();
+                CheckOnStudents.Clear();
                 ThisWeekScheduledCount = ThisWeekCompletedCount = ThisWeekCanceledCount = 0;
                 ActiveStudentsCount = 0;
 

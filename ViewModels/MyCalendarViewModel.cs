@@ -38,7 +38,7 @@ public partial class MyCalendarViewModel : ObservableObject
             ? $"Scheduling a new visit for: {SchedulingStudentName}"
             : string.Empty;
 
-    public event Action<int, DateTime>? ScheduleVisitRequested;
+    public event Action<int?, DateTime>? ScheduleVisitRequested;
 
     // -------------------------
     // Calendar state
@@ -64,10 +64,10 @@ public partial class MyCalendarViewModel : ObservableObject
         DisplayedMonth.Year != DateTime.Today.Year || DisplayedMonth.Month != DateTime.Today.Month;
 
     public bool CanAddVisitForSelectedDay =>
-        IsSchedulingMode &&
-        SchedulingStudentId is not null &&
         SelectedDayCell is not null &&
-        !SelectedDayCell.IsPlaceholder;
+        !SelectedDayCell.IsPlaceholder &&
+        SelectedDayCell.Date.Date >= DateTime.Today &&
+        (!IsSchedulingMode || SchedulingStudentId is not null);
 
     public MyCalendarViewModel(DataService data, ILogger<MyCalendarViewModel>? log = null)
     {
@@ -165,10 +165,9 @@ public partial class MyCalendarViewModel : ObservableObject
     private void AddVisitForSelectedDay()
     {
         if (!CanAddVisitForSelectedDay) return;
-        if (SchedulingStudentId is null) return;
         if (SelectedDayCell is null || SelectedDayCell.IsPlaceholder) return;
 
-        ScheduleVisitRequested?.Invoke(SchedulingStudentId.Value, SelectedDayCell.Date.Date);
+        ScheduleVisitRequested?.Invoke(SchedulingStudentId, SelectedDayCell.Date.Date);
     }
 
     // -------------------------
