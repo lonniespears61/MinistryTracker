@@ -47,4 +47,17 @@ The app does not automatically send crash reports, errors, or personal data. Fee
 
 PERSONAL DATA
 Do not include sensitive student details in feedback unless you intentionally choose to share them.";
+
+    public string DataSharingAgreementText { get; } =
+@"ON-DEMAND SHARING
+You may choose to share a selected student, visit, or scheduled follow-up with another user/device when someone else needs to help with a visit.
+
+USER CONTROL
+Sharing should happen only when you intentionally tap a Share action and choose what to send. The app should not automatically share student or visit data in the background.
+
+LIMITED PURPOSE
+Shared information should be used only for the specific visit or coverage need, such as vacation or temporary help.
+
+PERSONAL RESPONSIBILITY
+Before sharing, review the information and make sure it is appropriate to send to the selected person/device.";
 }

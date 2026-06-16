@@ -11,6 +11,8 @@ namespace MinistryTracker.Services
         private const string BetaTesterAgreementAcceptedKey = "beta_tester_agreement_accepted";
         private const string BetaTesterAgreementAcceptedOnKey = "beta_tester_agreement_accepted_on_utc";
         private const string IncludeDiagnosticsInFeedbackKey = "include_diagnostics_in_feedback";
+        private const string DataSharingAgreementAcceptedKey = "data_sharing_agreement_accepted";
+        private const string DataSharingAgreementAcceptedOnKey = "data_sharing_agreement_accepted_on_utc";
 
         public ServiceDaySettings GetServiceDaySettings()
         {
@@ -61,6 +63,21 @@ namespace MinistryTracker.Services
         public void SaveIncludeDiagnosticsInFeedback(bool includeDiagnostics)
         {
             Preferences.Set(IncludeDiagnosticsInFeedbackKey, includeDiagnostics);
+        }
+
+        public bool GetDataSharingAgreementAccepted()
+        {
+            return Preferences.Get(DataSharingAgreementAcceptedKey, false);
+        }
+
+        public void SaveDataSharingAgreementAccepted(bool accepted)
+        {
+            Preferences.Set(DataSharingAgreementAcceptedKey, accepted);
+
+            if (accepted)
+                Preferences.Set(DataSharingAgreementAcceptedOnKey, DateTime.UtcNow.ToString("O"));
+            else
+                Preferences.Remove(DataSharingAgreementAcceptedOnKey);
         }
     }
 }

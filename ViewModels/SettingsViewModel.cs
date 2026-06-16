@@ -73,6 +73,9 @@ namespace MinistryTracker.ViewModels
         [ObservableProperty]
         private string? feedbackText;
 
+        [ObservableProperty]
+        private bool dataSharingAgreementAccepted;
+
         // =====================================================================
         // SCHEMA VERSION DISPLAY
         // =====================================================================
@@ -148,6 +151,7 @@ namespace MinistryTracker.ViewModels
         {
             BetaTesterAgreementAccepted = _settingsService.GetBetaTesterAgreementAccepted();
             IncludeDiagnosticsInFeedback = _settingsService.GetIncludeDiagnosticsInFeedback();
+            DataSharingAgreementAccepted = _settingsService.GetDataSharingAgreementAccepted();
         }
 
         [RelayCommand]
@@ -189,6 +193,11 @@ namespace MinistryTracker.ViewModels
             }
 
             _settingsService.SaveIncludeDiagnosticsInFeedback(value);
+        }
+
+        partial void OnDataSharingAgreementAcceptedChanged(bool value)
+        {
+            _settingsService.SaveDataSharingAgreementAccepted(value);
         }
 
         public void DisableDeveloperMode()
