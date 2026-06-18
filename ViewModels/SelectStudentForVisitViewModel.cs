@@ -7,6 +7,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Extensions.Logging;
 using MinistryTracker.Data;
+using MinistryTracker.Data.Repositories;
 using MinistryTracker.Models.Enums;
 using System;
 using System.Collections.Generic;
@@ -18,7 +19,7 @@ namespace MinistryTracker.ViewModels;
 
 public partial class SelectStudentForVisitViewModel : ObservableObject
 {
-    private readonly DataService _data;
+    private readonly IStudentRepository _students;
     private readonly ILogger<SelectStudentForVisitViewModel>? _log;
 
     public ObservableCollection<StudentViewModel> Students { get; } = new();
@@ -31,10 +32,10 @@ public partial class SelectStudentForVisitViewModel : ObservableObject
     public string VisitDateTitle => $"Schedule for {VisitDate:dddd, MMMM d}";
 
     public SelectStudentForVisitViewModel(
-        DataService data,
+        IStudentRepository students,
         ILogger<SelectStudentForVisitViewModel>? log = null)
     {
-        _data = data ?? throw new ArgumentNullException(nameof(data));
+        _students = students ?? throw new ArgumentNullException(nameof(students));
         _log = log;
     }
 
@@ -49,7 +50,7 @@ public partial class SelectStudentForVisitViewModel : ObservableObject
         {
             IsBusy = true;
 
-            var students = await _data.GetStudentsAsync().ConfigureAwait(false);
+            var students = await _students.GetStudentsAsync().ConfigureAwait(false);
             var activeStudents = students
                 .Where(s => s.Status == StudentStatus.Active)
                 .OrderBy(s => s.Name)

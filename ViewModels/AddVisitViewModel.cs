@@ -15,13 +15,14 @@
 //
 // CHANGE NOTES
 // - Enforces a minimum 30-minute gap between scheduled visits.
-// - Uses existing DataService range query instead of introducing new data methods.
+// - Uses the existing visit range query instead of introducing new data methods.
 //
 // ---------------------------------------------------------------------------------------------------------------------
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MinistryTracker.Data;
+using MinistryTracker.Data.Repositories;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
 using MinistryTracker.Services;
@@ -35,12 +36,12 @@ namespace MinistryTracker.ViewModels
 {
     public partial class AddVisitViewModel : ObservableObject, IQueryAttributable
     {
-        private readonly DataService _data;
+        private readonly IVisitRepository _visits;
         private readonly SettingsService _settingsService;
 
-        public AddVisitViewModel(DataService data, SettingsService settingsService)
+        public AddVisitViewModel(IVisitRepository visits, SettingsService settingsService)
         {
-            _data = data ?? throw new ArgumentNullException(nameof(data));
+            _visits = visits ?? throw new ArgumentNullException(nameof(visits));
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
 
             ApplyDefaultVisitDateTime();
@@ -210,7 +211,7 @@ namespace MinistryTracker.ViewModels
                 var windowStart = scheduledDateTime.AddMinutes(-29);
                 var windowEnd = scheduledDateTime.AddMinutes(29);
 
-                var nearbyVisits = await _data
+                var nearbyVisits = await _visits
                     .GetVisitsWithStudentsInRangeAsync(windowStart, windowEnd, includeCanceled: false)
                     .ConfigureAwait(false);
 
@@ -235,7 +236,7 @@ namespace MinistryTracker.ViewModels
                     Status = VisitStatus.Scheduled
                 };
 
-                await _data.AddVisitAsync(visit).ConfigureAwait(false);
+                await _visits.AddVisitAsync(visit).ConfigureAwait(false);
 
                 SaveCompleted?.Invoke();
             }

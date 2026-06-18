@@ -6,7 +6,7 @@
 // - Loads visit details by visitId.
 // - Saves same-record edits for allowed fields.
 // - Cancels the current visit.
-// - Owns reschedule execution using DataService.
+// - Owns reschedule execution using the visit repository.
 //
 // DESIGN RULES
 // - ViewModel must NOT inherit from ContentPage.
@@ -25,6 +25,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MinistryTracker.Data;
+using MinistryTracker.Data.Repositories;
 using MinistryTracker.Models.Enums;
 using System;
 using System.Collections.Generic;
@@ -35,11 +36,13 @@ namespace MinistryTracker.ViewModels
 {
     public partial class UpdateVisitViewModel : ObservableObject
     {
-        private readonly DataService _data;
+        private readonly IStudentRepository _students;
+        private readonly IVisitRepository _visits;
 
-        public UpdateVisitViewModel(DataService data)
+        public UpdateVisitViewModel(IStudentRepository students, IVisitRepository visits)
         {
-            _data = data ?? throw new ArgumentNullException(nameof(data));
+            _students = students ?? throw new ArgumentNullException(nameof(students));
+            _visits = visits ?? throw new ArgumentNullException(nameof(visits));
         }
 
         // =====================================================================
@@ -136,7 +139,7 @@ namespace MinistryTracker.ViewModels
         public string CurrentVisitDateTimeDisplay =>
             ScheduledDateTime == default
                 ? "No scheduled time loaded"
-                : ScheduledDateTime.ToString("dddd, MMM d • h:mm tt");
+                : ScheduledDateTime.ToString("dddd, MMM d â€¢ h:mm tt");
 
         public string CurrentVisitStatusDisplay =>
             Status switch
@@ -171,7 +174,7 @@ namespace MinistryTracker.ViewModels
                 IsBusy = true;
                 StatusMessage = null;
 
-                var visit = await _data.GetVisitByIdAsync(visitId).ConfigureAwait(false);
+                var visit = await _visits.GetVisitByIdAsync(visitId).ConfigureAwait(false);
                 if (visit is null)
                 {
                     StatusMessage = "Visit not found.";
@@ -179,7 +182,7 @@ namespace MinistryTracker.ViewModels
                     return;
                 }
 
-                var student = await _data.GetStudentByIdAsync(visit.StudentId).ConfigureAwait(false);
+                var student = await _students.GetStudentByIdAsync(visit.StudentId).ConfigureAwait(false);
 
                 VisitId = visit.Id;
                 StudentId = visit.StudentId;
@@ -227,7 +230,7 @@ namespace MinistryTracker.ViewModels
                 IsBusy = true;
                 StatusMessage = null;
 
-                var rows = await _data.UpdateVisitDetailsAsync(
+                var rows = await _visits.UpdateVisitDetailsAsync(
                     VisitId,
                     Method,
                     MeetingAddress,
@@ -281,7 +284,7 @@ namespace MinistryTracker.ViewModels
 
                 // Locked rule:
                 // Cancel from this page is treated as "Canceled by Me".
-                var rows = await _data.CancelVisitByMeAsync(VisitId).ConfigureAwait(false);
+                var rows = await _visits.CancelVisitByMeAsync(VisitId).ConfigureAwait(false);
 
                 if (rows <= 0)
                 {
@@ -359,7 +362,7 @@ namespace MinistryTracker.ViewModels
 
                 // Locked rule:
                 // Reschedule closes current record as Rescheduled and creates a new Scheduled record.
-                var replacement = await _data.RescheduleVisitAsync(
+                var replacement = await _visits.RescheduleVisitAsync(
                     VisitId,
                     newScheduledDateTime).ConfigureAwait(false);
 

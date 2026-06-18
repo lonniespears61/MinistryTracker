@@ -24,6 +24,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Maui.ApplicationModel;
 using Microsoft.Extensions.Logging;
 using MinistryTracker.Data;
+using MinistryTracker.Data.Repositories;
 using MinistryTracker.Models.DTOs;
 using System;
 using System.Collections.Generic;
@@ -35,7 +36,8 @@ namespace MinistryTracker.ViewModels;
 
 public partial class MyCalendarViewModel : ObservableObject
 {
-    private readonly DataService _data;
+    private readonly IStudentRepository _students;
+    private readonly IVisitRepository _visits;
     private readonly ILogger<MyCalendarViewModel>? _log;
 
     private List<VisitWithStudent> _visibleMonthVisits = new();
@@ -113,9 +115,13 @@ public partial class MyCalendarViewModel : ObservableObject
         SelectedDayCell.Date.Date >= DateTime.Today &&
         (!IsSchedulingMode || SchedulingStudentId is not null);
 
-    public MyCalendarViewModel(DataService data, ILogger<MyCalendarViewModel>? log = null)
+    public MyCalendarViewModel(
+        IStudentRepository students,
+        IVisitRepository visits,
+        ILogger<MyCalendarViewModel>? log = null)
     {
-        _data = data;
+        _students = students;
+        _visits = visits;
         _log = log;
 
         DisplayedMonth = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
@@ -136,7 +142,7 @@ public partial class MyCalendarViewModel : ObservableObject
             var monthStart = DisplayedMonth.Date;
             var nextMonthStart = monthStart.AddMonths(1);
 
-            _visibleMonthVisits = await _data
+            _visibleMonthVisits = await _visits
                 .GetVisitsWithStudentsInRangeAsync(monthStart, nextMonthStart, includeCanceled: false)
                 .ConfigureAwait(false);
 
@@ -163,7 +169,7 @@ public partial class MyCalendarViewModel : ObservableObject
     {
         try
         {
-            var student = await _data.GetStudentByIdAsync(studentId).ConfigureAwait(false);
+            var student = await _students.GetStudentByIdAsync(studentId).ConfigureAwait(false);
 
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
@@ -208,7 +214,7 @@ public partial class MyCalendarViewModel : ObservableObject
     {
         try
         {
-            var student = await _data.GetStudentByIdAsync(studentId).ConfigureAwait(false);
+            var student = await _students.GetStudentByIdAsync(studentId).ConfigureAwait(false);
 
             await MainThread.InvokeOnMainThreadAsync(() =>
             {

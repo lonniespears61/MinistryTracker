@@ -11,19 +11,19 @@
 // - Show "Follow Up" only when there are unresolved missed visits.
 // - Show "It's Been Awhile" only when there are older unresolved missed visits.
 // - Keep sections quiet when there is nothing actionable.
-// - Do not duplicate business rules already owned by DataService.
+// - Do not duplicate business rules already owned by the repositories.
 //
 // ---------------------------------------------------------------------------------------------------------------------
 
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MinistryTracker.Data;
+using MinistryTracker.Data.Repositories;
 using MinistryTracker.Models.DTOs;
 using MinistryTracker.Models.Enums;
 
@@ -31,10 +31,9 @@ namespace MinistryTracker.ViewModels
 {
     public partial class DashboardViewModel : ObservableObject
     {
-        private readonly DataService _data;
+        private readonly IStudentRepository _students;
+        private readonly IVisitRepository _visits;
 
-        [ObservableProperty] private string dbFilePath = string.Empty;
-        [ObservableProperty] private string dbFileName = string.Empty;
         [ObservableProperty] private bool isBusy;
 
         /// <summary>
@@ -60,9 +59,10 @@ namespace MinistryTracker.ViewModels
         public bool HasMissedRecently => MissedRecently.Count > 0;
         public bool HasLongOverdue => LongOverdue.Count > 0;
 
-        public DashboardViewModel(DataService data)
+        public DashboardViewModel(IStudentRepository students, IVisitRepository visits)
         {
-            _data = data;
+            _students = students;
+            _visits = visits;
         }
 
         [RelayCommand(AllowConcurrentExecutions = false)]
@@ -70,9 +70,6 @@ namespace MinistryTracker.ViewModels
         {
             if (IsBusy)
                 return;
-
-            DbFilePath = _data.GetDatabasePath();
-            DbFileName = Path.GetFileName(DbFilePath);
 
             try
             {
@@ -106,7 +103,7 @@ namespace MinistryTracker.ViewModels
             var start = DateTime.Today;
             var end = start.AddDays(1);
 
-            var today = await _data.GetVisitsWithStudentsInRangeAsync(start, end, includeCanceled: false);
+            var today = await _visits.GetVisitsWithStudentsInRangeAsync(start, end, includeCanceled: false);
 
             var scheduledToday = today
                 .Where(v => v.Status == VisitStatus.Scheduled)
@@ -126,7 +123,7 @@ namespace MinistryTracker.ViewModels
             // Pull a slightly larger window once, then split it into:
             // - recent follow-up
             // - older "it's been awhile"
-            var missedVisits = await _data.GetUnhandledMissedVisitsAsync(days: 30);
+            var missedVisits = await _visits.GetUnhandledMissedVisitsAsync(days: 30);
 
             MissedRecently.Clear();
             LongOverdue.Clear();
@@ -139,7 +136,7 @@ namespace MinistryTracker.ViewModels
             }
 
             // Small dataset: load students once and match in memory.
-            var students = await _data.GetStudentsAsync();
+            var students = await _students.GetStudentsAsync();
             var studentsById = students.ToDictionary(s => s.StudentId);
 
             var now = DateTime.Now;

@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Maui.Controls.Maps;
 using Microsoft.Maui.Devices.Sensors;
 using MinistryTracker.Data;
+using MinistryTracker.Data.Repositories;
 using System;
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
@@ -19,11 +20,13 @@ namespace MinistryTracker.ViewModels
     /// </summary>
     public partial class StudentsMapViewModel : ObservableObject
     {
-        private readonly DataService _data;
+        private readonly IStudentRepository _students;
+        private readonly IVisitRepository _visits;
 
-        public StudentsMapViewModel(DataService data)
+        public StudentsMapViewModel(IStudentRepository students, IVisitRepository visits)
         {
-            _data = data;
+            _students = students;
+            _visits = visits;
             RefreshPinsCommand = new AsyncRelayCommand(RefreshPinsAsync);
         }
 
@@ -48,19 +51,19 @@ namespace MinistryTracker.ViewModels
             try
             {
                 IsBusy = true;
-                Status = "Loading visit locations…";
+                Status = "Loading visit locationsâ€¦";
 
                 Pins.Clear();
 
                 // Pull upcoming visits, then pin only the ones with coordinates.
-                var visits = await _data.GetUpcomingVisitsAsync();
+                var visits = await _visits.GetUpcomingVisitsAsync();
 
                 foreach (var v in visits)
                 {
                     if (v.MeetingLatitude is null || v.MeetingLongitude is null)
                         continue;
 
-                    var student = await _data.GetStudentByIdAsync(v.StudentId);
+                    var student = await _students.GetStudentByIdAsync(v.StudentId);
 
                     var pin = new Pin
                     {

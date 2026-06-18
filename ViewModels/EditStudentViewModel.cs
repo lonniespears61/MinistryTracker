@@ -15,6 +15,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MinistryTracker.Data;
+using MinistryTracker.Data.Repositories;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
 using System;
@@ -26,10 +27,10 @@ namespace MinistryTracker.ViewModels
 {
     public partial class EditStudentViewModel : ObservableObject
     {
-        private readonly DataService _data;
+        private readonly IStudentRepository _students;
         private Student? _loadedStudent;
 
-        public EditStudentViewModel(DataService data) => _data = data;
+        public EditStudentViewModel(IStudentRepository students) => _students = students;
 
         // =====================================================================
         // CORE FIELDS
@@ -75,7 +76,7 @@ namespace MinistryTracker.ViewModels
             {
                 IsBusy = true;
 
-                var s = await _data.GetStudentByIdAsync(id);
+                var s = await _students.GetStudentByIdAsync(id);
                 if (s is null)
                 {
                     StatusMessage = "Student not found.";
@@ -123,7 +124,7 @@ namespace MinistryTracker.ViewModels
 
                 if (_loadedStudent is null || _loadedStudent.StudentId != StudentId)
                 {
-                    _loadedStudent = await _data.GetStudentByIdAsync(StudentId);
+                    _loadedStudent = await _students.GetStudentByIdAsync(StudentId);
                 }
 
                 if (_loadedStudent is null)
@@ -140,7 +141,7 @@ namespace MinistryTracker.ViewModels
                 _loadedStudent.Status = Status;
                 _loadedStudent.Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes.Trim();
 
-                await _data.UpdateStudentAsync(_loadedStudent);
+                await _students.UpdateStudentAsync(_loadedStudent);
 
                 StatusMessage = "Saved ✓";
                 return true;

@@ -16,6 +16,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Maui.Devices.Sensors;
 using MinistryTracker.Data;
+using MinistryTracker.Data.Repositories;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
 using MinistryTracker.Utilities;
@@ -29,7 +30,7 @@ namespace MinistryTracker.ViewModels
 {
     public partial class AddStudentViewModel : ObservableObject
     {
-        private readonly DataService _data;
+        private readonly IStudentRepository _students;
 
         // Captured GPS state for this Add flow.
         private double? _capturedLatitude;
@@ -42,9 +43,9 @@ namespace MinistryTracker.ViewModels
             @"^[\p{L}\p{N}\s'\-.,/&]+$",
             RegexOptions.Compiled);
 
-        public AddStudentViewModel(DataService data)
+        public AddStudentViewModel(IStudentRepository students)
         {
-            _data = data ?? throw new ArgumentNullException(nameof(data));
+            _students = students ?? throw new ArgumentNullException(nameof(students));
             Reset();
         }
 
@@ -401,7 +402,7 @@ namespace MinistryTracker.ViewModels
                     Notes = NormalizeOptionalText(Notes)
                 };
 
-                var rows = await _data.AddStudentAsync(student).ConfigureAwait(false);
+                var rows = await _students.AddStudentAsync(student).ConfigureAwait(false);
 
                 if (rows > 0)
                 {

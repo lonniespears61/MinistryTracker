@@ -17,6 +17,7 @@ using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Microsoft.Maui.ApplicationModel;
 using MinistryTracker.Data;
+using MinistryTracker.Data.Repositories;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
 using System;
@@ -29,7 +30,8 @@ namespace MinistryTracker.ViewModels;
 
 public partial class StudentsListViewModel : ObservableObject
 {
-    private readonly DataService _data;
+    private readonly IStudentRepository _students;
+    private readonly IVisitRepository _visits;
     private readonly ILogger<StudentsListViewModel>? _log;
 
     public ObservableCollection<StudentViewModel> Students { get; } = new();
@@ -43,9 +45,13 @@ public partial class StudentsListViewModel : ObservableObject
 
     public int VisibleCount => FilteredStudents.Count;
 
-    public StudentsListViewModel(DataService data, ILogger<StudentsListViewModel>? log = null)
+    public StudentsListViewModel(
+        IStudentRepository students,
+        IVisitRepository visits,
+        ILogger<StudentsListViewModel>? log = null)
     {
-        _data = data;
+        _students = students;
+        _visits = visits;
         _log = log;
     }
 
@@ -78,11 +84,11 @@ public partial class StudentsListViewModel : ObservableObject
         {
             IsBusy = true;
 
-            var allStudents = await _data.GetStudentsAsync().ConfigureAwait(false);
+            var allStudents = await _students.GetStudentsAsync().ConfigureAwait(false);
 
             var tasks = allStudents.Select(async student =>
             {
-                var next = await _data.GetNextFutureVisitForStudentAsync(student.StudentId)
+                var next = await _visits.GetNextFutureVisitForStudentAsync(student.StudentId)
                                       .ConfigureAwait(false);
                 return (Student: student, NextVisit: next);
             });
@@ -144,7 +150,7 @@ public partial class StudentsListViewModel : ObservableObject
         try
         {
             var studentId = svm.Model.StudentId;
-            var existing = await _data.GetNextFutureVisitForStudentAsync(studentId)
+            var existing = await _visits.GetNextFutureVisitForStudentAsync(studentId)
                                       .ConfigureAwait(false);
 
             if (existing is null)
@@ -172,7 +178,7 @@ public partial class StudentsListViewModel : ObservableObject
                     break;
 
                 case "Replace it":
-                    await _data.CancelVisitByMeAsync(existing.Id, "Replaced by new visit")
+                    await _visits.CancelVisitByMeAsync(existing.Id, "Replaced by new visit")
                                .ConfigureAwait(false);
                     RequestNavigate?.Invoke($"AddVisitPage?studentId={studentId}");
                     break;

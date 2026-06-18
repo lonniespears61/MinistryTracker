@@ -27,10 +27,11 @@ using System.Threading.Tasks;
 using Microsoft.Maui.Storage;
 using SQLite;
 using MinistryTracker.Models;
+using MinistryTracker.Data.Repositories;
 
 namespace MinistryTracker.Data
 {
-    public partial class DataService
+    public partial class DataService : IStudentRepository, IVisitRepository
     {
         private const string DbFileName = "ministrytracker.db3";
 
