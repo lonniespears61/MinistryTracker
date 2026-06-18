@@ -54,7 +54,8 @@ public partial class MyCalendarViewModel : ObservableObject
 
     [ObservableProperty] private bool isRescheduleMode;
     [ObservableProperty] private int? reschedulingVisitId;
-    private TimeSpan? _reschedulingTimeOfDay;
+    [ObservableProperty] private TimeSpan rescheduleTime;
+    [ObservableProperty] private string? rescheduleReason;
 
     public string SchedulingBannerText
     {
@@ -116,6 +117,8 @@ public partial class MyCalendarViewModel : ObservableObject
         !SelectedDayCell.IsPlaceholder &&
         SelectedDayCell.Date.Date >= DateTime.Today &&
         (!IsSchedulingMode || SchedulingStudentId is not null);
+
+    public string SelectedDayActionText => IsRescheduleMode ? "Reschedule" : "Add";
 
     public MyCalendarViewModel(
         IStudentRepository students,
@@ -230,7 +233,8 @@ public partial class MyCalendarViewModel : ObservableObject
             {
                 IsRescheduleMode = true;
                 ReschedulingVisitId = visitId;
-                _reschedulingTimeOfDay = visit.ScheduledDateTime.TimeOfDay;
+                RescheduleTime = visit.ScheduledDateTime.TimeOfDay;
+                RescheduleReason = null;
 
                 IsSchedulingMode = true;
                 SchedulingStudentId = actualStudentId;
@@ -238,6 +242,7 @@ public partial class MyCalendarViewModel : ObservableObject
 
                 OnPropertyChanged(nameof(SchedulingBannerText));
                 OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
+                OnPropertyChanged(nameof(SelectedDayActionText));
             });
         }
         catch
@@ -246,7 +251,8 @@ public partial class MyCalendarViewModel : ObservableObject
             {
                 IsRescheduleMode = true;
                 ReschedulingVisitId = visitId;
-                _reschedulingTimeOfDay = null;
+                RescheduleTime = DateTime.Now.TimeOfDay;
+                RescheduleReason = null;
 
                 IsSchedulingMode = true;
                 SchedulingStudentId = studentId;
@@ -254,6 +260,7 @@ public partial class MyCalendarViewModel : ObservableObject
 
                 OnPropertyChanged(nameof(SchedulingBannerText));
                 OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
+                OnPropertyChanged(nameof(SelectedDayActionText));
             });
         }
     }
@@ -262,7 +269,8 @@ public partial class MyCalendarViewModel : ObservableObject
     {
         IsRescheduleMode = false;
         ReschedulingVisitId = null;
-        _reschedulingTimeOfDay = null;
+        RescheduleTime = default;
+        RescheduleReason = null;
 
         IsSchedulingMode = false;
         SchedulingStudentId = null;
@@ -270,6 +278,7 @@ public partial class MyCalendarViewModel : ObservableObject
 
         OnPropertyChanged(nameof(SchedulingBannerText));
         OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
+        OnPropertyChanged(nameof(SelectedDayActionText));
     }
 
     /// <summary>
@@ -302,10 +311,32 @@ public partial class MyCalendarViewModel : ObservableObject
         var original = await _visits.GetVisitByIdAsync(visitId).ConfigureAwait(false)
             ?? throw new InvalidOperationException("Visit not found.");
 
-        var timeOfDay = _reschedulingTimeOfDay ?? original.ScheduledDateTime.TimeOfDay;
-        var replacementDateTime = newDate.Date.Add(timeOfDay);
+        var replacementDateTime = newDate.Date.Add(RescheduleTime);
 
-        await _visits.RescheduleVisitAsync(visitId, replacementDateTime).ConfigureAwait(false);
+        var windowStart = replacementDateTime.AddMinutes(-29);
+        var windowEnd = replacementDateTime.AddMinutes(29);
+        var nearbyVisits = await _visits
+            .GetVisitsWithStudentsInRangeAsync(windowStart, windowEnd, includeCanceled: false)
+            .ConfigureAwait(false);
+
+        var hasConflict = nearbyVisits.Any(v =>
+            v.VisitId != visitId &&
+            v.Status == VisitStatus.Scheduled &&
+            Math.Abs((v.ScheduledDateTime - replacementDateTime).TotalMinutes) < 30);
+
+        if (hasConflict)
+        {
+            throw new InvalidOperationException(
+                "You already have a visit scheduled within 30 minutes of this time.");
+        }
+
+        var reason = string.IsNullOrWhiteSpace(RescheduleReason)
+            ? null
+            : $"Rescheduled: {RescheduleReason.Trim()}";
+
+        await _visits
+            .RescheduleVisitAsync(visitId, replacementDateTime, note: reason)
+            .ConfigureAwait(false);
 
         await MainThread.InvokeOnMainThreadAsync(() =>
         {
@@ -386,7 +417,7 @@ public partial class MyCalendarViewModel : ObservableObject
         OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
 
         // ---------------------------------------------------------------------
-        // SCHEDULING / RESCHEDULING TAP BEHAVIOR
+        // SCHEDULING TAP BEHAVIOR
         //
         // WHY:
         // In normal calendar mode, tapping a day should only select it and show
@@ -395,16 +426,8 @@ public partial class MyCalendarViewModel : ObservableObject
         // In scheduling mode, the user already came from a known student and is
         // using the calendar to answer: "What day works?"
         //
-        // In reschedule mode, the user is choosing a replacement date for an
-        // existing visit.
-        //
-        // So in either schedule/reschedule mode, tapping a valid day should
-        // immediately continue the flow instead of requiring an extra button tap.
-        //
-        // NOTE:
-        // We currently pass only the selected DATE here.
-        // AddVisit / reschedule workflow will apply default time logic unless a
-        // more specific time-selection step is added later.
+        // Reschedule mode stops after selecting the day so the user can choose
+        // the replacement time and enter a reason before confirming.
         // ---------------------------------------------------------------------
         if (IsSchedulingMode &&
             SchedulingStudentId is not null &&
@@ -412,14 +435,7 @@ public partial class MyCalendarViewModel : ObservableObject
             !value.IsPlaceholder &&
             value.Date.Date >= DateTime.Today)
         {
-            if (IsRescheduleMode && ReschedulingVisitId is not null)
-            {
-                RescheduleVisitRequested?.Invoke(
-                    ReschedulingVisitId.Value,
-                    SchedulingStudentId.Value,
-                    value.Date.Date);
-            }
-            else
+            if (!IsRescheduleMode)
             {
                 ScheduleVisitRequested?.Invoke(
                     SchedulingStudentId.Value,
@@ -520,5 +536,6 @@ public partial class MyCalendarViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedDayTitle));
         OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
         OnPropertyChanged(nameof(SchedulingBannerText));
+        OnPropertyChanged(nameof(SelectedDayActionText));
     }
 }

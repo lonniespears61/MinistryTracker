@@ -414,7 +414,9 @@ namespace MinistryTracker.Data
                     MeetingAddress = newMeetingAddress ?? current.MeetingAddress,
                     MeetingLatitude = newMeetingLatitude ?? current.MeetingLatitude,
                     MeetingLongitude = newMeetingLongitude ?? current.MeetingLongitude,
-                    RescheduledFromVisitId = current.Id
+                    RescheduledFromVisitId = current.Id,
+                    Notes = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+                    NotesCreatedDateTime = string.IsNullOrWhiteSpace(note) ? null : DateTime.Now
                 };
 
                 await Db.InsertAsync(replacement).ConfigureAwait(false);

@@ -26,7 +26,7 @@
         </Grid>
     </Shell.TitleView>
 
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*"
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*"
           Padding="16,12"
           RowSpacing="10">
 
@@ -143,14 +143,40 @@
                    VerticalOptions="Center" />
 
             <Button Grid.Column="1"
-                    Text="Add"
+                    Text="{Binding SelectedDayActionText}"
                     Padding="12,6"
                     Command="{Binding AddVisitForSelectedDayCommand}"
                     IsEnabled="{Binding CanAddVisitForSelectedDay}" />
         </Grid>
 
-        <!-- ROW 5: Agenda -->
-        <CollectionView Grid.Row="5"
+        <!-- ROW 5: Additional reschedule details -->
+        <Grid Grid.Row="5"
+              RowDefinitions="Auto,Auto"
+              ColumnDefinitions="Auto,*"
+              RowSpacing="8"
+              ColumnSpacing="12"
+              IsVisible="{Binding IsRescheduleMode}">
+            <Label Text="New time"
+                   VerticalOptions="Center" />
+
+            <TimePicker Grid.Column="1"
+                        Time="{Binding RescheduleTime}" />
+
+            <Label Grid.Row="1"
+                   Text="Reason"
+                   VerticalOptions="Start"
+                   Margin="0,8,0,0" />
+
+            <Editor Grid.Row="1"
+                    Grid.Column="1"
+                    Text="{Binding RescheduleReason}"
+                    Placeholder="Why is this visit being rescheduled?"
+                    AutoSize="TextChanges"
+                    MinimumHeightRequest="64" />
+        </Grid>
+
+        <!-- ROW 6: Agenda -->
+        <CollectionView Grid.Row="6"
                         ItemsSource="{Binding SelectedDayVisits}"
                         SelectionMode="Single"
                         SelectionChanged="OnVisitSelectionChanged"

@@ -145,7 +145,7 @@ public partial class MyCalendarPage : ContentPage
         {
             var confirm = await DisplayAlert(
                 "Reschedule Visit",
-                $"Move this visit to {newDate:dddd, MMM d}?",
+                $"Move this visit to {newDate.Date.Add(_vm.RescheduleTime):dddd, MMM d 'at' h:mm tt}?",
                 "Yes",
                 "No");
 
