@@ -150,15 +150,17 @@ public partial class StudentsListViewModel : ObservableObject
         try
         {
             var studentId = svm.Model.StudentId;
-            var existing = await _visits.GetNextFutureVisitForStudentAsync(studentId)
-                                      .ConfigureAwait(false);
+            var conflict = await _visits
+                .GetVisitScheduleConflictAsync(studentId)
+                .ConfigureAwait(false);
 
-            if (existing is null)
+            if (conflict is null)
             {
                 RequestNavigate?.Invoke($"AddVisitPage?studentId={studentId}");
                 return;
             }
 
+            var existing = conflict.Visit;
             var when = existing.ScheduledDateTime;
             var message = $"Scheduled for {when:ddd, MMM d} at {when:h:mm tt}.";
 

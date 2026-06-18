@@ -18,6 +18,11 @@ public interface IVisitRepository
     Task<List<Visit>> GetUpcomingVisitsAsync(int days = 7, CancellationToken ct = default);
     Task<List<Visit>> GetVisitsThisWeekAsync(bool includeCanceled = true, CancellationToken ct = default);
     Task<Visit?> GetNextFutureVisitForStudentAsync(int studentId, CancellationToken ct = default);
+    Task<VisitScheduleConflict?> GetVisitScheduleConflictAsync(
+        int studentId,
+        DateTime? scheduledDateTime = null,
+        int? excludeVisitId = null,
+        CancellationToken ct = default);
     Task<List<Visit>> GetUnhandledMissedVisitsAsync(int days = 7, CancellationToken ct = default);
     Task<int> UpdateVisitDetailsAsync(
         int visitId,

@@ -313,23 +313,6 @@ public partial class MyCalendarViewModel : ObservableObject
 
         var replacementDateTime = newDate.Date.Add(RescheduleTime);
 
-        var windowStart = replacementDateTime.AddMinutes(-29);
-        var windowEnd = replacementDateTime.AddMinutes(29);
-        var nearbyVisits = await _visits
-            .GetVisitsWithStudentsInRangeAsync(windowStart, windowEnd, includeCanceled: false)
-            .ConfigureAwait(false);
-
-        var hasConflict = nearbyVisits.Any(v =>
-            v.VisitId != visitId &&
-            v.Status == VisitStatus.Scheduled &&
-            Math.Abs((v.ScheduledDateTime - replacementDateTime).TotalMinutes) < 30);
-
-        if (hasConflict)
-        {
-            throw new InvalidOperationException(
-                "You already have a visit scheduled within 30 minutes of this time.");
-        }
-
         var reason = string.IsNullOrWhiteSpace(RescheduleReason)
             ? null
             : $"Rescheduled: {RescheduleReason.Trim()}";

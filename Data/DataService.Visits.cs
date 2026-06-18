@@ -21,6 +21,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using MinistryTracker.Models;
+using MinistryTracker.Models.DTOs;
 using MinistryTracker.Models.Enums;
 using MinistryTracker.Utilities;
 
@@ -67,10 +68,21 @@ namespace MinistryTracker.Data
             if (visit.StudentId <= 0)
                 throw new InvalidOperationException("Visit.StudentId must be set.");
 
-            return EnsureInitThen(() =>
+            return EnsureInitThen(async () =>
             {
                 ct.ThrowIfCancellationRequested();
-                return Db.InsertAsync(visit);
+
+                if (visit.Status == VisitStatus.Scheduled)
+                {
+                    var conflict = await FindVisitScheduleConflictAsync(
+                        visit.StudentId,
+                        visit.ScheduledDateTime,
+                        excludeVisitId: null).ConfigureAwait(false);
+
+                    ThrowIfScheduleConflict(conflict);
+                }
+
+                return await Db.InsertAsync(visit).ConfigureAwait(false);
             }, ct);
         }
 
@@ -178,6 +190,23 @@ namespace MinistryTracker.Data
                                .FirstOrDefaultAsync()
                                .ConfigureAwait(false);
             }, ct);
+
+        /// <summary>
+        /// Returns the first conflict that would prevent scheduling a visit.
+        /// A student may have only one future scheduled visit, and all scheduled
+        /// visits must be at least 30 minutes apart.
+        /// </summary>
+        public Task<VisitScheduleConflict?> GetVisitScheduleConflictAsync(
+            int studentId,
+            DateTime? scheduledDateTime = null,
+            int? excludeVisitId = null,
+            CancellationToken ct = default)
+            => EnsureInitThen(
+                () => FindVisitScheduleConflictAsync(
+                    studentId,
+                    scheduledDateTime,
+                    excludeVisitId),
+                ct);
 
         /// <summary>
         /// Returns missed visits from the last N days that still have no notes and no replacement visit.
@@ -424,6 +453,13 @@ namespace MinistryTracker.Data
                         "Only an upcoming scheduled visit or a missed visit can be rescheduled.");
                 }
 
+                var conflict = await FindVisitScheduleConflictAsync(
+                    current.StudentId,
+                    newScheduledDateTime,
+                    current.Id).ConfigureAwait(false);
+
+                ThrowIfScheduleConflict(conflict);
+
                 if (current.Status == VisitStatus.Scheduled)
                     current.Status = VisitStatus.Rescheduled;
 
@@ -474,5 +510,68 @@ namespace MinistryTracker.Data
 
                 return await Db.UpdateAsync(visit).ConfigureAwait(false);
             }, ct);
+
+        private async Task<VisitScheduleConflict?> FindVisitScheduleConflictAsync(
+            int studentId,
+            DateTime? scheduledDateTime,
+            int? excludeVisitId)
+        {
+            var now = DateTime.Now;
+            var futureVisits = await Db.Table<Visit>()
+                .Where(v =>
+                    v.StudentId == studentId &&
+                    v.Status == VisitStatus.Scheduled &&
+                    v.ScheduledDateTime >= now)
+                .OrderBy(v => v.ScheduledDateTime)
+                .ToListAsync()
+                .ConfigureAwait(false);
+
+            var existingFutureVisit = futureVisits.FirstOrDefault(
+                v => excludeVisitId is null || v.Id != excludeVisitId.Value);
+
+            if (existingFutureVisit is not null)
+            {
+                return new VisitScheduleConflict(
+                    VisitScheduleConflictType.ExistingFutureVisit,
+                    existingFutureVisit);
+            }
+
+            if (scheduledDateTime is null)
+                return null;
+
+            var windowStart = scheduledDateTime.Value.AddMinutes(-30);
+            var windowEnd = scheduledDateTime.Value.AddMinutes(30);
+
+            var nearbyVisits = await Db.Table<Visit>()
+                .Where(v =>
+                    v.Status == VisitStatus.Scheduled &&
+                    v.ScheduledDateTime > windowStart &&
+                    v.ScheduledDateTime < windowEnd)
+                .OrderBy(v => v.ScheduledDateTime)
+                .ToListAsync()
+                .ConfigureAwait(false);
+
+            var nearbyVisit = nearbyVisits.FirstOrDefault(
+                v => excludeVisitId is null || v.Id != excludeVisitId.Value);
+
+            return nearbyVisit is null
+                ? null
+                : new VisitScheduleConflict(
+                    VisitScheduleConflictType.TimeSpacing,
+                    nearbyVisit);
+        }
+
+        private static void ThrowIfScheduleConflict(VisitScheduleConflict? conflict)
+        {
+            if (conflict is null)
+                return;
+
+            var when = conflict.Visit.ScheduledDateTime;
+            var message = conflict.Type == VisitScheduleConflictType.ExistingFutureVisit
+                ? $"This student already has a visit scheduled for {when:ddd, MMM d} at {when:h:mm tt}."
+                : $"You already have a visit scheduled within 30 minutes of {when:h:mm tt}.";
+
+            throw new InvalidOperationException(message);
+        }
     }
 }
