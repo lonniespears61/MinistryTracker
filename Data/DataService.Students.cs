@@ -8,7 +8,6 @@
 // DESIGN RULES
 // - Student stores identity, relationship state, preferred contact path,
 //   and the primary reachable physical location.
-// - Household-style grouping is only valid when IsHomeAddress = true.
 // - Visit-specific meeting places belong on Visit, not Student.
 // - This file provides data access only; UI validation belongs elsewhere.
 //

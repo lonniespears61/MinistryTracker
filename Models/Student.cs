@@ -6,7 +6,6 @@
 // - This model represents WHO the person is and HOW we can reach them again.
 // - PrimaryAddress = best known reliable physical place to reach them.
 // - IsHomeAddress = indicates whether that address is their actual home.
-// - Household grouping is ONLY valid when IsHomeAddress = true.
 // - Visit records handle all interaction history and per-visit locations.
 // - This model remains language-neutral (no UI text stored here).
 // ---------------------------------------------------------------------------------------------------------------------
@@ -63,7 +62,6 @@ namespace MinistryTracker.Models
 
         /// <summary>
         /// True if PrimaryAddress is the person's actual home.
-        /// Only TRUE values are used for household grouping.
         /// </summary>
         public bool IsHomeAddress { get; set; } = false;
 
@@ -121,17 +119,6 @@ namespace MinistryTracker.Models
         /// Optional demographic field.
         /// </summary>
         public int? Age { get; set; }
-
-        /// <summary>
-        /// Household grouping (only valid when IsHomeAddress = true).
-        /// </summary>
-        public int? HouseholdId { get; set; }
-
-        /// <summary>
-        /// Navigation property (not stored).
-        /// </summary>
-        [Ignore]
-        public Household? Household { get; set; }
 
         /// <summary>
         /// General notes about the individual.

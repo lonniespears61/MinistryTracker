@@ -4,7 +4,7 @@
 // PURPOSE
 // - Handles creation of a new Student record.
 // - Keeps Add Student focused on first-entry person data only.
-// - Leaves household linking, Do Not Call, deletion, and broader relationship management for later workflows.
+// - Leaves Do Not Call, deletion, and broader relationship management for later workflows.
 //
 // WHY THIS VERSION CHANGED
 // - Student now has real address/location fields, so address is no longer folded into Notes.
