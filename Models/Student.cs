@@ -99,12 +99,6 @@ namespace MinistryTracker.Models
         public ContactMethod? PreferredContactMethod { get; set; }
 
         /// <summary>
-        /// Indicates level of development (interest → study).
-        /// Lightweight guidance, not strict workflow.
-        /// </summary>
-        public InterestLevel InterestLevel { get; set; }
-
-        /// <summary>
         /// Current relationship status.
         /// Controls visibility in dashboard/map logic.
         /// </summary>

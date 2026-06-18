@@ -94,13 +94,6 @@ namespace MinistryTracker.Data
                     (i % 6 == 0) ? StudentStatus.Paused :
                     StudentStatus.Active;
 
-                // ✅ FIXED INTEREST LEVEL
-                var interest =
-                    (i % 7 == 0) ? InterestLevel.Study :
-                    (i % 4 == 0) ? InterestLevel.ReturnVisit :
-                    (i % 3 == 0) ? InterestLevel.Interested :
-                    InterestLevel.Promising;
-
                 var initialContactType =
                     (i % 4 == 0) ? InitialContactType.HouseToHouse :
                     (i % 4 == 1) ? InitialContactType.Cart :
@@ -114,7 +107,6 @@ namespace MinistryTracker.Data
                     FirstContactDate = DateTime.Today.AddDays(-rng.Next(15, 180)),
                     PhoneNumber = $"270-555-{rng.Next(1000, 9999)}",
                     PreferredContactMethod = ContactMethod.InPerson,
-                    InterestLevel = interest,
                     Status = status,
                     Notes = "Good conversation. Worth following up.",
                     IsDeleted = false

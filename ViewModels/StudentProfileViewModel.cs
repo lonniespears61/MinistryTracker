@@ -59,9 +59,7 @@ namespace MinistryTracker.ViewModels
             OnPropertyChanged(nameof(PhoneNumber));
             OnPropertyChanged(nameof(FirstContactFormatted));
             OnPropertyChanged(nameof(StatusLabel));
-            OnPropertyChanged(nameof(InterestLabel));
             OnPropertyChanged(nameof(StatusColor));
-            OnPropertyChanged(nameof(InterestColor));
             OnPropertyChanged(nameof(Initials));
             OnPropertyChanged(nameof(SubTitle));
             OnPropertyChanged(nameof(Notes));
@@ -78,8 +76,6 @@ namespace MinistryTracker.ViewModels
                 : "Contacted: —";
 
         public string StatusLabel => Model?.Status.ToString() ?? "—";
-
-        public string InterestLabel => Model?.InterestLevel.ToString() ?? "—";
 
         public string Notes => Model?.Notes ?? string.Empty;
 
@@ -98,23 +94,6 @@ namespace MinistryTracker.ViewModels
                     StudentStatus.Discontinued => Colors.DarkGray,
                     StudentStatus.Completed => Colors.SteelBlue,
                     _ => Colors.Gray
-                };
-            }
-        }
-
-        public Color InterestColor
-        {
-            get
-            {
-                var interest = Model?.InterestLevel ?? InterestLevel.Promising;
-
-                return interest switch
-                {
-                    InterestLevel.Promising => Colors.LightGray,
-                    InterestLevel.Interested => Color.FromArgb("#FAFAD2"),
-                    InterestLevel.ReturnVisit => Colors.LightBlue,
-                    InterestLevel.Study => Colors.LightGreen,
-                    _ => Colors.White
                 };
             }
         }

@@ -39,11 +39,6 @@
                 ItemsSource="{Binding ContactMethodValues}"
                 SelectedItem="{Binding PreferredContactMethod}" />
 
-            <Label Text="Interest Level" />
-            <Picker
-                ItemsSource="{Binding InterestLevelValues}"
-                SelectedItem="{Binding InterestLevel}" />
-
             <Label Text="Status" />
             <Picker
                 ItemsSource="{Binding StudentStatusValues}"

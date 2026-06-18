@@ -94,14 +94,6 @@
 
                 <VerticalStackLayout Spacing="12" Padding="0,10,0,0">
 
-                    <!-- InterestLevel:
-                         - Default = Promising
-                         - Editable here to support backfilling existing students
-                         - Later updated by visit workflow -->
-                    <Label Text="Interest Level" />
-                    <Picker ItemsSource="{Binding InterestLevelValues}"
-                            SelectedItem="{Binding InterestLevel}" />
-
                     <!-- Optional demographic info.
                          Not required for initial contact -->
                     <Label Text="Age" />

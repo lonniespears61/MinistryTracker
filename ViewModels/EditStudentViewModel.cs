@@ -42,7 +42,6 @@ namespace MinistryTracker.ViewModels
 
         [ObservableProperty] private string? phoneNumber;
         [ObservableProperty] private ContactMethod? preferredContactMethod;
-        [ObservableProperty] private InterestLevel interestLevel;
         [ObservableProperty] private StudentStatus status;
         [ObservableProperty] private string? notes;
 
@@ -58,9 +57,6 @@ namespace MinistryTracker.ViewModels
 
         public List<ContactMethod> ContactMethodValues =>
             Enum.GetValues<ContactMethod>().ToList();
-
-        public List<InterestLevel> InterestLevelValues =>
-            Enum.GetValues<InterestLevel>().ToList();
 
         public List<StudentStatus> StudentStatusValues =>
             Enum.GetValues<StudentStatus>().ToList();
@@ -93,7 +89,6 @@ namespace MinistryTracker.ViewModels
                 InitialContactType = s.InitialContactType;
                 PhoneNumber = s.PhoneNumber;
                 PreferredContactMethod = s.PreferredContactMethod;
-                InterestLevel = s.InterestLevel;
                 Status = s.Status;
                 Notes = s.Notes;
             }
@@ -142,7 +137,6 @@ namespace MinistryTracker.ViewModels
                 _loadedStudent.InitialContactType = InitialContactType;
                 _loadedStudent.PhoneNumber = string.IsNullOrWhiteSpace(PhoneNumber) ? null : PhoneNumber.Trim();
                 _loadedStudent.PreferredContactMethod = PreferredContactMethod;
-                _loadedStudent.InterestLevel = InterestLevel;
                 _loadedStudent.Status = Status;
                 _loadedStudent.Notes = string.IsNullOrWhiteSpace(Notes) ? null : Notes.Trim();
 

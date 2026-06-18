@@ -1,4 +1,4 @@
-// StudentViewModel.cs — Student row + detail presentation VM — 2026-04-15
+ï»¿// StudentViewModel.cs â€” Student row + detail presentation VM â€” 2026-04-15
 //
 // Purpose:
 // - Wraps Student model for UI binding (lists + details)
@@ -54,7 +54,6 @@ public partial class StudentViewModel : ObservableObject
         OnPropertyChanged(nameof(FirstContactFormatted));
         OnPropertyChanged(nameof(StatusBorderColor));
         OnPropertyChanged(nameof(StatusBackgroundColor));
-        OnPropertyChanged(nameof(InterestColor));
         OnPropertyChanged(nameof(Initials));
         OnPropertyChanged(nameof(SubTitle));
         OnPropertyChanged(nameof(Notes));
@@ -94,11 +93,11 @@ public partial class StudentViewModel : ObservableObject
 
     public string FirstContactFormatted =>
         _student.FirstContactDate == default
-            ? "Contacted: —"
+            ? "Contacted: â€”"
             : $"Contacted: {_student.FirstContactDate:MMM dd, yyyy}";
 
     // =====================================================================
-    // 5) STATUS / INTEREST VISUALS
+    // 5) STATUS VISUALS
     // =====================================================================
 
     public Color StatusBorderColor =>
@@ -120,15 +119,6 @@ public partial class StudentViewModel : ObservableObject
             StudentStatus.Completed => Color.FromArgb("#e6f0ff"),
             _ => Colors.White
         };
-
-    public Color InterestColor => _student.InterestLevel switch
-    {
-        InterestLevel.Promising => Colors.LightGray,
-        InterestLevel.Interested => Color.FromArgb("#FAFAD2"),
-        InterestLevel.ReturnVisit => Colors.LightBlue,
-        InterestLevel.Study => Colors.LightGreen,
-        _ => Colors.White
-    };
 
     // =====================================================================
     // 6) DISPLAY HELPERS (computed strings)
@@ -165,7 +155,7 @@ public partial class StudentViewModel : ObservableObject
             if (segments.Count == 0)
                 segments.Add(_student.InitialContactType.ToString());
 
-            return string.Join(" • ", segments);
+            return string.Join(" â€¢ ", segments);
         }
     }
 }

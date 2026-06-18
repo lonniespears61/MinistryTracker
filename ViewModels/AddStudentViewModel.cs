@@ -9,7 +9,6 @@
 // WHY THIS VERSION CHANGED
 // - Student now has real address/location fields, so address is no longer folded into Notes.
 // - Add Student only collects Tier 1 and Tier 2 fields agreed in review.
-// - InterestLevel remains editable on Add because the app must support backfilling existing students.
 // - GPS capture stores coordinates now, but address replacement stays user-confirmed.
 // ---------------------------------------------------------------------------------------------------------------------
 
@@ -119,13 +118,6 @@ namespace MinistryTracker.ViewModels
         private string? _phoneNumber;
 
         /// <summary>
-        /// Current ministry standing / progression.
-        /// Defaults to Promising, but stays editable on Add to support backfill.
-        /// </summary>
-        [ObservableProperty]
-        private InterestLevel _interestLevel = InterestLevel.Promising;
-
-        /// <summary>
         /// Optional demographic field.
         /// </summary>
         [ObservableProperty]
@@ -176,9 +168,6 @@ namespace MinistryTracker.ViewModels
         public List<InitialContactType> InitialContactTypeValues =>
             Enum.GetValues<InitialContactType>().ToList();
 
-        public List<InterestLevel> InterestLevelValues =>
-            Enum.GetValues<InterestLevel>().ToList();
-
         public List<Gender> GenderValues =>
             Enum.GetValues<Gender>().ToList();
 
@@ -198,7 +187,6 @@ namespace MinistryTracker.ViewModels
             PhoneNumber = null;
             FirstContactDate = DateTime.Now;
             InitialContactType = InitialContactTypeValues.FirstOrDefault();
-            InterestLevel = InterestLevel.Promising;
             SelectedGender = null;
             StudentAge = null;
             Notes = null;
@@ -408,7 +396,6 @@ namespace MinistryTracker.ViewModels
                     PrimaryLatitude = _capturedLatitude,
                     PrimaryLongitude = _capturedLongitude,
                     PrimaryGeocodeStatus = _capturedGeocodeStatus,
-                    InterestLevel = InterestLevel,
                     Gender = SelectedGender,
                     Age = StudentAge,
                     Notes = NormalizeOptionalText(Notes)
