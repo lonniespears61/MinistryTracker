@@ -61,6 +61,8 @@ namespace MinistryTracker.ViewModels
         /// </summary>
         public event Action? CancelCompleted;
 
+        public event Action<string>? OutcomeCompleted;
+
         /// <summary>
         /// Raised when the user chooses to start reschedule flow.
         /// The page should navigate to Calendar in reschedule mode.
@@ -147,6 +149,40 @@ namespace MinistryTracker.ViewModels
                 _ => Status.ToString()
             };
 
+        public bool IsPastVisit =>
+            ScheduledDateTime != default &&
+            ScheduledDateTime <= DateTime.Now;
+
+        public bool CanEditDetails =>
+            VisitId > 0 &&
+            Status != VisitStatus.Rescheduled;
+
+        public bool CanSetOutcome =>
+            IsPastVisit &&
+            Status is VisitStatus.Scheduled or VisitStatus.Successful or VisitStatus.Missed;
+
+        public bool CanCancelVisit =>
+            Status == VisitStatus.Scheduled &&
+            ScheduledDateTime >= DateTime.Now;
+
+        public bool CanRescheduleVisit =>
+            Status == VisitStatus.Missed ||
+            (Status == VisitStatus.Scheduled && ScheduledDateTime >= DateTime.Now);
+
+        public bool IsHistoryLocked => Status == VisitStatus.Rescheduled;
+
+        public string VisitActionGuidance =>
+            IsHistoryLocked
+                ? "This is the original record of a rescheduled visit and is read-only."
+                : CanSetOutcome
+                    ? "Record the outcome or correct the visit details."
+                    : Status is VisitStatus.CanceledByMe or VisitStatus.CanceledByThem
+                        ? "Canceled visit details and notes may be corrected."
+                        : string.Empty;
+
+        public bool HasVisitActionGuidance =>
+            !string.IsNullOrWhiteSpace(VisitActionGuidance);
+
         // =====================================================================
         // LOAD
         // =====================================================================
@@ -219,6 +255,13 @@ namespace MinistryTracker.ViewModels
                 return;
             }
 
+            if (!CanEditDetails)
+            {
+                StatusMessage = "This historical rescheduled record is read-only.";
+                OperationFailed?.Invoke(StatusMessage);
+                return;
+            }
+
             try
             {
                 IsBusy = true;
@@ -254,6 +297,83 @@ namespace MinistryTracker.ViewModels
             }
         }
 
+        [RelayCommand]
+        private async Task MarkSuccessfulAsync()
+        {
+            await SetOutcomeAsync(VisitStatus.Successful);
+        }
+
+        [RelayCommand]
+        private async Task MarkMissedAsync()
+        {
+            await SetOutcomeAsync(VisitStatus.Missed);
+        }
+
+        private async Task SetOutcomeAsync(VisitStatus outcome)
+        {
+            if (IsBusy)
+                return;
+
+            if (!CanSetOutcome)
+            {
+                StatusMessage = "Only a past scheduled, successful, or missed visit can have its outcome changed.";
+                OperationFailed?.Invoke(StatusMessage);
+                return;
+            }
+
+            try
+            {
+                IsBusy = true;
+                StatusMessage = null;
+
+                var detailRows = await _visits.UpdateVisitDetailsAsync(
+                    VisitId,
+                    Method,
+                    MeetingAddress,
+                    Notes).ConfigureAwait(false);
+
+                if (detailRows <= 0)
+                {
+                    StatusMessage = "Visit not found.";
+                    OperationFailed?.Invoke(StatusMessage);
+                    return;
+                }
+
+                var rows = outcome == VisitStatus.Successful
+                    ? await _visits.MarkVisitSuccessfulAsync(
+                        VisitId,
+                        Notes,
+                        ScheduledDateTime).ConfigureAwait(false)
+                    : await _visits.MarkVisitMissedAsync(
+                        VisitId,
+                        Notes).ConfigureAwait(false);
+
+                if (rows <= 0)
+                {
+                    StatusMessage = "Visit not found.";
+                    OperationFailed?.Invoke(StatusMessage);
+                    return;
+                }
+
+                Status = outcome;
+                StatusMessage = outcome == VisitStatus.Successful
+                    ? "Visit marked successful."
+                    : "Visit marked missed.";
+
+                RefreshComputedProperties();
+                OutcomeCompleted?.Invoke(StatusMessage);
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"Outcome update failed: {ex.Message}";
+                OperationFailed?.Invoke(StatusMessage);
+            }
+            finally
+            {
+                IsBusy = false;
+            }
+        }
+
         // =====================================================================
         // CANCEL
         // =====================================================================
@@ -267,6 +387,13 @@ namespace MinistryTracker.ViewModels
             if (VisitId <= 0)
             {
                 StatusMessage = "Visit id is missing or invalid.";
+                OperationFailed?.Invoke(StatusMessage);
+                return;
+            }
+
+            if (!CanCancelVisit)
+            {
+                StatusMessage = "Only an upcoming scheduled visit can be canceled.";
                 OperationFailed?.Invoke(StatusMessage);
                 return;
             }
@@ -327,6 +454,13 @@ namespace MinistryTracker.ViewModels
                 return;
             }
 
+            if (!CanRescheduleVisit)
+            {
+                StatusMessage = "Only an upcoming scheduled visit or a missed visit can be rescheduled.";
+                OperationFailed?.Invoke(StatusMessage);
+                return;
+            }
+
             RescheduleRequested?.Invoke(VisitId, StudentId);
         }
 
@@ -341,6 +475,14 @@ namespace MinistryTracker.ViewModels
         {
             OnPropertyChanged(nameof(CurrentVisitDateTimeDisplay));
             OnPropertyChanged(nameof(CurrentVisitStatusDisplay));
+            OnPropertyChanged(nameof(IsPastVisit));
+            OnPropertyChanged(nameof(CanEditDetails));
+            OnPropertyChanged(nameof(CanSetOutcome));
+            OnPropertyChanged(nameof(CanCancelVisit));
+            OnPropertyChanged(nameof(CanRescheduleVisit));
+            OnPropertyChanged(nameof(IsHistoryLocked));
+            OnPropertyChanged(nameof(VisitActionGuidance));
+            OnPropertyChanged(nameof(HasVisitActionGuidance));
         }
     }
 }

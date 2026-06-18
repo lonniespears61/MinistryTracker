@@ -7,7 +7,8 @@
 //
 // DESIGN RULES
 // - One Visit record = one scheduled attempt.
-// - Reschedule = close old visit as Rescheduled and create a new Visit record.
+// - Reschedule an upcoming visit by closing it as Rescheduled and creating a new Visit record.
+// - Rescheduling a Missed visit preserves the Missed outcome and creates a linked follow-up.
 // - Cancellations preserve history; visits are not deleted as part of normal workflow.
 // - Notes are stored as one field, with NotesCreatedDateTime tracking when note content was last updated.
 // - This file does not apply UI prompts; it provides data operations that UI/workflow can build on.
@@ -70,23 +71,6 @@ namespace MinistryTracker.Data
             {
                 ct.ThrowIfCancellationRequested();
                 return Db.InsertAsync(visit);
-            }, ct);
-        }
-
-        /// <summary>
-        /// Update an existing visit.
-        /// </summary>
-        public Task<int> UpdateVisitAsync(Visit visit, CancellationToken ct = default)
-        {
-            ArgumentNullException.ThrowIfNull(visit);
-
-            if (visit.Id <= 0)
-                throw new InvalidOperationException("Visit.Id must be set.");
-
-            return EnsureInitThen(() =>
-            {
-                ct.ThrowIfCancellationRequested();
-                return Db.UpdateAsync(visit);
             }, ct);
         }
 
@@ -262,6 +246,9 @@ namespace MinistryTracker.Data
                 if (visit is null)
                     return 0;
 
+                if (visit.Status == VisitStatus.Rescheduled)
+                    throw new InvalidOperationException("A rescheduled history record cannot be edited.");
+
                 visit.Method = method;
                 visit.MeetingAddress = string.IsNullOrWhiteSpace(meetingAddress)
                     ? null
@@ -296,8 +283,22 @@ namespace MinistryTracker.Data
                 if (visit is null)
                     return 0;
 
+                if (visit.ScheduledDateTime > DateTime.Now)
+                    throw new InvalidOperationException("A future visit cannot be marked successful.");
+
+                if (visit.Status is VisitStatus.CanceledByMe or
+                    VisitStatus.CanceledByThem or
+                    VisitStatus.Rescheduled)
+                {
+                    throw new InvalidOperationException(
+                        "A canceled or rescheduled visit cannot be marked successful.");
+                }
+
                 visit.Status = VisitStatus.Successful;
-                visit.CompletedDateTime = completedDateTime ?? DateTime.Now;
+                visit.CompletedDateTime =
+                    completedDateTime ??
+                    visit.CompletedDateTime ??
+                    visit.ScheduledDateTime;
 
                 if (notes is not null)
                 {
@@ -321,7 +322,19 @@ namespace MinistryTracker.Data
                 if (visit is null)
                     return 0;
 
+                if (visit.ScheduledDateTime > DateTime.Now)
+                    throw new InvalidOperationException("A future visit cannot be marked missed.");
+
+                if (visit.Status is VisitStatus.CanceledByMe or
+                    VisitStatus.CanceledByThem or
+                    VisitStatus.Rescheduled)
+                {
+                    throw new InvalidOperationException(
+                        "A canceled or rescheduled visit cannot be marked missed.");
+                }
+
                 visit.Status = VisitStatus.Missed;
+                visit.CompletedDateTime = null;
 
                 if (notes is not null)
                 {
@@ -357,6 +370,13 @@ namespace MinistryTracker.Data
                 if (visit is null)
                     return 0;
 
+                if (visit.Status != VisitStatus.Scheduled)
+                    throw new InvalidOperationException("Only a scheduled visit can be canceled.");
+
+                if (visit.ScheduledDateTime < DateTime.Now)
+                    throw new InvalidOperationException(
+                        "A past visit should be marked successful or missed instead of canceled.");
+
                 visit.Status = canceledStatus;
 
                 if (!string.IsNullOrWhiteSpace(reason))
@@ -372,8 +392,8 @@ namespace MinistryTracker.Data
             }, ct);
 
         /// <summary>
-        /// Reschedule a visit by closing the current record as Rescheduled
-        /// and creating a new scheduled visit linked back to it.
+        /// Reschedule by creating a new scheduled visit linked back to the current record.
+        /// Upcoming scheduled visits are closed as Rescheduled; Missed visits remain Missed.
         /// </summary>
         public Task<Visit> RescheduleVisitAsync(
             int visitId,
@@ -393,7 +413,19 @@ namespace MinistryTracker.Data
                 if (current is null)
                     throw new InvalidOperationException("Visit not found.");
 
-                current.Status = VisitStatus.Rescheduled;
+                var canReschedule =
+                    current.Status == VisitStatus.Missed ||
+                    (current.Status == VisitStatus.Scheduled &&
+                     current.ScheduledDateTime >= DateTime.Now);
+
+                if (!canReschedule)
+                {
+                    throw new InvalidOperationException(
+                        "Only an upcoming scheduled visit or a missed visit can be rescheduled.");
+                }
+
+                if (current.Status == VisitStatus.Scheduled)
+                    current.Status = VisitStatus.Rescheduled;
 
                 if (!string.IsNullOrWhiteSpace(note))
                 {
@@ -433,6 +465,9 @@ namespace MinistryTracker.Data
                 var visit = await Db.FindAsync<Visit>(visitId).ConfigureAwait(false);
                 if (visit is null)
                     return 0;
+
+                if (visit.Status == VisitStatus.Rescheduled)
+                    throw new InvalidOperationException("A rescheduled history record cannot be edited.");
 
                 visit.Notes = notes;
                 visit.NotesCreatedDateTime = string.IsNullOrWhiteSpace(notes) ? null : DateTime.Now;

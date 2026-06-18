@@ -12,7 +12,6 @@ public interface IVisitRepository
         bool includeCanceled = false,
         CancellationToken ct = default);
     Task<int> AddVisitAsync(Visit visit, CancellationToken ct = default);
-    Task<int> UpdateVisitAsync(Visit visit, CancellationToken ct = default);
     Task<Visit?> GetVisitByIdAsync(int visitId, CancellationToken ct = default);
     Task<int> DeleteVisitAsync(int visitId, CancellationToken ct = default);
     Task<List<Visit>> GetVisitsTodayAsync(CancellationToken ct = default);

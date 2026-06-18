@@ -63,6 +63,12 @@ WHY THIS FILE EXISTS IN THIS SHAPE
                         FontSize="13"
                         FontAttributes="Bold"
                         TextColor="#2563EB" />
+
+                    <Label
+                        Text="{Binding VisitActionGuidance}"
+                        FontSize="12"
+                        TextColor="#6B7280"
+                        IsVisible="{Binding HasVisitActionGuidance}" />
                 </VerticalStackLayout>
             </Border>
 
@@ -74,18 +80,42 @@ WHY THIS FILE EXISTS IN THIS SHAPE
             <Picker
                 Title="Select method"
                 ItemsSource="{Binding ContactMethodValues}"
-                SelectedItem="{Binding Method}" />
+                SelectedItem="{Binding Method}"
+                IsEnabled="{Binding CanEditDetails}" />
 
             <Label Text="Meeting Address" />
             <Entry
                 Text="{Binding MeetingAddress}"
-                Placeholder="Optional address or meeting location" />
+                Placeholder="Optional address or meeting location"
+                IsEnabled="{Binding CanEditDetails}" />
 
             <Label Text="Notes" />
             <Editor
                 Text="{Binding Notes}"
                 AutoSize="TextChanges"
-                Placeholder="Visit notes, reminders, or follow-up details" />
+                Placeholder="Visit notes, reminders, or follow-up details"
+                IsEnabled="{Binding CanEditDetails}" />
+
+            <Grid ColumnDefinitions="*,*"
+                  ColumnSpacing="12"
+                  IsVisible="{Binding CanSetOutcome}">
+                <Button
+                    Text="Successful"
+                    Command="{Binding MarkSuccessfulCommand}"
+                    CornerRadius="14"
+                    HeightRequest="52"
+                    BackgroundColor="#16803A"
+                    TextColor="White" />
+
+                <Button
+                    Grid.Column="1"
+                    Text="Missed"
+                    Command="{Binding MarkMissedCommand}"
+                    CornerRadius="14"
+                    HeightRequest="52"
+                    BackgroundColor="#B45309"
+                    TextColor="White" />
+            </Grid>
 
             <!--
             Action area:
@@ -105,6 +135,7 @@ WHY THIS FILE EXISTS IN THIS SHAPE
                 <Button
                     Text="Save Changes"
                     Command="{Binding SaveCommand}"
+                    IsEnabled="{Binding CanEditDetails}"
                     CornerRadius="14"
                     HeightRequest="52" />
 
@@ -112,6 +143,7 @@ WHY THIS FILE EXISTS IN THIS SHAPE
                     Grid.Column="1"
                     Text="Reschedule"
                     Command="{Binding RescheduleCommand}"
+                    IsVisible="{Binding CanRescheduleVisit}"
                     CornerRadius="14"
                     HeightRequest="52" />
             </Grid>
@@ -119,6 +151,7 @@ WHY THIS FILE EXISTS IN THIS SHAPE
             <Button
                 Text="Cancel Visit"
                 Command="{Binding CancelVisitCommand}"
+                IsVisible="{Binding CanCancelVisit}"
                 CornerRadius="14"
                 HeightRequest="52" />
 

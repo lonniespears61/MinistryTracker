@@ -44,6 +44,7 @@ public partial class UpdateVisitPage : ContentPage
         {
             _vm.SaveCompleted += OnSaveCompleted;
             _vm.CancelCompleted += OnCancelCompleted;
+            _vm.OutcomeCompleted += OnOutcomeCompleted;
             _vm.RescheduleRequested += OnRescheduleRequested;
             _vm.OperationFailed += OnOperationFailed;
             _subscribed = true;
@@ -66,6 +67,7 @@ public partial class UpdateVisitPage : ContentPage
         {
             _vm.SaveCompleted -= OnSaveCompleted;
             _vm.CancelCompleted -= OnCancelCompleted;
+            _vm.OutcomeCompleted -= OnOutcomeCompleted;
             _vm.RescheduleRequested -= OnRescheduleRequested;
             _vm.OperationFailed -= OnOperationFailed;
             _subscribed = false;
@@ -81,6 +83,11 @@ public partial class UpdateVisitPage : ContentPage
     {
         await DisplayAlert("Cancel Visit", "Visit canceled.", "OK");
         await Shell.Current.GoToAsync("..");
+    }
+
+    private async void OnOutcomeCompleted(string message)
+    {
+        await DisplayAlert("Visit Outcome", message, "OK");
     }
 
     private async void OnRescheduleRequested(int visitId, int studentId)
