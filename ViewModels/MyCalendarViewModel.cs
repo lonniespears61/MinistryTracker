@@ -26,6 +26,7 @@ using Microsoft.Extensions.Logging;
 using MinistryTracker.Data;
 using MinistryTracker.Data.Repositories;
 using MinistryTracker.Models.DTOs;
+using MinistryTracker.Models.Enums;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -53,6 +54,7 @@ public partial class MyCalendarViewModel : ObservableObject
 
     [ObservableProperty] private bool isRescheduleMode;
     [ObservableProperty] private int? reschedulingVisitId;
+    private TimeSpan? _reschedulingTimeOfDay;
 
     public string SchedulingBannerText
     {
@@ -142,9 +144,13 @@ public partial class MyCalendarViewModel : ObservableObject
             var monthStart = DisplayedMonth.Date;
             var nextMonthStart = monthStart.AddMonths(1);
 
-            _visibleMonthVisits = await _visits
+            var monthVisits = await _visits
                 .GetVisitsWithStudentsInRangeAsync(monthStart, nextMonthStart, includeCanceled: false)
                 .ConfigureAwait(false);
+
+            _visibleMonthVisits = monthVisits
+                .Where(v => v.Status != VisitStatus.Rescheduled)
+                .ToList();
 
             BuildVisitsLookup(_visibleMonthVisits);
 
@@ -214,16 +220,21 @@ public partial class MyCalendarViewModel : ObservableObject
     {
         try
         {
-            var student = await _students.GetStudentByIdAsync(studentId).ConfigureAwait(false);
+            var visit = await _visits.GetVisitByIdAsync(visitId).ConfigureAwait(false)
+                ?? throw new InvalidOperationException("Visit not found.");
+
+            var actualStudentId = visit.StudentId;
+            var student = await _students.GetStudentByIdAsync(actualStudentId).ConfigureAwait(false);
 
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
                 IsRescheduleMode = true;
                 ReschedulingVisitId = visitId;
+                _reschedulingTimeOfDay = visit.ScheduledDateTime.TimeOfDay;
 
                 IsSchedulingMode = true;
-                SchedulingStudentId = studentId;
-                SchedulingStudentName = student?.Name ?? $"Student #{studentId}";
+                SchedulingStudentId = actualStudentId;
+                SchedulingStudentName = student?.Name ?? $"Student #{actualStudentId}";
 
                 OnPropertyChanged(nameof(SchedulingBannerText));
                 OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
@@ -235,6 +246,7 @@ public partial class MyCalendarViewModel : ObservableObject
             {
                 IsRescheduleMode = true;
                 ReschedulingVisitId = visitId;
+                _reschedulingTimeOfDay = null;
 
                 IsSchedulingMode = true;
                 SchedulingStudentId = studentId;
@@ -250,6 +262,7 @@ public partial class MyCalendarViewModel : ObservableObject
     {
         IsRescheduleMode = false;
         ReschedulingVisitId = null;
+        _reschedulingTimeOfDay = null;
 
         IsSchedulingMode = false;
         SchedulingStudentId = null;
@@ -275,6 +288,41 @@ public partial class MyCalendarViewModel : ObservableObject
         SyncAgendaForSelection();
         OnPropertyChanged(nameof(SelectedDayTitle));
         OnPropertyChanged(nameof(CanAddVisitForSelectedDay));
+    }
+
+    public async Task CompleteRescheduleAsync(DateTime newDate)
+    {
+        if (!IsRescheduleMode || ReschedulingVisitId is null)
+            throw new InvalidOperationException("No visit is selected for rescheduling.");
+
+        if (newDate.Date < DateTime.Today)
+            throw new InvalidOperationException("A visit cannot be rescheduled before today.");
+
+        var visitId = ReschedulingVisitId.Value;
+        var original = await _visits.GetVisitByIdAsync(visitId).ConfigureAwait(false)
+            ?? throw new InvalidOperationException("Visit not found.");
+
+        var timeOfDay = _reschedulingTimeOfDay ?? original.ScheduledDateTime.TimeOfDay;
+        var replacementDateTime = newDate.Date.Add(timeOfDay);
+
+        await _visits.RescheduleVisitAsync(visitId, replacementDateTime).ConfigureAwait(false);
+
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            ClearSchedulingContext();
+            DisplayedMonth = new DateTime(
+                replacementDateTime.Year,
+                replacementDateTime.Month,
+                1);
+        });
+
+        await LoadAsync().ConfigureAwait(false);
+
+        await MainThread.InvokeOnMainThreadAsync(() =>
+        {
+            SelectedDayCell = DayCells.FirstOrDefault(
+                cell => !cell.IsPlaceholder && cell.Date.Date == replacementDateTime.Date);
+        });
     }
 
     // -------------------------

@@ -1,4 +1,4 @@
-// DashboardPage.xaml.cs — Dashboard interactions — 2026-01-22
+// DashboardPage.xaml.cs â€” Dashboard interactions â€” 2026-01-22
 
 using System;
 using System.Linq;
@@ -54,6 +54,22 @@ public partial class DashboardPage : ContentPage
         var today = DateTime.Today.ToString("yyyy-MM-dd");
         await Shell.Current.GoToAsync(
             $"{nameof(AddVisitPage)}?studentId={suggestion.StudentId}&date={today}");
+    }
+
+    private async void OnVisitSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is CollectionView collectionView)
+            collectionView.SelectedItem = null;
+
+        var visit = e.CurrentSelection
+            .OfType<VisitWithStudent>()
+            .FirstOrDefault();
+
+        if (visit is null)
+            return;
+
+        await Shell.Current.GoToAsync(
+            $"{nameof(UpdateVisitPage)}?visitId={visit.VisitId}");
     }
 
     private async void OnOpenMapClicked(object sender, EventArgs e)

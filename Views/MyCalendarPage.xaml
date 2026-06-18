@@ -152,6 +152,8 @@
         <!-- ROW 5: Agenda -->
         <CollectionView Grid.Row="5"
                         ItemsSource="{Binding SelectedDayVisits}"
+                        SelectionMode="Single"
+                        SelectionChanged="OnVisitSelectionChanged"
                         EmptyView="No visits scheduled for this day.">
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="models:VisitWithStudent">

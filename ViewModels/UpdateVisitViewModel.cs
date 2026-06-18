@@ -6,7 +6,7 @@
 // - Loads visit details by visitId.
 // - Saves same-record edits for allowed fields.
 // - Cancels the current visit.
-// - Owns reschedule execution using the visit repository.
+// - Starts the calendar-based reschedule flow.
 //
 // DESIGN RULES
 // - ViewModel must NOT inherit from ContentPage.
@@ -66,12 +66,6 @@ namespace MinistryTracker.ViewModels
         /// The page should navigate to Calendar in reschedule mode.
         /// </summary>
         public event Action<int, int>? RescheduleRequested;
-
-        /// <summary>
-        /// Raised when the reschedule operation completes successfully.
-        /// The page may use this to navigate away or refresh.
-        /// </summary>
-        public event Action? RescheduleCompleted;
 
         /// <summary>
         /// Raised when an operation fails.
@@ -324,7 +318,7 @@ namespace MinistryTracker.ViewModels
             // - current visit id
             // - current student id
             //
-            // The actual data operation is performed later by CompleteRescheduleAsync.
+            // Calendar owns the date choice and completes the reschedule.
             // -----------------------------------------------------------------
             if (VisitId <= 0 || StudentId <= 0)
             {
@@ -334,57 +328,6 @@ namespace MinistryTracker.ViewModels
             }
 
             RescheduleRequested?.Invoke(VisitId, StudentId);
-        }
-
-        /// <summary>
-        /// Completes the reschedule after Calendar has produced a replacement date.
-        ///
-        /// WHY:
-        /// The page can stay responsible for navigation and user choice, while the
-        /// ViewModel stays responsible for the actual business/data operation.
-        /// </summary>
-        public async Task CompleteRescheduleAsync(DateTime newScheduledDateTime)
-        {
-            if (IsBusy)
-                return;
-
-            if (VisitId <= 0)
-            {
-                StatusMessage = "Visit id is missing or invalid.";
-                OperationFailed?.Invoke(StatusMessage);
-                return;
-            }
-
-            try
-            {
-                IsBusy = true;
-                StatusMessage = null;
-
-                // Locked rule:
-                // Reschedule closes current record as Rescheduled and creates a new Scheduled record.
-                var replacement = await _visits.RescheduleVisitAsync(
-                    VisitId,
-                    newScheduledDateTime).ConfigureAwait(false);
-
-                Status = VisitStatus.Rescheduled;
-                RefreshComputedProperties();
-
-                StatusMessage = "Visit rescheduled.";
-                RescheduleCompleted?.Invoke();
-
-                // Refresh this ViewModel from source of truth so the page remains coherent
-                // if the user stays on it briefly before navigation completes.
-                await LoadAsync(VisitId).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                StatusMessage = $"Reschedule failed: {ex.Message}";
-                OperationFailed?.Invoke(StatusMessage);
-            }
-            finally
-            {
-                IsBusy = false;
-            }
         }
 
         // =====================================================================

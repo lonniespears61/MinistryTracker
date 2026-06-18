@@ -383,7 +383,11 @@ namespace MinistryTracker.Data
             double? newMeetingLongitude = null,
             string? note = null,
             CancellationToken ct = default)
-            => EnsureInitThen(async () =>
+        {
+            if (newScheduledDateTime.Date < DateTime.Today)
+                throw new InvalidOperationException("A visit cannot be rescheduled before today.");
+
+            return EnsureInitThen(async () =>
             {
                 var current = await Db.FindAsync<Visit>(visitId).ConfigureAwait(false);
                 if (current is null)
@@ -416,6 +420,7 @@ namespace MinistryTracker.Data
                 await Db.InsertAsync(replacement).ConfigureAwait(false);
                 return replacement;
             }, ct);
+        }
 
         /// <summary>
         /// Update visit notes and stamp note timing.

@@ -152,13 +152,8 @@ public partial class MyCalendarPage : ContentPage
             if (!confirm)
                 return;
 
-            // Calendar only chooses the replacement date.
-            // UpdateVisitPage / UpdateVisitViewModel remain the owners of the
-            // actual reschedule operation.
-            var dateString = newDate.ToString("yyyy-MM-dd");
-
-            await Shell.Current.GoToAsync(
-                $"..{nameof(UpdateVisitPage)}?visitId={visitId}&rescheduleDate={dateString}");
+            await _vm.CompleteRescheduleAsync(newDate);
+            await DisplayAlert("Reschedule Visit", "Visit rescheduled.", "OK");
         }
         catch (Exception ex)
         {
@@ -227,6 +222,18 @@ public partial class MyCalendarPage : ContentPage
         {
             System.Diagnostics.Debug.WriteLine(ex);
             await DisplayAlert("Something Broke", "Back up and try again", "OK");
+        }
+    }
+
+    private void OnVisitSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is CollectionView collectionView)
+            collectionView.SelectedItem = null;
+
+        if (e.CurrentSelection.Count > 0 &&
+            e.CurrentSelection[0] is VisitWithStudent visit)
+        {
+            OnExistingVisitTapped(visit);
         }
     }
 

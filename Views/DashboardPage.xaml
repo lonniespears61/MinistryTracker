@@ -184,7 +184,8 @@ DESIGN RULES
                     -->
                     <CollectionView
                         ItemsSource="{Binding TodayVisits}"
-                        SelectionMode="None"
+                        SelectionMode="Single"
+                        SelectionChanged="OnVisitSelectionChanged"
                         Margin="0"
                         BackgroundColor="Transparent"
                         IsVisible="{Binding HasTodayVisits}">
@@ -280,7 +281,8 @@ DESIGN RULES
                     -->
                     <CollectionView
                         ItemsSource="{Binding MissedRecently}"
-                        SelectionMode="None"
+                        SelectionMode="Single"
+                        SelectionChanged="OnVisitSelectionChanged"
                         Margin="0"
                         BackgroundColor="Transparent"
                         IsVisible="{Binding HasMissedRecently}">
@@ -371,7 +373,8 @@ DESIGN RULES
                     -->
                     <CollectionView
                         ItemsSource="{Binding LongOverdue}"
-                        SelectionMode="None"
+                        SelectionMode="Single"
+                        SelectionChanged="OnVisitSelectionChanged"
                         Margin="0"
                         BackgroundColor="Transparent"
                         IsVisible="{Binding HasLongOverdue}">
