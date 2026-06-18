@@ -52,12 +52,23 @@ public partial class AddStudentPage : ContentPage
 
             if (scheduleVisit)
             {
-                // Scheduling flow is the next wiring step.
-                // Keep this branch explicit so the later route hookup is isolated here.
-                await DisplayAlert(
-                    "Next Step",
-                    "Visit scheduling will be wired next.",
-                    "OK");
+                if (_vm.SavedStudentId is not int studentId || studentId <= 0)
+                {
+                    await DisplayAlert(
+                        "Schedule Visit",
+                        "The student was saved, but the new student ID was not available.",
+                        "OK");
+
+                    await Shell.Current.GoToAsync("..");
+                    return;
+                }
+
+                // Replace Add Student with Add Visit in the navigation stack.
+                // Saving or canceling the visit then returns to the page where
+                // the user originally started adding the student.
+                await Shell.Current.GoToAsync(
+                    $"../{nameof(AddVisitPage)}?studentId={studentId}");
+                return;
             }
 
             await Shell.Current.GoToAsync("..");
