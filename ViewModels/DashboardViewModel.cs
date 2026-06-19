@@ -88,9 +88,7 @@ namespace MinistryTracker.ViewModels
                 OnPropertyChanged(nameof(HasMissedRecently));
                 OnPropertyChanged(nameof(HasLongOverdue));
 
-#if DEBUG
                 System.Diagnostics.Debug.WriteLine($"Dashboard LoadAsync error: {ex}");
-#endif
             }
             finally
             {

@@ -8,12 +8,12 @@
     xmlns:viewmodels="clr-namespace:MinistryTracker.ViewModels"
     x:DataType="viewmodels:StudentsListViewModel"
     Title="Students"
-    BackgroundColor="{StaticResource Students.BgTint}">
+    BackgroundColor="{DynamicResource Students.BgTint}">
 
     <Shell.TitleView>
         <Grid VerticalOptions="Center"
               Padding="0,20,0,0"
-              BackgroundColor="{StaticResource Students.Base}">
+              BackgroundColor="{DynamicResource Students.Base}">
             <Label Text="Student List"
                    FontSize="18"
                    FontAttributes="Bold"
@@ -45,7 +45,7 @@
                     Grid.Column="1"
                     Clicked="OnAddStudentClicked"
                     CornerRadius="12"
-                    BackgroundColor="{StaticResource Students.Base}"
+                    BackgroundColor="{DynamicResource Students.Base}"
                     TextColor="White" />
         </Grid>
 
@@ -53,8 +53,8 @@
         <Border x:Name="SwipeHintBanner"
                 Grid.Row="1"
                 IsVisible="False"
-                BackgroundColor="{StaticResource Students.CardTint}"
-                Stroke="{StaticResource Students.BorderTint}"
+                BackgroundColor="{DynamicResource Students.CardTint}"
+                Stroke="{DynamicResource Students.BorderTint}"
                 StrokeThickness="1"
                 StrokeShape="RoundRectangle 14"
                 Padding="12"
@@ -74,7 +74,7 @@
                         Clicked="OnDismissSwipeHintClicked"
                         CornerRadius="12"
                         Padding="12,8"
-                        BackgroundColor="{StaticResource Students.Base}"
+                        BackgroundColor="{DynamicResource Students.Base}"
                         TextColor="White" />
 
                 <!-- Optional: tiny subtext -->
@@ -123,8 +123,8 @@
                             </SwipeItems>
                         </SwipeView.RightItems>
 
-                        <Border BackgroundColor="{StaticResource Students.CardTint}"
-                                Stroke="{StaticResource Students.BorderTint}"
+                        <Border BackgroundColor="{DynamicResource Students.CardTint}"
+                                Stroke="{DynamicResource Students.BorderTint}"
                                 StrokeThickness="1"
                                 StrokeShape="RoundRectangle 14"
                                 Margin="0,0,0,10"
@@ -135,7 +135,7 @@
                                              Binding="{Binding IsAlternate}"
                                              Value="True">
                                     <Setter Property="BackgroundColor"
-                                            Value="{StaticResource Students.BgTint}" />
+                                            Value="{DynamicResource Students.BgTint}" />
                                 </DataTrigger>
                             </Border.Triggers>
 
@@ -171,12 +171,13 @@
                                            TextColor="{AppThemeBinding Light=#475569, Dark=#9AA6B2}" />
                                 </VerticalStackLayout>
 
-                                <Image Grid.Column="2"
-                                       Source="chevron_right.png"
-                                       WidthRequest="16"
-                                       HeightRequest="16"
+                                <Label Grid.Column="2"
+                                       Text="›"
+                                       FontSize="28"
                                        VerticalOptions="Center"
-                                       Opacity="0.5" />
+                                       HorizontalOptions="Center"
+                                       TextColor="{AppThemeBinding Light=#64748B, Dark=#94A3B8}"
+                                       Opacity="0.7" />
                             </Grid>
                         </Border>
 

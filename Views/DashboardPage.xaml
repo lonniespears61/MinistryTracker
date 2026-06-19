@@ -25,7 +25,7 @@ DESIGN RULES
     xmlns:converters="clr-namespace:MinistryTracker.Converters"
     x:DataType="viewmodels:DashboardViewModel"
     Title="Dashboard"
-    BackgroundColor="{StaticResource Dashboard.BgTint}">
+    BackgroundColor="{DynamicResource Dashboard.BgTint}">
 
     <ContentPage.Resources>
         <ResourceDictionary>
@@ -84,7 +84,7 @@ DESIGN RULES
             <!-- QUICK ACTIONS -->
             <Border
                 BackgroundColor="#EEF3FB"
-                Stroke="{StaticResource Dashboard.BorderTint}"
+                Stroke="{DynamicResource Dashboard.BorderTint}"
                 StrokeThickness="1"
                 Padding="0"
                 Margin="0,2">
@@ -103,7 +103,7 @@ DESIGN RULES
                 <VerticalStackLayout Spacing="0">
 
                     <Border
-                        BackgroundColor="{StaticResource Dashboard.Base}"
+                        BackgroundColor="{DynamicResource Dashboard.Base}"
                         Padding="16,12">
                         <Border.StrokeShape>
                             <RoundRectangle CornerRadius="18,18,0,0" />
@@ -126,7 +126,7 @@ DESIGN RULES
                             Clicked="OnAddNewCallClicked"
                             CornerRadius="14"
                             HeightRequest="54"
-                            BackgroundColor="{StaticResource Dashboard.Base}"
+                            BackgroundColor="{DynamicResource Dashboard.Base}"
                             TextColor="White" />
 
                         <Button
@@ -144,7 +144,7 @@ DESIGN RULES
             <!-- TODAY -->
             <Border
                 BackgroundColor="#EEF7EA"
-                Stroke="{StaticResource Dashboard.BorderTint}"
+                Stroke="{DynamicResource Dashboard.BorderTint}"
                 StrokeThickness="1"
                 Padding="0"
                 Margin="0,2">
@@ -241,7 +241,7 @@ DESIGN RULES
             <!-- FOLLOW UP -->
             <Border
                 BackgroundColor="#FFF6E8"
-                Stroke="{StaticResource Dashboard.BorderTint}"
+                Stroke="{DynamicResource Dashboard.BorderTint}"
                 StrokeThickness="1"
                 Padding="0"
                 Margin="0,2">
@@ -333,7 +333,7 @@ DESIGN RULES
             <!-- IT'S BEEN AWHILE -->
             <Border
                 BackgroundColor="#F1F2F4"
-                Stroke="{StaticResource Dashboard.BorderTint}"
+                Stroke="{DynamicResource Dashboard.BorderTint}"
                 StrokeThickness="1"
                 Padding="0"
                 Margin="0,2">

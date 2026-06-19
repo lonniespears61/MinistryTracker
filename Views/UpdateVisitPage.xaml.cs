@@ -6,16 +6,22 @@
 // - Receives visitId from Shell query params.
 // - Wires page lifecycle, ViewModel loading, and navigation responses.
 //
+// FIX
+// - All page-owned UI work is now forced onto the main thread.
+// - This prevents Android crash:
+//   "Can't create handler inside thread ... that has not called Looper.prepare()"
+//
 // DESIGN RULES
 // - This page is for an EXISTING visit.
 // - ViewModel owns load/save/cancel/reschedule logic.
 // - Page owns navigation and user-facing prompts.
 // - Reschedule does not edit datetime in place.
-//   It should go to Calendar in reschedule mode.
+//   It goes to Calendar in reschedule mode.
 //
 // ---------------------------------------------------------------------------------------------------------------------
 
 using System;
+using Microsoft.Maui.ApplicationModel;
 using MinistryTracker.ViewModels;
 
 namespace MinistryTracker.Views;
@@ -74,46 +80,47 @@ public partial class UpdateVisitPage : ContentPage
         }
     }
 
-    private async void OnSaveCompleted()
+    private void OnSaveCompleted()
     {
-        await DisplayAlert("Save Changes", "Changes saved.", "OK");
+        MainThread.BeginInvokeOnMainThread(
+            async () => await DisplayAlert("Save Changes", "Changes saved.", "OK"));
     }
 
-    private async void OnCancelCompleted()
+    private void OnCancelCompleted()
     {
-        await DisplayAlert("Cancel Visit", "Visit canceled.", "OK");
-        await Shell.Current.GoToAsync("..");
-    }
-
-    private async void OnOutcomeCompleted(string message)
-    {
-        await DisplayAlert("Visit Outcome", message, "OK");
-    }
-
-    private async void OnRescheduleRequested(int visitId, int studentId)
-    {
-        try
+        MainThread.BeginInvokeOnMainThread(async () =>
         {
-            // -----------------------------------------------------------------
-            // LOCKED RULE:
-            // Reschedule goes through Calendar.
-            // The current visit is not edited in place.
-            //
-            // We pass both visitId and studentId so Calendar can support
-            // a proper reschedule flow when that mode is wired.
-            // -----------------------------------------------------------------
-            await Shell.Current.GoToAsync(
-                $"{nameof(MyCalendarPage)}?mode=reschedule&visitId={visitId}&studentId={studentId}");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine(ex);
-            await DisplayAlert("Reschedule", "Could not open Calendar.", "OK");
-        }
+            await DisplayAlert("Cancel Visit", "Visit canceled.", "OK");
+            await Shell.Current.GoToAsync("..");
+        });
     }
 
-    private async void OnOperationFailed(string message)
+    private void OnOutcomeCompleted(string message)
     {
-        await DisplayAlert("Visit", message, "OK");
+        MainThread.BeginInvokeOnMainThread(
+            async () => await DisplayAlert("Visit Outcome", message, "OK"));
+    }
+
+    private void OnRescheduleRequested(int visitId, int studentId)
+    {
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            try
+            {
+                await Shell.Current.GoToAsync(
+                    $"{nameof(MyCalendarPage)}?mode=reschedule&visitId={visitId}&studentId={studentId}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex);
+                await DisplayAlert("Reschedule", "Could not open Calendar.", "OK");
+            }
+        });
+    }
+
+    private void OnOperationFailed(string message)
+    {
+        MainThread.BeginInvokeOnMainThread(
+            async () => await DisplayAlert("Visit", message, "OK"));
     }
 }
