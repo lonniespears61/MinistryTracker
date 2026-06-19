@@ -11,7 +11,8 @@
     BackgroundColor="{DynamicResource Students.BgTint}">
 
     <Shell.TitleView>
-        <Grid VerticalOptions="Center"
+        <Grid ColumnDefinitions="*,Auto"
+              VerticalOptions="Center"
               Padding="0,20,0,0"
               BackgroundColor="{DynamicResource Students.Base}">
             <Label Text="Student List"
@@ -19,6 +20,17 @@
                    FontAttributes="Bold"
                    TextColor="White"
                    VerticalOptions="Center" />
+
+            <Button Grid.Column="1"
+                    Text="?"
+                    Clicked="OnShowListHelpClicked"
+                    WidthRequest="38"
+                    HeightRequest="38"
+                    Padding="0"
+                    CornerRadius="19"
+                    BackgroundColor="Transparent"
+                    TextColor="White"
+                    SemanticProperties.Description="Show student list help" />
         </Grid>
     </Shell.TitleView>
 
@@ -61,11 +73,11 @@
                 Margin="0,0,0,10">
 
             <Grid ColumnDefinitions="*,Auto"
-                  RowDefinitions="Auto,Auto"
+                  RowDefinitions="Auto"
                   ColumnSpacing="12">
 
                 <Label Grid.Row="0" Grid.Column="0"
-                       Text="Tip: Swipe right to edit. Swipe left to schedule a visit."
+                       Text="Tap for profile &amp; visit history • Swipe right to edit • Swipe left to schedule"
                        FontSize="13"
                        TextColor="{AppThemeBinding Light=#0F172A, Dark=#E6EEF9}" />
 
@@ -77,12 +89,6 @@
                         BackgroundColor="{DynamicResource Students.Base}"
                         TextColor="White" />
 
-                <!-- Optional: tiny subtext -->
-                <Label Grid.Row="1" Grid.Column="0"
-                       Text="This message will keep showing until you dismiss it."
-                       FontSize="11"
-                       Opacity="0.7"
-                       TextColor="{AppThemeBinding Light=#475569, Dark=#9AA6B2}" />
             </Grid>
         </Border>
 

@@ -13,6 +13,7 @@ public interface IVisitRepository
         CancellationToken ct = default);
     Task<int> AddVisitAsync(Visit visit, CancellationToken ct = default);
     Task<Visit?> GetVisitByIdAsync(int visitId, CancellationToken ct = default);
+    Task<List<Visit>> GetVisitsForStudentAsync(int studentId, CancellationToken ct = default);
     Task<int> DeleteVisitAsync(int visitId, CancellationToken ct = default);
     Task<List<Visit>> GetVisitsTodayAsync(CancellationToken ct = default);
     Task<List<Visit>> GetUpcomingVisitsAsync(int days = 7, CancellationToken ct = default);

@@ -32,7 +32,7 @@ namespace MinistryTracker.Views;
 
 public partial class StudentsListPage : ContentPage
 {
-    private const string PrefKey_SwipeHintDismissed = "StudentsList.SwipeHintDismissed";
+    private const string PrefKey_SwipeHintDismissed = "StudentsList.InteractionHintDismissed.v2";
 
     private readonly StudentsListViewModel _vm;
 
@@ -190,6 +190,9 @@ public partial class StudentsListPage : ContentPage
         Preferences.Default.Set(PrefKey_SwipeHintDismissed, true);
         SwipeHintBanner.IsVisible = false;
     }
+
+    private void OnShowListHelpClicked(object sender, EventArgs e)
+        => SwipeHintBanner.IsVisible = true;
 
     // =========================================================================
     // ADD STUDENT BUTTON

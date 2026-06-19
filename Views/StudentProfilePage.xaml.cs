@@ -88,4 +88,22 @@ public partial class StudentProfilePage : ContentPage
         // - EditStudentPage will receive studentId via QueryProperty or load pattern.
         await Shell.Current.GoToAsync($"{nameof(EditStudentPage)}?studentId={studentId}");
     }
+
+    private async void OnVisitHistoryClicked(object sender, EventArgs e)
+    {
+        if (_vm.Model is not Student student)
+            return;
+
+        await Shell.Current.GoToAsync(
+            $"{nameof(StudentVisitHistoryPage)}?studentId={student.StudentId}");
+    }
+
+    private async void OnScheduleVisitClicked(object sender, EventArgs e)
+    {
+        if (_vm.Model is not Student student)
+            return;
+
+        await Shell.Current.GoToAsync(
+            $"{nameof(MyCalendarPage)}?mode=schedule&studentId={student.StudentId}");
+    }
 }

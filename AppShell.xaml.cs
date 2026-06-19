@@ -65,6 +65,7 @@ public partial class AppShell : Shell
     {
         // Student-related pages
         Routing.RegisterRoute(nameof(StudentProfilePage), typeof(StudentProfilePage));
+        Routing.RegisterRoute(nameof(StudentVisitHistoryPage), typeof(StudentVisitHistoryPage));
         Routing.RegisterRoute(nameof(EditStudentPage), typeof(EditStudentPage));
         Routing.RegisterRoute(nameof(AddStudentPage), typeof(AddStudentPage));
         Routing.RegisterRoute(nameof(StudentsMapPage), typeof(StudentsMapPage));

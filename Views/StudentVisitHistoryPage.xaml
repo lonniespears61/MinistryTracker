@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MinistryTracker.Views.StudentVisitHistoryPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:vm="clr-namespace:MinistryTracker.ViewModels"
+    x:DataType="vm:StudentVisitHistoryViewModel"
+    Title="Visit History">
+
+    <Grid RowDefinitions="Auto,*"
+          Padding="16,12"
+          RowSpacing="12">
+        <VerticalStackLayout Spacing="2">
+            <Label Text="{Binding StudentName}"
+                   FontSize="22"
+                   FontAttributes="Bold" />
+            <Label Text="Visit History"
+                   FontSize="13"
+                   Opacity="0.7" />
+        </VerticalStackLayout>
+
+        <CollectionView Grid.Row="1"
+                        ItemsSource="{Binding Visits}"
+                        SelectionMode="Single"
+                        SelectionChanged="OnVisitSelectionChanged"
+                        EmptyView="No visits recorded for this student.">
+            <CollectionView.ItemTemplate>
+                <DataTemplate x:DataType="vm:VisitHistoryItemViewModel">
+                    <Border Padding="12"
+                            Margin="0,0,0,10"
+                            Stroke="#D1D5DB"
+                            StrokeThickness="1"
+                            StrokeShape="RoundRectangle 8">
+                        <Grid ColumnDefinitions="*,Auto"
+                              ColumnSpacing="12">
+                            <VerticalStackLayout Spacing="4">
+                                <Label Text="{Binding ScheduledDateTime, StringFormat='{0:ddd, MMM d, yyyy h:mm tt}'}"
+                                       FontAttributes="Bold" />
+                                <Label Text="{Binding Method}"
+                                       FontSize="13"
+                                       Opacity="0.75" />
+                                <Label Text="{Binding Notes}"
+                                       FontSize="13"
+                                       MaxLines="2"
+                                       LineBreakMode="TailTruncation"
+                                       IsVisible="{Binding HasNotes}" />
+                            </VerticalStackLayout>
+
+                            <VerticalStackLayout Grid.Column="1"
+                                                 HorizontalOptions="End"
+                                                 VerticalOptions="Center">
+                                <Label Text="{Binding Status}"
+                                       FontSize="13"
+                                       FontAttributes="Bold"
+                                       TextColor="#2563EB" />
+                                <Label Text="›"
+                                       FontSize="26"
+                                       HorizontalOptions="End" />
+                            </VerticalStackLayout>
+                        </Grid>
+                    </Border>
+                </DataTemplate>
+            </CollectionView.ItemTemplate>
+        </CollectionView>
+    </Grid>
+</ContentPage>

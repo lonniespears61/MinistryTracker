@@ -103,12 +103,32 @@
                 </VerticalStackLayout>
             </Border>
 
-            <!-- ACTION -->
-            <Button Text="Edit Student"
-                    Clicked="OnEditStudentClicked"
-                    BackgroundColor="#1A73E8"
-                    TextColor="White"
-                    CornerRadius="12" />
+            <!-- ACTIONS -->
+            <Grid ColumnDefinitions="*,*"
+                  RowDefinitions="Auto,Auto"
+                  ColumnSpacing="10"
+                  RowSpacing="10">
+                <Button Text="Visit History"
+                        Clicked="OnVisitHistoryClicked"
+                        BackgroundColor="#64748B"
+                        TextColor="White"
+                        CornerRadius="8" />
+
+                <Button Grid.Column="1"
+                        Text="Schedule Visit"
+                        Clicked="OnScheduleVisitClicked"
+                        BackgroundColor="#16A34A"
+                        TextColor="White"
+                        CornerRadius="8" />
+
+                <Button Grid.Row="1"
+                        Grid.ColumnSpan="2"
+                        Text="Edit Student"
+                        Clicked="OnEditStudentClicked"
+                        BackgroundColor="#1A73E8"
+                        TextColor="White"
+                        CornerRadius="8" />
+            </Grid>
 
         </VerticalStackLayout>
     </ScrollView>

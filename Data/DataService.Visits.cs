@@ -97,6 +97,19 @@ namespace MinistryTracker.Data
             }, ct);
 
         /// <summary>
+        /// Returns the complete visit history for one student, newest first.
+        /// All statuses remain visible as part of the student's history.
+        /// </summary>
+        public Task<List<Visit>> GetVisitsForStudentAsync(
+            int studentId,
+            CancellationToken ct = default)
+            => EnsureInitThen(() =>
+                Db.Table<Visit>()
+                  .Where(v => v.StudentId == studentId)
+                  .OrderByDescending(v => v.ScheduledDateTime)
+                  .ToListAsync(), ct);
+
+        /// <summary>
         /// Delete a visit record.
         /// Reserved for true cleanup scenarios, not normal workflow.
         /// </summary>
