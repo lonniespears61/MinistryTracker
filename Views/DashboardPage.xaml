@@ -65,7 +65,7 @@ DESIGN RULES
                     HeightRequest="34"
                     BackgroundColor="Transparent"
                     Clicked="OnOpenMapClicked"
-                    SemanticProperties.Description="Students Nearby" />
+                    SemanticProperties.Description="Students Near Me" />
 
                 <ImageButton
                     Source="icon_settings.png"
@@ -131,7 +131,7 @@ DESIGN RULES
 
                         <Button
                             Grid.Column="1"
-                            Text="Students Nearby"
+                            Text="Students Near Me"
                             Clicked="OnOpenMapClicked"
                             CornerRadius="14"
                             HeightRequest="54"
@@ -374,13 +374,13 @@ DESIGN RULES
                     <CollectionView
                         ItemsSource="{Binding LongOverdue}"
                         SelectionMode="Single"
-                        SelectionChanged="OnVisitSelectionChanged"
+                        SelectionChanged="OnLongOverdueSelectionChanged"
                         Margin="0"
                         BackgroundColor="Transparent"
                         IsVisible="{Binding HasLongOverdue}">
 
                         <CollectionView.ItemTemplate>
-                            <DataTemplate x:DataType="dto:VisitWithStudent">
+                            <DataTemplate x:DataType="dto:CheckOnStudentSuggestion">
                                 <Grid
                                     Padding="16,14"
                                     ColumnDefinitions="*,Auto"
@@ -394,7 +394,7 @@ DESIGN RULES
                                             TextColor="{AppThemeBinding Light={StaticResource TextPrimaryLight}, Dark={StaticResource TextPrimaryDark}}" />
 
                                         <Label
-                                            Text="{Binding NotesPreview}"
+                                            Text="{Binding ReasonDisplay}"
                                             FontSize="13"
                                             MaxLines="2"
                                             LineBreakMode="TailTruncation"
@@ -403,7 +403,7 @@ DESIGN RULES
 
                                     <Label
                                         Grid.Column="1"
-                                        Text="{Binding ScheduledDateTime, StringFormat='{0:MMM d}'}"
+                                        Text="{Binding LastVisitDisplay}"
                                         FontSize="14"
                                         FontAttributes="Bold"
                                         VerticalOptions="Center"

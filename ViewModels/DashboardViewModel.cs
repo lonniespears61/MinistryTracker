@@ -9,7 +9,8 @@
 // - No counts or summary metrics.
 // - Show today's scheduled visits only when they exist.
 // - Show "Follow Up" only when there are unresolved missed visits.
-// - Show "It's Been Awhile" only when there are older unresolved missed visits.
+// - Show "It's Been Awhile" for active students with no future visit and no
+//   recorded visit in at least 30 days.
 // - Keep sections quiet when there is nothing actionable.
 // - Do not duplicate business rules already owned by the repositories.
 //
@@ -49,11 +50,10 @@ namespace MinistryTracker.ViewModels
         public ObservableCollection<VisitWithStudent> MissedRecently { get; } = new();
 
         /// <summary>
-        /// Older unresolved missed visits.
-        /// These are the people who have slipped long enough to deserve a deliberate check-in.
+        /// Active students with no future visit whose last visit was at least 30 days ago.
         /// Only shown when this collection has items.
         /// </summary>
-        public ObservableCollection<VisitWithStudent> LongOverdue { get; } = new();
+        public ObservableCollection<CheckOnStudentSuggestion> LongOverdue { get; } = new();
 
         public bool HasTodayVisits => TodayVisits.Count > 0;
         public bool HasMissedRecently => MissedRecently.Count > 0;
@@ -76,7 +76,8 @@ namespace MinistryTracker.ViewModels
                 IsBusy = true;
 
                 await LoadTodayVisitsAsync();
-                await LoadMissedBucketsAsync();
+                await LoadMissedRecentlyAsync();
+                await LoadLongOverdueAsync();
             }
             catch (Exception ex)
             {
@@ -116,29 +117,21 @@ namespace MinistryTracker.ViewModels
             OnPropertyChanged(nameof(HasTodayVisits));
         }
 
-        private async Task LoadMissedBucketsAsync()
+        private async Task LoadMissedRecentlyAsync()
         {
-            // Pull a slightly larger window once, then split it into:
-            // - recent follow-up
-            // - older "it's been awhile"
-            var missedVisits = await _visits.GetUnhandledMissedVisitsAsync(days: 30);
+            var missedVisits = await _visits.GetUnhandledMissedVisitsAsync(days: 7);
 
             MissedRecently.Clear();
-            LongOverdue.Clear();
 
             if (missedVisits.Count == 0)
             {
                 OnPropertyChanged(nameof(HasMissedRecently));
-                OnPropertyChanged(nameof(HasLongOverdue));
                 return;
             }
 
             // Small dataset: load students once and match in memory.
             var students = await _students.GetStudentsAsync();
             var studentsById = students.ToDictionary(s => s.StudentId);
-
-            var now = DateTime.Now;
-            var recentCutoff = now.AddDays(-7);
 
             var projected = new List<VisitWithStudent>(missedVisits.Count);
 
@@ -157,13 +150,23 @@ namespace MinistryTracker.ViewModels
                 });
             }
 
-            foreach (var item in projected.Where(v => v.ScheduledDateTime >= recentCutoff))
+            foreach (var item in projected)
                 MissedRecently.Add(item);
 
-            foreach (var item in projected.Where(v => v.ScheduledDateTime < recentCutoff))
-                LongOverdue.Add(item);
-
             OnPropertyChanged(nameof(HasMissedRecently));
+        }
+
+        private async Task LoadLongOverdueAsync()
+        {
+            var suggestions = await _students.GetCheckOnStudentSuggestionsAsync(
+                take: 5,
+                minDaysSinceVisit: 30);
+
+            LongOverdue.Clear();
+
+            foreach (var suggestion in suggestions)
+                LongOverdue.Add(suggestion);
+
             OnPropertyChanged(nameof(HasLongOverdue));
         }
 

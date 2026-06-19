@@ -72,6 +72,23 @@ public partial class DashboardPage : ContentPage
             $"{nameof(UpdateVisitPage)}?visitId={visit.VisitId}");
     }
 
+    private async void OnLongOverdueSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is CollectionView collectionView)
+            collectionView.SelectedItem = null;
+
+        var suggestion = e.CurrentSelection
+            .OfType<CheckOnStudentSuggestion>()
+            .FirstOrDefault();
+
+        if (suggestion is null)
+            return;
+
+        var today = DateTime.Today.ToString("yyyy-MM-dd");
+        await Shell.Current.GoToAsync(
+            $"{nameof(AddVisitPage)}?studentId={suggestion.StudentId}&date={today}");
+    }
+
     private async void OnOpenMapClicked(object sender, EventArgs e)
         => await Shell.Current.GoToAsync(nameof(StudentsMapPage));
 
