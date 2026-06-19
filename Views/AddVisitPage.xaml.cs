@@ -49,6 +49,16 @@ public partial class AddVisitPage : ContentPage
         // ✅ Ensure UI thread
         await MainThread.InvokeOnMainThreadAsync(async () =>
         {
+            if (string.Equals(_vm.ReturnTo, "studentProfile", StringComparison.OrdinalIgnoreCase))
+            {
+                var studentId = _vm.StudentId;
+
+                await Shell.Current.Navigation.PopToRootAsync(false);
+                await Shell.Current.GoToAsync(
+                    $"{nameof(StudentProfilePage)}?studentId={studentId}");
+                return;
+            }
+
             if (string.Equals(_vm.ReturnTo, "calendar", StringComparison.OrdinalIgnoreCase))
             {
                 await Shell.Current.GoToAsync($"//{MinistryTracker.AppShell.CalendarTabRoute}");

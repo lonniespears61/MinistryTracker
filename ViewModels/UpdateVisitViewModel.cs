@@ -53,7 +53,13 @@ namespace MinistryTracker.ViewModels
         /// Raised when same-record edits save successfully.
         /// The page may use this to show confirmation or navigate.
         /// </summary>
-        public event Action? SaveCompleted;
+        public event Action<int>? SaveCompleted;
+
+        /// <summary>
+        /// Raised after same-record edits save successfully when the user wants
+        /// to schedule another visit for the same student.
+        /// </summary>
+        public event Action<int>? ScheduleNextRequested;
 
         /// <summary>
         /// Raised when the visit is canceled successfully.
@@ -245,6 +251,17 @@ namespace MinistryTracker.ViewModels
         [RelayCommand]
         private async Task SaveAsync()
         {
+            await SaveDetailsAsync(scheduleNext: false);
+        }
+
+        [RelayCommand]
+        private async Task SaveAndScheduleNextAsync()
+        {
+            await SaveDetailsAsync(scheduleNext: true);
+        }
+
+        private async Task SaveDetailsAsync(bool scheduleNext)
+        {
             if (IsBusy)
                 return;
 
@@ -281,10 +298,10 @@ namespace MinistryTracker.ViewModels
                 }
 
                 StatusMessage = "Changes saved.";
-                SaveCompleted?.Invoke();
-
-                // Reload from source of truth so display state stays aligned.
-                await LoadAsync(VisitId).ConfigureAwait(false);
+                if (scheduleNext)
+                    ScheduleNextRequested?.Invoke(StudentId);
+                else
+                    SaveCompleted?.Invoke(StudentId);
             }
             catch (Exception ex)
             {

@@ -149,6 +149,13 @@ WHY THIS FILE EXISTS IN THIS SHAPE
             </Grid>
 
             <Button
+                Text="Save &amp; Schedule Next Visit"
+                Command="{Binding SaveAndScheduleNextCommand}"
+                IsEnabled="{Binding CanEditDetails}"
+                CornerRadius="14"
+                HeightRequest="52" />
+
+            <Button
                 Text="Cancel Visit"
                 Command="{Binding CancelVisitCommand}"
                 IsVisible="{Binding CanCancelVisit}"

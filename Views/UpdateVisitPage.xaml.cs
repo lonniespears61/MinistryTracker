@@ -49,6 +49,7 @@ public partial class UpdateVisitPage : ContentPage
         if (!_subscribed)
         {
             _vm.SaveCompleted += OnSaveCompleted;
+            _vm.ScheduleNextRequested += OnScheduleNextRequested;
             _vm.CancelCompleted += OnCancelCompleted;
             _vm.OutcomeCompleted += OnOutcomeCompleted;
             _vm.RescheduleRequested += OnRescheduleRequested;
@@ -72,6 +73,7 @@ public partial class UpdateVisitPage : ContentPage
         if (_subscribed)
         {
             _vm.SaveCompleted -= OnSaveCompleted;
+            _vm.ScheduleNextRequested -= OnScheduleNextRequested;
             _vm.CancelCompleted -= OnCancelCompleted;
             _vm.OutcomeCompleted -= OnOutcomeCompleted;
             _vm.RescheduleRequested -= OnRescheduleRequested;
@@ -80,10 +82,39 @@ public partial class UpdateVisitPage : ContentPage
         }
     }
 
-    private void OnSaveCompleted()
+    private void OnSaveCompleted(int studentId)
     {
-        MainThread.BeginInvokeOnMainThread(
-            async () => await DisplayAlert("Save Changes", "Changes saved.", "OK"));
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            try
+            {
+                await Shell.Current.Navigation.PopToRootAsync(false);
+                await Shell.Current.GoToAsync(
+                    $"{nameof(StudentProfilePage)}?studentId={studentId}");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex);
+                await DisplayAlert("Save Changes", "Changes saved, but the student profile could not be opened.", "OK");
+            }
+        });
+    }
+
+    private void OnScheduleNextRequested(int studentId)
+    {
+        MainThread.BeginInvokeOnMainThread(async () =>
+        {
+            try
+            {
+                await Shell.Current.GoToAsync(
+                    $"{nameof(MyCalendarPage)}?mode=schedule&studentId={studentId}&returnTo=studentProfile");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine(ex);
+                await DisplayAlert("Schedule Next Visit", "Could not open Calendar.", "OK");
+            }
+        });
     }
 
     private void OnCancelCompleted()

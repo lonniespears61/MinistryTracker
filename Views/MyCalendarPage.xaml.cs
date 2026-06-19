@@ -25,6 +25,7 @@ namespace MinistryTracker.Views;
 [QueryProperty(nameof(Mode), "mode")]
 [QueryProperty(nameof(StudentId), "studentId")]
 [QueryProperty(nameof(VisitId), "visitId")]
+[QueryProperty(nameof(ReturnTo), "returnTo")]
 public partial class MyCalendarPage : ContentPage
 {
     private readonly MyCalendarViewModel _vm;
@@ -35,6 +36,7 @@ public partial class MyCalendarPage : ContentPage
     public string? Mode { get; set; }
     public string? StudentId { get; set; }
     public string? VisitId { get; set; }
+    public string? ReturnTo { get; set; }
 
     public MyCalendarPage(MyCalendarViewModel vm)
     {
@@ -126,7 +128,12 @@ public partial class MyCalendarPage : ContentPage
 
             if (studentId is int sid && sid > 0)
             {
-                await Shell.Current.GoToAsync($"{nameof(AddVisitPage)}?studentId={sid}&date={dateString}&returnTo=calendar");
+                var returnTo = string.IsNullOrWhiteSpace(ReturnTo)
+                    ? "calendar"
+                    : Uri.EscapeDataString(ReturnTo);
+
+                await Shell.Current.GoToAsync(
+                    $"{nameof(AddVisitPage)}?studentId={sid}&date={dateString}&returnTo={returnTo}");
                 return;
             }
 
