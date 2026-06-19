@@ -118,6 +118,9 @@ public partial class StudentsListPage : ContentPage
     private static Task GoToAddStudentAsync() =>
         Shell.Current.GoToAsync(nameof(AddStudentPage));
 
+    private static Task GoToStudentProfileAsync(int studentId) =>
+        Shell.Current.GoToAsync($"{nameof(StudentProfilePage)}?studentId={studentId}");
+
     // =========================================================================
     // SWIPE ITEM HELPERS
     // =========================================================================
@@ -194,4 +197,19 @@ public partial class StudentsListPage : ContentPage
 
     private async void OnAddStudentClicked(object sender, EventArgs e)
         => await GoToAddStudentAsync();
+
+    private async void OnStudentSelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is CollectionView collectionView)
+            collectionView.SelectedItem = null;
+
+        var student = e.CurrentSelection
+            .OfType<StudentViewModel>()
+            .FirstOrDefault();
+
+        if (student?.Model is null)
+            return;
+
+        await GoToStudentProfileAsync(student.Model.StudentId);
+    }
 }

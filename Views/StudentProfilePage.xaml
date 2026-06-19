@@ -93,7 +93,7 @@
 
                     <!-- PHONE -->
                     <Label Text="{Binding PhoneNumber, StringFormat='Phone: {0}'}"
-                           IsVisible="{Binding PhoneNumber}" />
+                           IsVisible="{Binding HasPhoneNumber}" />
 
                     <!-- NOTES -->
                     <Label Text="{Binding Notes}"

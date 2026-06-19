@@ -18,6 +18,7 @@ using System.Collections.Generic;
 using System.Linq;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Microsoft.Maui.Graphics;
+using MinistryTracker.Data.Repositories;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
 
@@ -25,11 +26,14 @@ namespace MinistryTracker.ViewModels
 {
     public partial class StudentProfileViewModel : ObservableObject
     {
+        private readonly IStudentRepository _students;
+
         [ObservableProperty]
         private Student? model;
 
-        public StudentProfileViewModel()
+        public StudentProfileViewModel(IStudentRepository students)
         {
+            _students = students;
         }
 
         /// <summary>
@@ -53,10 +57,21 @@ namespace MinistryTracker.ViewModels
             Model = student;
         }
 
+        public async Task<bool> LoadAsync(int studentId)
+        {
+            var student = await _students.GetStudentByIdAsync(studentId);
+            if (student is null)
+                return false;
+
+            Load(student);
+            return true;
+        }
+
         partial void OnModelChanged(Student? value)
         {
             OnPropertyChanged(nameof(Name));
             OnPropertyChanged(nameof(PhoneNumber));
+            OnPropertyChanged(nameof(HasPhoneNumber));
             OnPropertyChanged(nameof(FirstContactFormatted));
             OnPropertyChanged(nameof(StatusLabel));
             OnPropertyChanged(nameof(StatusColor));
@@ -69,6 +84,8 @@ namespace MinistryTracker.ViewModels
         public string Name => Model?.Name ?? string.Empty;
 
         public string? PhoneNumber => Model?.PhoneNumber;
+
+        public bool HasPhoneNumber => !string.IsNullOrWhiteSpace(Model?.PhoneNumber);
 
         public string FirstContactFormatted =>
             Model?.FirstContactDate is DateTime d && d != default

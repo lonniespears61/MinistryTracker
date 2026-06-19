@@ -22,9 +22,13 @@ using MinistryTracker.ViewModels;
 
 namespace MinistryTracker.Views;
 
+[QueryProperty(nameof(StudentIdQuery), "studentId")]
 public partial class StudentProfilePage : ContentPage
 {
     private readonly StudentProfileViewModel _vm;
+    private int _lastLoadedStudentId;
+
+    public string? StudentIdQuery { get; set; }
 
     public StudentProfilePage(StudentProfileViewModel vm)
     {
@@ -35,6 +39,26 @@ public partial class StudentProfilePage : ContentPage
         // Under Shell, you typically do NOT mess with NavigationPage back button.
         // If you want to control back behavior/visibility, do it through Shell/NavBar settings.
         // NavigationPage.SetHasBackButton(this, false);
+    }
+
+    protected override async void OnAppearing()
+    {
+        base.OnAppearing();
+
+        if (!int.TryParse(StudentIdQuery, out var studentId) || studentId <= 0)
+            return;
+
+        if (_lastLoadedStudentId == studentId && _vm.Model is not null)
+            return;
+
+        if (await _vm.LoadAsync(studentId))
+        {
+            _lastLoadedStudentId = studentId;
+            return;
+        }
+
+        await DisplayAlert("Student not found", "This student could not be loaded.", "OK");
+        await Shell.Current.GoToAsync("..");
     }
 
     // LEGACY HOME CLICKED (REMOVE OR REPURPOSE)

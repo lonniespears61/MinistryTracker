@@ -96,7 +96,8 @@
         <CollectionView x:Name="StudentsCollection"
                         Grid.Row="3"
                         ItemsSource="{Binding FilteredStudents}"
-                        SelectionMode="None">
+                        SelectionMode="Single"
+                        SelectionChanged="OnStudentSelectionChanged">
 
             <CollectionView.ItemTemplate>
                 <DataTemplate x:DataType="viewmodels:StudentViewModel">
