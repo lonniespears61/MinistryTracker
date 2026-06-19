@@ -40,7 +40,9 @@ public static class MauiProgram
         builder.Services.AddSingleton<DataService>(); // SQLite wrapper / repo
         builder.Services.AddSingleton<IStudentRepository>(sp => sp.GetRequiredService<DataService>());
         builder.Services.AddSingleton<IVisitRepository>(sp => sp.GetRequiredService<DataService>());
-        builder.Services.AddSingleton<AppShell>();    // ✅ Shell root for DI
+        // Android can recreate its activity while the application remains alive.
+        // Each MAUI window therefore needs a fresh Shell and handler tree.
+        builder.Services.AddTransient<AppShell>();
         builder.Services.AddSingleton<SettingsService>(); // User preferences (Normal Service Days, etc.)   
 
         // ===== ViewModels =====

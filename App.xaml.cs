@@ -3,25 +3,26 @@
 using Microsoft.Maui;
 using Microsoft.Maui.Controls;
 using Microsoft.Maui.Graphics;
+using Microsoft.Extensions.DependencyInjection;
 using MinistryTracker.Utilities;
 
 namespace MinistryTracker;
 
 public partial class App : Application
 {
-    private readonly AppShell _shell;
+    private readonly IServiceProvider _services;
 
-    public App(AppShell shell)
+    public App(IServiceProvider services)
     {
         InitializeComponent();
 
-        _shell = shell;
+        _services = services;
 
         RegisterThemeResources();
     }
 
     protected override Window CreateWindow(IActivationState? activationState)
-        => new Window(_shell);
+        => new(_services.GetRequiredService<AppShell>());
 
     private void RegisterThemeResources()
     {
