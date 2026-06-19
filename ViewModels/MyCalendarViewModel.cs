@@ -379,6 +379,11 @@ public partial class MyCalendarViewModel : ObservableObject
         if (visit is null)
             return;
 
+        // A student/visit is already pending in Calendar. Existing agenda
+        // entries remain visible for context, but cannot replace that workflow.
+        if (IsSchedulingMode && SchedulingStudentId is not null)
+            return;
+
         ExistingVisitTapped?.Invoke(visit);
     }
 

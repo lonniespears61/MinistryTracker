@@ -17,6 +17,8 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using System;
+using CommunityToolkit.Maui.Alerts;
+using CommunityToolkit.Maui.Core;
 using MinistryTracker.Models.DTOs;
 using MinistryTracker.ViewModels;
 
@@ -173,57 +175,12 @@ public partial class MyCalendarPage : ContentPage
     {
         try
         {
-            // Normal mode:
-            // tapping an existing visit means open it.
-            if (!_vm.IsSchedulingMode)
-            {
-                await OpenExistingVisitAsync(visit);
+            // While Calendar owns a pending student/visit scheduling context,
+            // agenda entries are display-only and must not replace that flow.
+            if (_vm.IsSchedulingMode && _vm.SchedulingStudentId is not null)
                 return;
-            }
 
-            // Scheduling/rescheduling mode + same student:
-            // opening the tapped visit is the most natural interpretation.
-            if (_vm.SchedulingStudentId == visit.StudentId)
-            {
-                await OpenExistingVisitAsync(visit);
-                return;
-            }
-
-            // Scheduling/rescheduling mode + different student:
-            // preserve current student context unless the user explicitly switches.
-            var currentStudentName = string.IsNullOrWhiteSpace(_vm.SchedulingStudentName)
-                ? "current student"
-                : _vm.SchedulingStudentName;
-
-            var tappedStudentName = string.IsNullOrWhiteSpace(visit.StudentName)
-                ? "this student"
-                : visit.StudentName;
-
-            var choice = await DisplayActionSheet(
-                $"You're scheduling for {currentStudentName}. What would you like to do?",
-                "Cancel",
-                null,
-                $"Schedule {currentStudentName} on this date",
-                $"Open {tappedStudentName}'s Visit");
-
-            if (choice == $"Schedule {currentStudentName} on this date")
-            {
-                if (_vm.SchedulingStudentId is int schedulingStudentId)
-                {
-                    OnScheduleVisitRequested(schedulingStudentId, visit.ScheduledDateTime.Date);
-                }
-
-                return;
-            }
-
-            if (choice == $"Open {tappedStudentName}'s Visit")
-            {
-                _vm.ClearSchedulingContext();
-                await OpenExistingVisitAsync(visit);
-                return;
-            }
-
-            // Cancel = keep current context and do nothing else.
+            await OpenExistingVisitAsync(visit);
         }
         catch (Exception ex)
         {
@@ -232,13 +189,29 @@ public partial class MyCalendarPage : ContentPage
         }
     }
 
-    private void OnVisitSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private async void OnVisitSelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (sender is CollectionView collectionView)
             collectionView.SelectedItem = null;
 
-        if (e.CurrentSelection.Count > 0 &&
-            e.CurrentSelection[0] is VisitWithStudent visit)
+        if (e.CurrentSelection.Count == 0)
+            return;
+
+        if (_vm.IsSchedulingMode && _vm.SchedulingStudentId is not null)
+        {
+            var action = _vm.IsRescheduleMode ? "rescheduling" : "scheduling";
+            var studentName = string.IsNullOrWhiteSpace(_vm.SchedulingStudentName)
+                ? "the selected student"
+                : _vm.SchedulingStudentName;
+
+            await Toast.Make(
+                    $"You are {action} a visit for {studentName}. Finish or go back before opening another visit.",
+                    ToastDuration.Long)
+                .Show();
+            return;
+        }
+
+        if (e.CurrentSelection[0] is VisitWithStudent visit)
         {
             OnExistingVisitTapped(visit);
         }
