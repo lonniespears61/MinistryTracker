@@ -89,10 +89,6 @@ public partial class MyCalendarPage : ContentPage
                 sid > 0)
             {
                 await _vm.BeginSchedulingForStudentAsync(sid);
-
-                // Keep the student scheduling context, but clear any previous day
-                // selection so backing out of Add Visit does not leave phantom state.
-                _vm.ClearSelectedDay();
             }
             else if (string.Equals(Mode, "reschedule", StringComparison.OrdinalIgnoreCase) &&
                      int.TryParse(StudentId, out var rsid) &&
@@ -101,9 +97,6 @@ public partial class MyCalendarPage : ContentPage
                      vid > 0)
             {
                 await _vm.BeginRescheduleAsync(vid, rsid);
-
-                // Same rule as schedule mode: keep context, clear transient date choice.
-                _vm.ClearSelectedDay();
             }
             else
             {

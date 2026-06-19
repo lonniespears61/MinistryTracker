@@ -43,6 +43,7 @@ public partial class MyCalendarViewModel : ObservableObject
 
     private List<VisitWithStudent> _visibleMonthVisits = new();
     private readonly Dictionary<DateTime, List<VisitWithStudent>> _visitsByDate = new();
+    private bool _isApplyingCalendarState;
 
     // -------------------------
     // Schedule / Reschedule Mode (context)
@@ -159,9 +160,18 @@ public partial class MyCalendarViewModel : ObservableObject
 
             await MainThread.InvokeOnMainThreadAsync(() =>
             {
-                BuildMonthGrid();
-                SyncAgendaForSelection();
-                RaiseHeaderProps();
+                _isApplyingCalendarState = true;
+
+                try
+                {
+                    BuildMonthGrid();
+                    SyncAgendaForSelection();
+                    RaiseHeaderProps();
+                }
+                finally
+                {
+                    _isApplyingCalendarState = false;
+                }
             });
         }
         catch (Exception ex)
@@ -419,6 +429,7 @@ public partial class MyCalendarViewModel : ObservableObject
         // ---------------------------------------------------------------------
         if (IsSchedulingMode &&
             SchedulingStudentId is not null &&
+            !_isApplyingCalendarState &&
             value is not null &&
             !value.IsPlaceholder &&
             value.Date.Date >= DateTime.Today)
