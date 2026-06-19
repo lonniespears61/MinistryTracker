@@ -107,7 +107,7 @@ public partial class UpdateVisitPage : ContentPage
             try
             {
                 await Shell.Current.GoToAsync(
-                    $"{nameof(MyCalendarPage)}?mode=schedule&studentId={studentId}&returnTo=studentProfile");
+                    $"{nameof(MyCalendarPage)}?mode=schedule&studentId={studentId}");
             }
             catch (Exception ex)
             {

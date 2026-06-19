@@ -64,6 +64,6 @@ public partial class SelectStudentForVisitPage : ContentPage
 
         var dateString = _vm.VisitDate.ToString("yyyy-MM-dd");
         await Shell.Current.GoToAsync(
-            $"{nameof(AddVisitPage)}?studentId={student.StudentId}&date={dateString}&returnTo=calendar");
+            $"{nameof(AddVisitPage)}?studentId={student.StudentId}&date={dateString}");
     }
 }

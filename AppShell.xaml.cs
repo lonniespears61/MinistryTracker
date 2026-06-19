@@ -7,6 +7,7 @@ namespace MinistryTracker;
 
 public partial class AppShell : Shell
 {
+    public const string DashboardTabRoute = "DashboardTab";
     public const string CalendarTabRoute = "CalendarTab";
 
     private readonly IServiceProvider _services;
@@ -30,6 +31,7 @@ public partial class AppShell : Shell
 
         tabs.Items.Add(new ShellContent
         {
+            Route = DashboardTabRoute,
             Title = "Dashboard",
             Icon = "icon_home.png",
             ContentTemplate = new DataTemplate(() => _services.GetRequiredService<DashboardPage>())

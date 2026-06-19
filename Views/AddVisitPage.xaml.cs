@@ -46,26 +46,14 @@ public partial class AddVisitPage : ContentPage
 
     private async void OnSaveCompleted()
     {
-        // ✅ Ensure UI thread
+        // Saving a new visit completes the scheduling workflow, regardless of
+        // where it started. Use an absolute tab route so Calendar, student
+        // selection, profile, and other intermediate pages are removed.
         await MainThread.InvokeOnMainThreadAsync(async () =>
         {
-            if (string.Equals(_vm.ReturnTo, "studentProfile", StringComparison.OrdinalIgnoreCase))
-            {
-                var studentId = _vm.StudentId;
-
-                await Shell.Current.Navigation.PopToRootAsync(false);
-                await Shell.Current.GoToAsync(
-                    $"{nameof(StudentProfilePage)}?studentId={studentId}");
-                return;
-            }
-
-            if (string.Equals(_vm.ReturnTo, "calendar", StringComparison.OrdinalIgnoreCase))
-            {
-                await Shell.Current.GoToAsync($"//{MinistryTracker.AppShell.CalendarTabRoute}");
-                return;
-            }
-
-            await Shell.Current.GoToAsync("..");
+            await Shell.Current.Navigation.PopToRootAsync(false);
+            await Shell.Current.GoToAsync(
+                $"//{MinistryTracker.AppShell.DashboardTabRoute}");
         });
     }
 

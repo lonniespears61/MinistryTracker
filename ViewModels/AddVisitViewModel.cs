@@ -96,10 +96,6 @@ namespace MinistryTracker.ViewModels
                 }
             }
 
-            if (query.TryGetValue("returnTo", out var rawReturnTo) && rawReturnTo is not null)
-            {
-                ReturnTo = rawReturnTo.ToString();
-            }
         }
 
         // =====================================================================
@@ -126,9 +122,6 @@ namespace MinistryTracker.ViewModels
 
         [ObservableProperty]
         private bool isBusy;
-
-        [ObservableProperty]
-        private string? returnTo;
 
         // =====================================================================
         // PICKER SOURCES
