@@ -165,7 +165,16 @@ public partial class StudentsListPage : ContentPage
             var student = TryGetStudentFromSwipeSender(sender);
             if (student is null) return;
             CloseContainingSwipeView((Element)sender);
-            // Goes through the VM — conflict check requires a DataService call
+
+            if (student.IsDeleted || student.Status != MinistryTracker.Models.Enums.StudentStatus.Active)
+            {
+                await DisplayAlert(
+                    "Schedule Visit",
+                    $"Visits can only be scheduled for active students. Current status: {student.Status}.",
+                    "OK");
+                return;
+            }
+
             await GoToScheduleVisitCalendarAsync(student.StudentId);
         }
         catch (Exception ex)

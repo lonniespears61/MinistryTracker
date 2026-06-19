@@ -117,6 +117,7 @@
                 <Button Grid.Column="1"
                         Text="Schedule Visit"
                         Clicked="OnScheduleVisitClicked"
+                        IsEnabled="{Binding CanScheduleVisit}"
                         BackgroundColor="#16A34A"
                         TextColor="White"
                         CornerRadius="8" />

@@ -12,6 +12,10 @@ public interface IVisitRepository
         bool includeCanceled = false,
         CancellationToken ct = default);
     Task<int> AddVisitAsync(Visit visit, CancellationToken ct = default);
+    Task<int> ReplaceScheduledVisitAsync(
+        int existingVisitId,
+        Visit replacement,
+        CancellationToken ct = default);
     Task<Visit?> GetVisitByIdAsync(int visitId, CancellationToken ct = default);
     Task<List<Visit>> GetVisitsForStudentAsync(int studentId, CancellationToken ct = default);
     Task<int> DeleteVisitAsync(int visitId, CancellationToken ct = default);
@@ -39,6 +43,14 @@ public interface IVisitRepository
     Task<int> MarkVisitMissedAsync(
         int visitId,
         string? notes = null,
+        CancellationToken ct = default);
+    Task<int> UpdateVisitDetailsAndOutcomeAsync(
+        int visitId,
+        ContactMethod method,
+        string? meetingAddress,
+        string? notes,
+        VisitStatus outcome,
+        DateTime? completedDateTime = null,
         CancellationToken ct = default);
     Task<int> CancelVisitByMeAsync(int visitId, string? reason = null, CancellationToken ct = default);
     Task<int> CancelVisitByThemAsync(int visitId, string? reason = null, CancellationToken ct = default);

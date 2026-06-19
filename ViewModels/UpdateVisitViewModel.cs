@@ -343,27 +343,14 @@ namespace MinistryTracker.ViewModels
                 IsBusy = true;
                 StatusMessage = null;
 
-                var detailRows = await _visits.UpdateVisitDetailsAsync(
+                var rows = await _visits.UpdateVisitDetailsAndOutcomeAsync(
                     VisitId,
                     Method,
                     MeetingAddress,
-                    Notes).ConfigureAwait(false);
-
-                if (detailRows <= 0)
-                {
-                    StatusMessage = "Visit not found.";
-                    OperationFailed?.Invoke(StatusMessage);
-                    return;
-                }
-
-                var rows = outcome == VisitStatus.Successful
-                    ? await _visits.MarkVisitSuccessfulAsync(
-                        VisitId,
-                        Notes,
-                        ScheduledDateTime).ConfigureAwait(false)
-                    : await _visits.MarkVisitMissedAsync(
-                        VisitId,
-                        Notes).ConfigureAwait(false);
+                    Notes,
+                    outcome,
+                    outcome == VisitStatus.Successful ? ScheduledDateTime : null)
+                    .ConfigureAwait(false);
 
                 if (rows <= 0)
                 {

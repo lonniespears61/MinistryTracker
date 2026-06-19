@@ -72,6 +72,9 @@ namespace MinistryTracker.ViewModels
         [ObservableProperty]
         private int studentId;
 
+        [ObservableProperty]
+        private int? replaceVisitId;
+
         public void ApplyQueryAttributes(IDictionary<string, object> query)
         {
             if (query.TryGetValue("studentId", out var rawId) && rawId is not null)
@@ -80,6 +83,15 @@ namespace MinistryTracker.ViewModels
                     StudentId = id;
                 else if (rawId is string s && int.TryParse(s, out var parsed))
                     StudentId = parsed;
+            }
+
+            if (query.TryGetValue("replaceVisitId", out var rawReplaceId) && rawReplaceId is not null)
+            {
+                if (rawReplaceId is int replaceId)
+                    ReplaceVisitId = replaceId;
+                else if (rawReplaceId is string replaceText &&
+                         int.TryParse(replaceText, out var parsedReplaceId))
+                    ReplaceVisitId = parsedReplaceId;
             }
 
             // If a date is explicitly passed in, keep that date
@@ -195,7 +207,16 @@ namespace MinistryTracker.ViewModels
                     Status = VisitStatus.Scheduled
                 };
 
-                await _visits.AddVisitAsync(visit).ConfigureAwait(false);
+                if (ReplaceVisitId is int replaceVisitId && replaceVisitId > 0)
+                {
+                    await _visits
+                        .ReplaceScheduledVisitAsync(replaceVisitId, visit)
+                        .ConfigureAwait(false);
+                }
+                else
+                {
+                    await _visits.AddVisitAsync(visit).ConfigureAwait(false);
+                }
 
                 SaveCompleted?.Invoke();
             }

@@ -75,6 +75,7 @@ namespace MinistryTracker.ViewModels
             OnPropertyChanged(nameof(FirstContactFormatted));
             OnPropertyChanged(nameof(StatusLabel));
             OnPropertyChanged(nameof(StatusColor));
+            OnPropertyChanged(nameof(CanScheduleVisit));
             OnPropertyChanged(nameof(Initials));
             OnPropertyChanged(nameof(SubTitle));
             OnPropertyChanged(nameof(Notes));
@@ -97,6 +98,9 @@ namespace MinistryTracker.ViewModels
         public string Notes => Model?.Notes ?? string.Empty;
 
         public bool HasNotes => !string.IsNullOrWhiteSpace(Model?.Notes);
+
+        public bool CanScheduleVisit =>
+            Model is { IsDeleted: false, Status: StudentStatus.Active };
 
         public Color StatusColor
         {

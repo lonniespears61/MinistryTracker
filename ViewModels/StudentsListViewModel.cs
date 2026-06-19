@@ -147,6 +147,9 @@ public partial class StudentsListViewModel : ObservableObject
     {
         if (svm?.Model is null) return;
 
+        if (svm.Model.IsDeleted || svm.Model.Status != StudentStatus.Active)
+            return;
+
         try
         {
             var studentId = svm.Model.StudentId;
@@ -180,9 +183,8 @@ public partial class StudentsListViewModel : ObservableObject
                     break;
 
                 case "Replace it":
-                    await _visits.CancelVisitByMeAsync(existing.Id, "Replaced by new visit")
-                               .ConfigureAwait(false);
-                    RequestNavigate?.Invoke($"AddVisitPage?studentId={studentId}");
+                    RequestNavigate?.Invoke(
+                        $"AddVisitPage?studentId={studentId}&replaceVisitId={existing.Id}");
                     break;
 
                     // "Cancel" or null = do nothing

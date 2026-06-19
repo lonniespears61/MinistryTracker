@@ -71,18 +71,82 @@ namespace MinistryTracker.Data
             return EnsureInitThen(async () =>
             {
                 ct.ThrowIfCancellationRequested();
+                var inserted = 0;
 
-                if (visit.Status == VisitStatus.Scheduled)
+                await Db.RunInTransactionAsync(connection =>
                 {
-                    var conflict = await FindVisitScheduleConflictAsync(
-                        visit.StudentId,
-                        visit.ScheduledDateTime,
-                        excludeVisitId: null).ConfigureAwait(false);
+                    if (visit.Status == VisitStatus.Scheduled)
+                    {
+                        ThrowIfStudentCannotBeScheduled(connection, visit.StudentId);
+                        ThrowIfScheduleConflict(FindVisitScheduleConflict(
+                            connection,
+                            visit.StudentId,
+                            visit.ScheduledDateTime,
+                            excludeVisitId: null));
+                    }
 
-                    ThrowIfScheduleConflict(conflict);
-                }
+                    inserted = connection.Insert(visit);
+                }).ConfigureAwait(false);
 
-                return await Db.InsertAsync(visit).ConfigureAwait(false);
+                return inserted;
+            }, ct);
+        }
+
+        /// <summary>
+        /// Atomically replaces one upcoming scheduled visit with another.
+        /// </summary>
+        public Task<int> ReplaceScheduledVisitAsync(
+            int existingVisitId,
+            Visit replacement,
+            CancellationToken ct = default)
+        {
+            ArgumentNullException.ThrowIfNull(replacement);
+
+            if (existingVisitId <= 0)
+                throw new InvalidOperationException("Existing visit id must be set.");
+
+            if (replacement.StudentId <= 0)
+                throw new InvalidOperationException("Visit.StudentId must be set.");
+
+            return EnsureInitThen(async () =>
+            {
+                ct.ThrowIfCancellationRequested();
+                var inserted = 0;
+
+                await Db.RunInTransactionAsync(connection =>
+                {
+                    var existing = connection.Find<Visit>(existingVisitId)
+                        ?? throw new InvalidOperationException("Existing visit not found.");
+
+                    if (existing.Status != VisitStatus.Scheduled ||
+                        existing.ScheduledDateTime < DateTime.Now)
+                    {
+                        throw new InvalidOperationException(
+                            "Only an upcoming scheduled visit can be replaced.");
+                    }
+
+                    if (existing.StudentId != replacement.StudentId)
+                        throw new InvalidOperationException("Replacement student does not match.");
+
+                    ThrowIfStudentCannotBeScheduled(connection, replacement.StudentId);
+                    ThrowIfScheduleConflict(FindVisitScheduleConflict(
+                        connection,
+                        replacement.StudentId,
+                        replacement.ScheduledDateTime,
+                        excludeVisitId: existing.Id));
+
+                    existing.Status = VisitStatus.CanceledByMe;
+                    const string reason = "Replaced by new visit";
+                    existing.Notes = string.IsNullOrWhiteSpace(existing.Notes)
+                        ? reason
+                        : $"{existing.Notes}\n\n{reason}";
+                    existing.NotesCreatedDateTime = DateTime.Now;
+
+                    connection.Update(existing);
+                    inserted = connection.Insert(replacement);
+                }).ConfigureAwait(false);
+
+                return inserted;
             }, ct);
         }
 
@@ -388,6 +452,65 @@ namespace MinistryTracker.Data
             }, ct);
 
         /// <summary>
+        /// Atomically saves editable details and applies a completed visit outcome.
+        /// </summary>
+        public Task<int> UpdateVisitDetailsAndOutcomeAsync(
+            int visitId,
+            ContactMethod method,
+            string? meetingAddress,
+            string? notes,
+            VisitStatus outcome,
+            DateTime? completedDateTime = null,
+            CancellationToken ct = default)
+        {
+            if (outcome is not VisitStatus.Successful and not VisitStatus.Missed)
+                throw new InvalidOperationException("Outcome must be Successful or Missed.");
+
+            return EnsureInitThen(async () =>
+            {
+                ct.ThrowIfCancellationRequested();
+                var updated = 0;
+
+                await Db.RunInTransactionAsync(connection =>
+                {
+                    var visit = connection.Find<Visit>(visitId);
+                    if (visit is null)
+                        return;
+
+                    if (visit.ScheduledDateTime > DateTime.Now)
+                        throw new InvalidOperationException("A future visit cannot have an outcome.");
+
+                    if (visit.Status is VisitStatus.CanceledByMe or
+                        VisitStatus.CanceledByThem or
+                        VisitStatus.Rescheduled)
+                    {
+                        throw new InvalidOperationException(
+                            "A canceled or rescheduled visit cannot have an outcome.");
+                    }
+
+                    visit.Method = method;
+                    visit.MeetingAddress = string.IsNullOrWhiteSpace(meetingAddress)
+                        ? null
+                        : meetingAddress.Trim();
+                    visit.Notes = string.IsNullOrWhiteSpace(notes)
+                        ? null
+                        : notes.Trim();
+                    visit.NotesCreatedDateTime = string.IsNullOrWhiteSpace(visit.Notes)
+                        ? null
+                        : DateTime.Now;
+                    visit.Status = outcome;
+                    visit.CompletedDateTime = outcome == VisitStatus.Successful
+                        ? completedDateTime ?? visit.CompletedDateTime ?? visit.ScheduledDateTime
+                        : null;
+
+                    updated = connection.Update(visit);
+                }).ConfigureAwait(false);
+
+                return updated;
+            }, ct);
+        }
+
+        /// <summary>
         /// Cancel a visit as canceled by the user.
         /// Preserves history and optionally appends context to notes.
         /// </summary>
@@ -451,57 +574,64 @@ namespace MinistryTracker.Data
 
             return EnsureInitThen(async () =>
             {
-                var current = await Db.FindAsync<Visit>(visitId).ConfigureAwait(false);
-                if (current is null)
-                    throw new InvalidOperationException("Visit not found.");
+                ct.ThrowIfCancellationRequested();
+                Visit? replacement = null;
 
-                var canReschedule =
-                    current.Status == VisitStatus.Missed ||
-                    (current.Status == VisitStatus.Scheduled &&
-                     current.ScheduledDateTime >= DateTime.Now);
-
-                if (!canReschedule)
+                await Db.RunInTransactionAsync(connection =>
                 {
-                    throw new InvalidOperationException(
-                        "Only an upcoming scheduled visit or a missed visit can be rescheduled.");
-                }
+                    var current = connection.Find<Visit>(visitId)
+                        ?? throw new InvalidOperationException("Visit not found.");
 
-                var conflict = await FindVisitScheduleConflictAsync(
-                    current.StudentId,
-                    newScheduledDateTime,
-                    current.Id).ConfigureAwait(false);
+                    var canReschedule =
+                        current.Status == VisitStatus.Missed ||
+                        (current.Status == VisitStatus.Scheduled &&
+                         current.ScheduledDateTime >= DateTime.Now);
 
-                ThrowIfScheduleConflict(conflict);
+                    if (!canReschedule)
+                    {
+                        throw new InvalidOperationException(
+                            "Only an upcoming scheduled visit or a missed visit can be rescheduled.");
+                    }
 
-                if (current.Status == VisitStatus.Scheduled)
-                    current.Status = VisitStatus.Rescheduled;
+                    ThrowIfStudentCannotBeScheduled(connection, current.StudentId);
+                    ThrowIfScheduleConflict(FindVisitScheduleConflict(
+                        connection,
+                        current.StudentId,
+                        newScheduledDateTime,
+                        current.Id));
 
-                if (!string.IsNullOrWhiteSpace(note))
-                {
-                    current.Notes = string.IsNullOrWhiteSpace(current.Notes)
-                        ? note
-                        : $"{current.Notes}\n\n{note}";
-                    current.NotesCreatedDateTime = DateTime.Now;
-                }
+                    if (current.Status == VisitStatus.Scheduled)
+                        current.Status = VisitStatus.Rescheduled;
 
-                await Db.UpdateAsync(current).ConfigureAwait(false);
+                    if (!string.IsNullOrWhiteSpace(note))
+                    {
+                        current.Notes = string.IsNullOrWhiteSpace(current.Notes)
+                            ? note
+                            : $"{current.Notes}\n\n{note}";
+                        current.NotesCreatedDateTime = DateTime.Now;
+                    }
 
-                var replacement = new Visit
-                {
-                    StudentId = current.StudentId,
-                    Method = current.Method,
-                    ScheduledDateTime = newScheduledDateTime,
-                    Status = VisitStatus.Scheduled,
-                    MeetingAddress = newMeetingAddress ?? current.MeetingAddress,
-                    MeetingLatitude = newMeetingLatitude ?? current.MeetingLatitude,
-                    MeetingLongitude = newMeetingLongitude ?? current.MeetingLongitude,
-                    RescheduledFromVisitId = current.Id,
-                    Notes = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
-                    NotesCreatedDateTime = string.IsNullOrWhiteSpace(note) ? null : DateTime.Now
-                };
+                    connection.Update(current);
 
-                await Db.InsertAsync(replacement).ConfigureAwait(false);
-                return replacement;
+                    replacement = new Visit
+                    {
+                        StudentId = current.StudentId,
+                        Method = current.Method,
+                        ScheduledDateTime = newScheduledDateTime,
+                        Status = VisitStatus.Scheduled,
+                        MeetingAddress = newMeetingAddress ?? current.MeetingAddress,
+                        MeetingLatitude = newMeetingLatitude ?? current.MeetingLatitude,
+                        MeetingLongitude = newMeetingLongitude ?? current.MeetingLongitude,
+                        RescheduledFromVisitId = current.Id,
+                        Notes = string.IsNullOrWhiteSpace(note) ? null : note.Trim(),
+                        NotesCreatedDateTime = string.IsNullOrWhiteSpace(note) ? null : DateTime.Now
+                    };
+
+                    connection.Insert(replacement);
+                }).ConfigureAwait(false);
+
+                return replacement
+                    ?? throw new InvalidOperationException("Replacement visit was not created.");
             }, ct);
         }
 
@@ -572,6 +702,70 @@ namespace MinistryTracker.Data
                 : new VisitScheduleConflict(
                     VisitScheduleConflictType.TimeSpacing,
                     nearbyVisit);
+        }
+
+        private static VisitScheduleConflict? FindVisitScheduleConflict(
+            SQLite.SQLiteConnection connection,
+            int studentId,
+            DateTime? scheduledDateTime,
+            int? excludeVisitId)
+        {
+            var now = DateTime.Now;
+            var futureVisits = connection.Table<Visit>()
+                .Where(v =>
+                    v.StudentId == studentId &&
+                    v.Status == VisitStatus.Scheduled &&
+                    v.ScheduledDateTime >= now)
+                .OrderBy(v => v.ScheduledDateTime)
+                .ToList();
+
+            var existingFutureVisit = futureVisits.FirstOrDefault(
+                v => excludeVisitId is null || v.Id != excludeVisitId.Value);
+
+            if (existingFutureVisit is not null)
+            {
+                return new VisitScheduleConflict(
+                    VisitScheduleConflictType.ExistingFutureVisit,
+                    existingFutureVisit);
+            }
+
+            if (scheduledDateTime is null)
+                return null;
+
+            var windowStart = scheduledDateTime.Value.AddMinutes(-30);
+            var windowEnd = scheduledDateTime.Value.AddMinutes(30);
+
+            var nearbyVisit = connection.Table<Visit>()
+                .Where(v =>
+                    v.Status == VisitStatus.Scheduled &&
+                    v.ScheduledDateTime > windowStart &&
+                    v.ScheduledDateTime < windowEnd)
+                .OrderBy(v => v.ScheduledDateTime)
+                .ToList()
+                .FirstOrDefault(v => excludeVisitId is null || v.Id != excludeVisitId.Value);
+
+            return nearbyVisit is null
+                ? null
+                : new VisitScheduleConflict(
+                    VisitScheduleConflictType.TimeSpacing,
+                    nearbyVisit);
+        }
+
+        private static void ThrowIfStudentCannotBeScheduled(
+            SQLite.SQLiteConnection connection,
+            int studentId)
+        {
+            var student = connection.Find<Student>(studentId)
+                ?? throw new InvalidOperationException("Student not found.");
+
+            if (student.IsDeleted)
+                throw new InvalidOperationException("A deleted student cannot have a visit scheduled.");
+
+            if (student.Status != StudentStatus.Active)
+            {
+                throw new InvalidOperationException(
+                    $"Visits can only be scheduled for active students. Current status: {student.Status}.");
+            }
         }
 
         private static void ThrowIfScheduleConflict(VisitScheduleConflict? conflict)
