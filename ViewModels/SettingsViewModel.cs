@@ -688,7 +688,8 @@ namespace MinistryTracker.ViewModels
                 {
                     Subject = $"Ministry Tracker Beta Feedback - {AppInfo.Current.VersionString}",
                     Body = body,
-                    BodyFormat = EmailBodyFormat.PlainText
+                    BodyFormat = EmailBodyFormat.PlainText,
+                    To = new List<string> { "support@ministrytoolworks.com" }
                 };
 
                 await Email.Default.ComposeAsync(message).ConfigureAwait(false);

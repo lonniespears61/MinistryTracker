@@ -14,7 +14,7 @@ public partial class SettingsViewModel
 
     // If you want less "corporate" tone, drop "All rights reserved."
     public string Copyright =>
-        $"© {DateTime.Now:yyyy} Diakonos Tools.";
+        $"© {DateTime.Now:yyyy} Ministry Toolworks.";
 
     public string LegalDisclaimers { get; } =
 @"INDEPENDENT APPLICATION
