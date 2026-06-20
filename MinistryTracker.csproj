@@ -29,6 +29,14 @@
 	<PropertyGroup>
 		<LangVersion>preview</LangVersion>
 	</PropertyGroup>
+
+	<PropertyGroup Condition="'$(Configuration)' == 'Release' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<AndroidKeyStore>true</AndroidKeyStore>
+		<AndroidSigningKeyStore>$(MINISTRYTOOLWORKS_KEYSTORE_PATH)</AndroidSigningKeyStore>
+		<AndroidSigningKeyAlias>$(MINISTRYTOOLWORKS_KEY_ALIAS)</AndroidSigningKeyAlias>
+		<AndroidSigningStorePass>$(MINISTRYTOOLWORKS_KEYSTORE_PASSWORD)</AndroidSigningStorePass>
+		<AndroidSigningKeyPass>$(MINISTRYTOOLWORKS_KEY_PASSWORD)</AndroidSigningKeyPass>
+	</PropertyGroup>
 	<ItemGroup>
 		<!-- App Icon -->
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" />
