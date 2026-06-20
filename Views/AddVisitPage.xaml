@@ -7,9 +7,14 @@
     x:DataType="vm:AddVisitViewModel"
     Title="Add Visit">
 
+    <Shell.BackButtonBehavior>
+        <BackButtonBehavior
+            Command="{Binding CancelCommand}" />
+    </Shell.BackButtonBehavior>
+
     <ContentPage.ToolbarItems>
         <ToolbarItem Text="Save" Command="{Binding SaveVisitCommand}" Priority="0" />
-        <ToolbarItem Text="Cancel" Clicked="OnCancelClicked" Priority="1" />
+        <ToolbarItem Text="Cancel" Command="{Binding CancelCommand}" Priority="1" />
     </ContentPage.ToolbarItems>
 
     <ScrollView>

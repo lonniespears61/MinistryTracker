@@ -104,6 +104,11 @@
             </Border>
 
             <!-- ACTIONS -->
+            <Label Text="{Binding ScheduleGuidance}"
+                   IsVisible="{Binding HasScheduleGuidance}"
+                   FontSize="12"
+                   TextColor="#B45309" />
+
             <Grid ColumnDefinitions="*,*"
                   RowDefinitions="Auto,Auto"
                   ColumnSpacing="10"

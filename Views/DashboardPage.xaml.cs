@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using MinistryTracker.Models.DTOs;
+using MinistryTracker.Services;
 using MinistryTracker.ViewModels;
 
 namespace MinistryTracker.Views;
@@ -11,11 +12,15 @@ namespace MinistryTracker.Views;
 public partial class DashboardPage : ContentPage
 {
     private readonly DashboardViewModel _vm;
+    private readonly VisitWorkflowCoordinator _workflow;
 
-    public DashboardPage(DashboardViewModel vm)
+    public DashboardPage(
+        DashboardViewModel vm,
+        VisitWorkflowCoordinator workflow)
     {
         InitializeComponent();
         _vm = vm;
+        _workflow = workflow;
         BindingContext = _vm;
     }
 
@@ -51,9 +56,10 @@ public partial class DashboardPage : ContentPage
         if (suggestion is null)
             return;
 
-        var today = DateTime.Today.ToString("yyyy-MM-dd");
-        await Shell.Current.GoToAsync(
-            $"{nameof(AddVisitPage)}?studentId={suggestion.StudentId}&date={today}");
+        await _workflow.BeginSchedulingAsync(
+            this,
+            suggestion.StudentId,
+            DateTime.Today);
     }
 
     private async void OnVisitSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -84,9 +90,10 @@ public partial class DashboardPage : ContentPage
         if (suggestion is null)
             return;
 
-        var today = DateTime.Today.ToString("yyyy-MM-dd");
-        await Shell.Current.GoToAsync(
-            $"{nameof(AddVisitPage)}?studentId={suggestion.StudentId}&date={today}");
+        await _workflow.BeginSchedulingAsync(
+            this,
+            suggestion.StudentId,
+            DateTime.Today);
     }
 
     private async void OnOpenMapClicked(object sender, EventArgs e)

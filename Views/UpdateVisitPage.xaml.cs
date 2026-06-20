@@ -22,6 +22,7 @@
 
 using System;
 using Microsoft.Maui.ApplicationModel;
+using MinistryTracker.Services;
 using MinistryTracker.ViewModels;
 
 namespace MinistryTracker.Views;
@@ -30,15 +31,19 @@ namespace MinistryTracker.Views;
 public partial class UpdateVisitPage : ContentPage
 {
     private readonly UpdateVisitViewModel _vm;
+    private readonly VisitWorkflowCoordinator _workflow;
     private bool _subscribed;
 
     public string? VisitId { get; set; }
 
-    public UpdateVisitPage(UpdateVisitViewModel vm)
+    public UpdateVisitPage(
+        UpdateVisitViewModel vm,
+        VisitWorkflowCoordinator workflow)
     {
         InitializeComponent();
 
         _vm = vm;
+        _workflow = workflow;
         BindingContext = _vm;
     }
 
@@ -88,9 +93,7 @@ public partial class UpdateVisitPage : ContentPage
         {
             try
             {
-                await Shell.Current.Navigation.PopToRootAsync(false);
-                await Shell.Current.GoToAsync(
-                    $"{nameof(StudentProfilePage)}?studentId={studentId}");
+                await _workflow.CompleteExistingVisitAsync(studentId);
             }
             catch (Exception ex)
             {
@@ -106,8 +109,7 @@ public partial class UpdateVisitPage : ContentPage
         {
             try
             {
-                await Shell.Current.GoToAsync(
-                    $"{nameof(MyCalendarPage)}?mode=schedule&studentId={studentId}");
+                await _workflow.BeginSchedulingAsync(this, studentId);
             }
             catch (Exception ex)
             {
@@ -122,8 +124,20 @@ public partial class UpdateVisitPage : ContentPage
         MainThread.BeginInvokeOnMainThread(async () =>
         {
             await DisplayAlert("Cancel Visit", "Visit canceled.", "OK");
-            await Shell.Current.GoToAsync("..");
+            await _workflow.CompleteExistingVisitAsync(_vm.StudentId);
         });
+    }
+
+    private async void OnCancelVisitClicked(object sender, EventArgs e)
+    {
+        var confirmed = await DisplayAlert(
+            "Cancel Visit",
+            "Cancel this scheduled visit? This keeps the visit in history.",
+            "Cancel Visit",
+            "Keep Visit");
+
+        if (confirmed && _vm.CancelVisitCommand.CanExecute(null))
+            await _vm.CancelVisitCommand.ExecuteAsync(null);
     }
 
     private void OnOutcomeCompleted(string message)

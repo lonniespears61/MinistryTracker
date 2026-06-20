@@ -21,6 +21,7 @@ using Microsoft.Maui.Graphics;
 using MinistryTracker.Data.Repositories;
 using MinistryTracker.Models;
 using MinistryTracker.Models.Enums;
+using MinistryTracker.Services;
 
 namespace MinistryTracker.ViewModels
 {
@@ -76,6 +77,8 @@ namespace MinistryTracker.ViewModels
             OnPropertyChanged(nameof(StatusLabel));
             OnPropertyChanged(nameof(StatusColor));
             OnPropertyChanged(nameof(CanScheduleVisit));
+            OnPropertyChanged(nameof(ScheduleGuidance));
+            OnPropertyChanged(nameof(HasScheduleGuidance));
             OnPropertyChanged(nameof(Initials));
             OnPropertyChanged(nameof(SubTitle));
             OnPropertyChanged(nameof(Notes));
@@ -100,7 +103,22 @@ namespace MinistryTracker.ViewModels
         public bool HasNotes => !string.IsNullOrWhiteSpace(Model?.Notes);
 
         public bool CanScheduleVisit =>
-            Model is { IsDeleted: false, Status: StudentStatus.Active };
+            WorkflowPolicy.CanScheduleStudent(Model);
+
+        public string ScheduleGuidance =>
+            Model?.Status switch
+            {
+                StudentStatus.Paused =>
+                    "Scheduling is paused for this student. Set the student to Active to schedule a visit.",
+                StudentStatus.Completed =>
+                    "This student is marked Completed. Reopen as Active to schedule another visit.",
+                StudentStatus.Discontinued =>
+                    "This student is marked Discontinued. Reopen as Active to schedule another visit.",
+                _ => string.Empty
+            };
+
+        public bool HasScheduleGuidance =>
+            !string.IsNullOrWhiteSpace(ScheduleGuidance);
 
         public Color StatusColor
         {

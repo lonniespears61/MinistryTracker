@@ -151,13 +151,14 @@ WHY THIS FILE EXISTS IN THIS SHAPE
             <Button
                 Text="Save &amp; Schedule Next Visit"
                 Command="{Binding SaveAndScheduleNextCommand}"
-                IsEnabled="{Binding CanEditDetails}"
+                IsVisible="{Binding CanScheduleNextVisit}"
+                IsEnabled="{Binding CanScheduleNextVisit}"
                 CornerRadius="14"
                 HeightRequest="52" />
 
             <Button
                 Text="Cancel Visit"
-                Command="{Binding CancelVisitCommand}"
+                Clicked="OnCancelVisitClicked"
                 IsVisible="{Binding CanCancelVisit}"
                 CornerRadius="14"
                 HeightRequest="52" />

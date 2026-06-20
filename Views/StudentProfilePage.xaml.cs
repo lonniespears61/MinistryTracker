@@ -18,6 +18,7 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 using MinistryTracker.Models;
+using MinistryTracker.Services;
 using MinistryTracker.ViewModels;
 
 namespace MinistryTracker.Views;
@@ -26,14 +27,17 @@ namespace MinistryTracker.Views;
 public partial class StudentProfilePage : ContentPage
 {
     private readonly StudentProfileViewModel _vm;
-    private int _lastLoadedStudentId;
+    private readonly VisitWorkflowCoordinator _workflow;
 
     public string? StudentIdQuery { get; set; }
 
-    public StudentProfilePage(StudentProfileViewModel vm)
+    public StudentProfilePage(
+        StudentProfileViewModel vm,
+        VisitWorkflowCoordinator workflow)
     {
         InitializeComponent();
         _vm = vm;
+        _workflow = workflow;
         BindingContext = _vm;
 
         // Under Shell, you typically do NOT mess with NavigationPage back button.
@@ -48,14 +52,8 @@ public partial class StudentProfilePage : ContentPage
         if (!int.TryParse(StudentIdQuery, out var studentId) || studentId <= 0)
             return;
 
-        if (_lastLoadedStudentId == studentId && _vm.Model is not null)
-            return;
-
         if (await _vm.LoadAsync(studentId))
-        {
-            _lastLoadedStudentId = studentId;
             return;
-        }
 
         await DisplayAlert("Student not found", "This student could not be loaded.", "OK");
         await Shell.Current.GoToAsync("..");
@@ -65,14 +63,8 @@ public partial class StudentProfilePage : ContentPage
     // In a Shell + TabBar app, "Home" is simply the Dashboard tab.
     // If your XAML still has a Home button wired to this, either remove the button,
     // or switch tabs via an absolute Shell route (example commented below).
-    private void OnHomeClicked(object sender, EventArgs e)
-    {
-        // OPTION A (Recommended): remove the home button from this page entirely.
-        // Tabs already provide home navigation.
-
-        // OPTION B: if you *must* keep a home button, navigate to the dashboard tab route.
-        // await Shell.Current.GoToAsync("//dashboard");
-    }
+    private async void OnHomeClicked(object sender, EventArgs e)
+        => await _workflow.GoToDashboardAsync();
 
     private async void OnEditStudentClicked(object sender, EventArgs e)
     {
@@ -103,7 +95,6 @@ public partial class StudentProfilePage : ContentPage
         if (_vm.Model is not Student student)
             return;
 
-        await Shell.Current.GoToAsync(
-            $"{nameof(MyCalendarPage)}?mode=schedule&studentId={student.StudentId}");
+        await _workflow.BeginSchedulingAsync(this, student.StudentId);
     }
 }

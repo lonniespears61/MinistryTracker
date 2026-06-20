@@ -470,6 +470,11 @@ public partial class MyCalendarViewModel : ObservableObject
 
     private void BuildMonthGrid()
     {
+        var previouslySelectedDate =
+            SelectedDayCell is { IsPlaceholder: false }
+                ? SelectedDayCell.Date.Date
+                : (DateTime?)null;
+
         DayCells.Clear();
 
         var first = new DateTime(DisplayedMonth.Year, DisplayedMonth.Month, 1);
@@ -494,10 +499,20 @@ public partial class MyCalendarViewModel : ObservableObject
         while (DayCells.Count % 7 != 0)
             DayCells.Add(CalendarDayCellViewModel.Placeholder());
 
-        if (DisplayedMonth.Year == DateTime.Today.Year && DisplayedMonth.Month == DateTime.Today.Month)
-            SelectedDayCell = DayCells.FirstOrDefault(c => !c.IsPlaceholder && c.Date == DateTime.Today);
-        else if (SelectedDayCell is null || SelectedDayCell.IsPlaceholder)
-            SelectedDayCell = null;
+        var selectedDate =
+            previouslySelectedDate is DateTime previous &&
+            previous.Year == DisplayedMonth.Year &&
+            previous.Month == DisplayedMonth.Month
+                ? previous
+                : DisplayedMonth.Year == DateTime.Today.Year &&
+                  DisplayedMonth.Month == DateTime.Today.Month
+                    ? DateTime.Today
+                    : (DateTime?)null;
+
+        SelectedDayCell = selectedDate is DateTime selected
+            ? DayCells.FirstOrDefault(
+                cell => !cell.IsPlaceholder && cell.Date.Date == selected)
+            : null;
     }
 
     private async Task SetDisplayedMonthAsync(DateTime anyDateInMonth)

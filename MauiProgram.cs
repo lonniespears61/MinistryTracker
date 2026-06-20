@@ -44,6 +44,7 @@ public static class MauiProgram
         // Each MAUI window therefore needs a fresh Shell and handler tree.
         builder.Services.AddTransient<AppShell>();
         builder.Services.AddSingleton<SettingsService>(); // User preferences (Normal Service Days, etc.)   
+        builder.Services.AddSingleton<VisitWorkflowCoordinator>();
 
         // ===== ViewModels =====
         builder.Services.AddTransient<DashboardViewModel>();

@@ -28,6 +28,7 @@ using MinistryTracker.Services;
 using MinistryTracker.Utilities;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -58,12 +59,16 @@ namespace MinistryTracker.ViewModels
         /// The View responds by navigating back.
         /// </summary>
         public event Action? SaveCompleted;
+        public event Action? CancelRequested;
 
         /// <summary>
         /// Fired when save fails.
         /// The View responds by showing an alert.
         /// </summary>
         public event Action<string>? SaveFailed;
+
+        [RelayCommand]
+        private void Cancel() => CancelRequested?.Invoke();
 
         // =====================================================================
         // SHELL QUERY INPUTS
@@ -74,6 +79,9 @@ namespace MinistryTracker.ViewModels
 
         [ObservableProperty]
         private int? replaceVisitId;
+
+        [ObservableProperty]
+        private string? cancelTo;
 
         public void ApplyQueryAttributes(IDictionary<string, object> query)
         {
@@ -94,11 +102,19 @@ namespace MinistryTracker.ViewModels
                     ReplaceVisitId = parsedReplaceId;
             }
 
+            if (query.TryGetValue("cancelTo", out var rawCancelTo) && rawCancelTo is not null)
+                CancelTo = rawCancelTo.ToString();
+
             // If a date is explicitly passed in, keep that date
             // but apply that day's configured default time.
             if (query.TryGetValue("date", out var rawDate) && rawDate is string dateStr)
             {
-                if (DateTime.TryParse(dateStr, out var parsedDate))
+                if (DateTime.TryParseExact(
+                    dateStr,
+                    "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture,
+                    DateTimeStyles.None,
+                    out var parsedDate))
                 {
                     var settings = _settingsService.GetServiceDaySettings();
                     var defaultDateTime = VisitSchedulingHelper.GetDefaultVisitDateTime(settings, parsedDate.Date);

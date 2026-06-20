@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using System.Linq;
+using MinistryTracker.Services;
 using MinistryTracker.ViewModels;
 
 namespace MinistryTracker.Views;
@@ -9,14 +10,18 @@ namespace MinistryTracker.Views;
 public partial class SelectStudentForVisitPage : ContentPage
 {
     private readonly SelectStudentForVisitViewModel _vm;
+    private readonly VisitWorkflowCoordinator _workflow;
     private bool _loaded;
 
     public string? DateQuery { get; set; }
 
-    public SelectStudentForVisitPage(SelectStudentForVisitViewModel vm)
+    public SelectStudentForVisitPage(
+        SelectStudentForVisitViewModel vm,
+        VisitWorkflowCoordinator workflow)
     {
         InitializeComponent();
         _vm = vm;
+        _workflow = workflow;
         BindingContext = _vm;
     }
 
@@ -62,8 +67,10 @@ public partial class SelectStudentForVisitPage : ContentPage
         if (student is null)
             return;
 
-        var dateString = _vm.VisitDate.ToString("yyyy-MM-dd");
-        await Shell.Current.GoToAsync(
-            $"{nameof(AddVisitPage)}?studentId={student.StudentId}&date={dateString}");
+        await _workflow.BeginSchedulingAsync(
+            this,
+            student.StudentId,
+            _vm.VisitDate,
+            VisitWorkflowCoordinator.CancelToCalendar);
     }
 }

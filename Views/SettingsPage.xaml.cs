@@ -1,5 +1,6 @@
 ﻿using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Extensions.DependencyInjection;
 using MinistryTracker.ViewModels;
 using MinistryTracker.ViewModels.Messages;
 
@@ -108,7 +109,8 @@ public partial class SettingsPage : ContentPage
 
     private async void OnFeedbackClicked(object sender, EventArgs e)
     {
-        await Shell.Current.GoToAsync(nameof(FeedbackPage));
+        var feedbackPage = MauiProgram.Services.GetRequiredService<FeedbackPage>();
+        await Navigation.PushAsync(feedbackPage);
     }
 
     private void OnRemoveServiceDayClicked(object sender, EventArgs e)

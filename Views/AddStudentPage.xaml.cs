@@ -1,17 +1,22 @@
 ﻿using MinistryTracker.ViewModels;
 using System;
 using Microsoft.Maui.ApplicationModel;
+using MinistryTracker.Services;
 
 namespace MinistryTracker.Views;
 
 public partial class AddStudentPage : ContentPage
 {
     private readonly AddStudentViewModel _vm;
+    private readonly VisitWorkflowCoordinator _workflow;
 
-    public AddStudentPage(AddStudentViewModel vm)
+    public AddStudentPage(
+        AddStudentViewModel vm,
+        VisitWorkflowCoordinator workflow)
     {
         InitializeComponent();
         _vm = vm;
+        _workflow = workflow;
         BindingContext = _vm;
     }
 
@@ -63,11 +68,10 @@ public partial class AddStudentPage : ContentPage
                     return;
                 }
 
-                // Replace Add Student with Add Visit in the navigation stack.
-                // Saving or canceling the visit then returns to the page where
-                // the user originally started adding the student.
-                await Shell.Current.GoToAsync(
-                    $"../{nameof(AddVisitPage)}?studentId={studentId}");
+                await Shell.Current.GoToAsync("..");
+                await _workflow.BeginSchedulingAsync(
+                    Shell.Current.CurrentPage ?? this,
+                    studentId);
                 return;
             }
 

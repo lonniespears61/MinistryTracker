@@ -27,6 +27,8 @@ using CommunityToolkit.Mvvm.Input;
 using MinistryTracker.Data;
 using MinistryTracker.Data.Repositories;
 using MinistryTracker.Models.Enums;
+using MinistryTracker.Models;
+using MinistryTracker.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -93,6 +95,11 @@ namespace MinistryTracker.ViewModels
 
         [ObservableProperty]
         private string studentName = string.Empty;
+
+        [ObservableProperty]
+        private bool studentCanSchedule;
+
+        private Student? _student;
 
         // =====================================================================
         // CURRENT VISIT STATE
@@ -161,30 +168,25 @@ namespace MinistryTracker.ViewModels
 
         public bool CanEditDetails =>
             VisitId > 0 &&
-            Status != VisitStatus.Rescheduled;
+            WorkflowPolicy.CanEditVisitDetails(Status);
 
         public bool CanSetOutcome =>
-            IsPastVisit &&
-            Status is VisitStatus.Scheduled or VisitStatus.Successful or VisitStatus.Missed;
+            WorkflowPolicy.CanSetVisitOutcome(Status, ScheduledDateTime, DateTime.Now);
 
         public bool CanCancelVisit =>
-            Status == VisitStatus.Scheduled &&
-            ScheduledDateTime >= DateTime.Now;
+            WorkflowPolicy.CanCancelVisit(Status, ScheduledDateTime, DateTime.Now);
 
         public bool CanRescheduleVisit =>
-            Status == VisitStatus.Missed ||
-            (Status == VisitStatus.Scheduled && ScheduledDateTime >= DateTime.Now);
+            StudentCanSchedule &&
+            WorkflowPolicy.CanRescheduleVisit(Status, ScheduledDateTime, DateTime.Now);
+
+        public bool CanScheduleNextVisit =>
+            WorkflowPolicy.CanScheduleNextVisit(_student, Status);
 
         public bool IsHistoryLocked => Status == VisitStatus.Rescheduled;
 
         public string VisitActionGuidance =>
-            IsHistoryLocked
-                ? "This is the original record of a rescheduled visit and is read-only."
-                : CanSetOutcome
-                    ? "Record the outcome or correct the visit details."
-                    : Status is VisitStatus.CanceledByMe or VisitStatus.CanceledByThem
-                        ? "Canceled visit details and notes may be corrected."
-                        : string.Empty;
+            WorkflowPolicy.GetVisitGuidance(Status, ScheduledDateTime, DateTime.Now);
 
         public bool HasVisitActionGuidance =>
             !string.IsNullOrWhiteSpace(VisitActionGuidance);
@@ -219,10 +221,12 @@ namespace MinistryTracker.ViewModels
                 }
 
                 var student = await _students.GetStudentByIdAsync(visit.StudentId).ConfigureAwait(false);
+                _student = student;
 
                 VisitId = visit.Id;
                 StudentId = visit.StudentId;
                 StudentName = student?.Name ?? $"Student #{visit.StudentId}";
+                StudentCanSchedule = WorkflowPolicy.CanScheduleStudent(student);
 
                 ScheduledDateTime = visit.ScheduledDateTime;
                 Status = visit.Status;
@@ -257,6 +261,14 @@ namespace MinistryTracker.ViewModels
         [RelayCommand]
         private async Task SaveAndScheduleNextAsync()
         {
+            if (!CanScheduleNextVisit)
+            {
+                StatusMessage =
+                    "A next visit can only be scheduled for an active student after this visit is closed.";
+                OperationFailed?.Invoke(StatusMessage);
+                return;
+            }
+
             await SaveDetailsAsync(scheduleNext: true);
         }
 
@@ -484,6 +496,7 @@ namespace MinistryTracker.ViewModels
             OnPropertyChanged(nameof(CanSetOutcome));
             OnPropertyChanged(nameof(CanCancelVisit));
             OnPropertyChanged(nameof(CanRescheduleVisit));
+            OnPropertyChanged(nameof(CanScheduleNextVisit));
             OnPropertyChanged(nameof(IsHistoryLocked));
             OnPropertyChanged(nameof(VisitActionGuidance));
             OnPropertyChanged(nameof(HasVisitActionGuidance));

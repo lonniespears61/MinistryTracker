@@ -20,6 +20,7 @@ using System;
 using CommunityToolkit.Maui.Alerts;
 using CommunityToolkit.Maui.Core;
 using MinistryTracker.Models.DTOs;
+using MinistryTracker.Services;
 using MinistryTracker.ViewModels;
 
 namespace MinistryTracker.Views;
@@ -27,21 +28,28 @@ namespace MinistryTracker.Views;
 [QueryProperty(nameof(Mode), "mode")]
 [QueryProperty(nameof(StudentId), "studentId")]
 [QueryProperty(nameof(VisitId), "visitId")]
+[QueryProperty(nameof(ReplaceVisitId), "replaceVisitId")]
 public partial class MyCalendarPage : ContentPage
 {
     private readonly MyCalendarViewModel _vm;
+    private readonly VisitWorkflowCoordinator _workflow;
 
     private bool _loading;
     private bool _subscribed;
+    private int? _pendingReplaceVisitId;
 
     public string? Mode { get; set; }
     public string? StudentId { get; set; }
     public string? VisitId { get; set; }
+    public string? ReplaceVisitId { get; set; }
 
-    public MyCalendarPage(MyCalendarViewModel vm)
+    public MyCalendarPage(
+        MyCalendarViewModel vm,
+        VisitWorkflowCoordinator workflow)
     {
         InitializeComponent();
         _vm = vm;
+        _workflow = workflow;
         BindingContext = _vm;
     }
 
@@ -88,6 +96,12 @@ public partial class MyCalendarPage : ContentPage
                 int.TryParse(StudentId, out var sid) &&
                 sid > 0)
             {
+                _pendingReplaceVisitId =
+                    int.TryParse(ReplaceVisitId, out var replaceVisitId) &&
+                    replaceVisitId > 0
+                        ? replaceVisitId
+                        : null;
+
                 await _vm.BeginSchedulingForStudentAsync(sid);
             }
             else if (string.Equals(Mode, "reschedule", StringComparison.OrdinalIgnoreCase) &&
@@ -96,10 +110,12 @@ public partial class MyCalendarPage : ContentPage
                      rsid > 0 &&
                      vid > 0)
             {
+                _pendingReplaceVisitId = null;
                 await _vm.BeginRescheduleAsync(vid, rsid);
             }
             else
             {
+                _pendingReplaceVisitId = null;
                 _vm.ClearSchedulingContext();
             }
         }
@@ -109,6 +125,10 @@ public partial class MyCalendarPage : ContentPage
         }
         finally
         {
+            Mode = null;
+            StudentId = null;
+            VisitId = null;
+            ReplaceVisitId = null;
             _loading = false;
         }
     }
@@ -117,16 +137,16 @@ public partial class MyCalendarPage : ContentPage
     {
         try
         {
-            var dateString = date.ToString("yyyy-MM-dd");
-
             if (studentId is int sid && sid > 0)
             {
-                await Shell.Current.GoToAsync(
-                    $"{nameof(AddVisitPage)}?studentId={sid}&date={dateString}");
+                await _workflow.ContinueSchedulingAsync(
+                    sid,
+                    date,
+                    _pendingReplaceVisitId);
                 return;
             }
 
-            await Shell.Current.GoToAsync($"{nameof(SelectStudentForVisitPage)}?date={dateString}");
+            await _workflow.SelectStudentForDateAsync(date);
         }
         catch (Exception ex)
         {
@@ -150,6 +170,7 @@ public partial class MyCalendarPage : ContentPage
 
             await _vm.CompleteRescheduleAsync(newDate);
             await DisplayAlert("Reschedule Visit", "Visit rescheduled.", "OK");
+            await _workflow.CompleteExistingVisitAsync(studentId);
         }
         catch (Exception ex)
         {

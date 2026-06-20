@@ -3,19 +3,25 @@ using MinistryTracker.ViewModels;
 using System;
 using System.Threading.Tasks;
 using Microsoft.Maui.ApplicationModel; // ✅ REQUIRED
+using MinistryTracker.Services;
 
 namespace MinistryTracker.Views;
 
 public partial class AddVisitPage : ContentPage
 {
     private readonly AddVisitViewModel _vm;
+    private readonly VisitWorkflowCoordinator _workflow;
     private bool _dateRequested;
     private bool _timeRequested;
+    private bool _canceling;
 
-    public AddVisitPage(AddVisitViewModel vm)
+    public AddVisitPage(
+        AddVisitViewModel vm,
+        VisitWorkflowCoordinator workflow)
     {
         InitializeComponent();
         _vm = vm;
+        _workflow = workflow;
         BindingContext = _vm;
 
         Loaded += (_, __) => TryOpenDateAsync();
@@ -34,6 +40,7 @@ public partial class AddVisitPage : ContentPage
 
         _vm.SaveCompleted += OnSaveCompleted;
         _vm.SaveFailed += OnSaveFailed; // ✅ added consistency
+        _vm.CancelRequested += OnCancelRequested;
     }
 
     protected override void OnDisappearing()
@@ -42,6 +49,7 @@ public partial class AddVisitPage : ContentPage
 
         _vm.SaveCompleted -= OnSaveCompleted;
         _vm.SaveFailed -= OnSaveFailed; // ✅ added consistency
+        _vm.CancelRequested -= OnCancelRequested;
     }
 
     private async void OnSaveCompleted()
@@ -51,9 +59,7 @@ public partial class AddVisitPage : ContentPage
         // selection, profile, and other intermediate pages are removed.
         await MainThread.InvokeOnMainThreadAsync(async () =>
         {
-            await Shell.Current.Navigation.PopToRootAsync(false);
-            await Shell.Current.GoToAsync(
-                $"//{MinistryTracker.AppShell.DashboardTabRoute}");
+            await _workflow.CompleteNewVisitAsync();
         });
     }
 
@@ -101,8 +107,24 @@ public partial class AddVisitPage : ContentPage
         _timeRequested = true;
         TryOpenTimeAsync();
     }
-    private async void OnCancelClicked(object sender, EventArgs e)
+    private async void OnCancelRequested() => await CancelAsync();
+
+    protected override bool OnBackButtonPressed()
     {
-        await Shell.Current.GoToAsync("..");
+        if (_vm.CancelCommand.CanExecute(null))
+            _vm.CancelCommand.Execute(null);
+        return true;
+    }
+
+    private Task CancelAsync() =>
+        CancelOnceAsync();
+
+    private async Task CancelOnceAsync()
+    {
+        if (_canceling)
+            return;
+
+        _canceling = true;
+        await _workflow.CancelNewVisitAsync(_vm.CancelTo);
     }
 }
