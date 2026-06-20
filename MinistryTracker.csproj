@@ -64,6 +64,12 @@
 	  <Folder Include="Views\Controls\" />
 	</ItemGroup>
 
+	<ItemGroup Condition="'$(Configuration)' == 'Release'">
+	  <Compile Remove="Data\DataService.Seeding.cs" />
+	  <Compile Remove="Views\DeveloperSettingsPanel.xaml.cs" />
+	  <MauiXaml Remove="Views\DeveloperSettingsPanel.xaml" />
+	</ItemGroup>
+
 	<ItemGroup>
 	  <Compile Update="Views\DashboardPage.xaml.cs">
 	    <DependentUpon>DashboardPage.xaml</DependentUpon>

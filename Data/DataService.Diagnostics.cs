@@ -27,6 +27,7 @@ namespace MinistryTracker.Data
 {
     public partial class DataService
     {
+#if DEBUG
         public Task RunSeedDemoDataAsync(CancellationToken ct = default)
             => SeedDemoDataAsync(ct);
 
@@ -106,6 +107,7 @@ namespace MinistryTracker.Data
 
             File.Delete(path);
         }
+#endif
 
         public Task<(string DbPath, int StudentCount, int VisitCount)> GetDatabaseHealthAsync(CancellationToken ct = default)
         {

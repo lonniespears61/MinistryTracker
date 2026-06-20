@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<VerticalStackLayout
+    x:Class="MinistryTracker.Views.DeveloperSettingsPanel"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+    xmlns:vm="clr-namespace:MinistryTracker.ViewModels"
+    x:DataType="vm:SettingsViewModel"
+    Spacing="16"
+    IsVisible="{Binding IsDeveloperMode}">
+
+    <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}" Padding="14">
+        <Border.StrokeShape>
+            <RoundRectangle CornerRadius="16" />
+        </Border.StrokeShape>
+        <VerticalStackLayout Spacing="8">
+            <Label Text="Database Schema" FontSize="18" FontAttributes="Bold" />
+            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="6">
+                <Label Text="Current Schema" />
+                <Label Grid.Column="1" Text="{Binding CurrentSchemaVersion}" />
+                <Label Grid.Row="1" Text="App Schema" />
+                <Label Grid.Row="1" Grid.Column="1" Text="{Binding AppSchemaVersion}" />
+                <Label Grid.Row="2" Text="Migration Needed" />
+                <Label Grid.Row="2" Grid.Column="1" Text="{Binding IsMigrationRequired}" />
+            </Grid>
+        </VerticalStackLayout>
+    </Border>
+
+    <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}" Padding="14">
+        <Border.StrokeShape>
+            <RoundRectangle CornerRadius="16" />
+        </Border.StrokeShape>
+        <toolkit:Expander IsExpanded="{Binding HealthExpanded}">
+            <toolkit:Expander.Header>
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <Label Text="Database Health" FontSize="18" FontAttributes="Bold" />
+                    <Button Grid.Column="1" Text="Show" Command="{Binding ShowDbHealthCommand}" />
+                </Grid>
+            </toolkit:Expander.Header>
+            <toolkit:Expander.Content>
+                <ScrollView HeightRequest="260">
+                    <Label Text="{Binding DbHealthText}" FontSize="12" LineBreakMode="WordWrap" />
+                </ScrollView>
+            </toolkit:Expander.Content>
+        </toolkit:Expander>
+    </Border>
+
+    <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}" Padding="14">
+        <Border.StrokeShape>
+            <RoundRectangle CornerRadius="16" />
+        </Border.StrokeShape>
+        <VerticalStackLayout Spacing="8">
+            <Label Text="Test Data" FontSize="18" FontAttributes="Bold" />
+            <Label Text="Slide all the way right to delete local rows and rebuild test data."
+                   FontSize="12" FontAttributes="Bold" TextColor="#b00020" />
+            <Slider Minimum="0" Maximum="100"
+                    Value="{Binding DeleteAndReseedSliderValue, Mode=TwoWay}" />
+        </VerticalStackLayout>
+    </Border>
+
+    <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}" Padding="14">
+        <Border.StrokeShape>
+            <RoundRectangle CornerRadius="16" />
+        </Border.StrokeShape>
+        <VerticalStackLayout Spacing="8">
+            <Label Text="Reset DB (Schema + Data)" FontSize="18" FontAttributes="Bold" />
+            <Label Text="Slide all the way right to delete the database, rebuild it, and seed test data."
+                   FontSize="12" FontAttributes="Bold" TextColor="#b00020" />
+            <Slider Minimum="0" Maximum="100"
+                    Value="{Binding ResetSchemaAndDataSliderValue, Mode=TwoWay}" />
+        </VerticalStackLayout>
+    </Border>
+
+    <Border BackgroundColor="{AppThemeBinding Light=#FFFFFF, Dark=#1E1E1E}" Padding="14">
+        <Border.StrokeShape>
+            <RoundRectangle CornerRadius="16" />
+        </Border.StrokeShape>
+        <VerticalStackLayout Spacing="8">
+            <Label Text="Reset DB (Schema Only)" FontSize="18" FontAttributes="Bold" />
+            <Label Text="Slide all the way right to delete the database and rebuild an empty schema."
+                   FontSize="12" FontAttributes="Bold" TextColor="#7f1d1d" />
+            <Slider Minimum="0" Maximum="100"
+                    Value="{Binding ResetSchemaOnlySliderValue, Mode=TwoWay}" />
+        </VerticalStackLayout>
+    </Border>
+</VerticalStackLayout>

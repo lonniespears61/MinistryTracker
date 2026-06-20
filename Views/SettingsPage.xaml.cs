@@ -8,17 +8,28 @@ namespace MinistryTracker.Views;
 
 public partial class SettingsPage : ContentPage
 {
+#if DEBUG
     private const int DeveloperUnlockTapCount = 7;
+#endif
 
     private readonly SettingsViewModel _vm;
     private bool _messengerRegistered;
+#if DEBUG
     private int _versionTapCount;
+#endif
 
     public SettingsPage(SettingsViewModel vm)
     {
         InitializeComponent();
         _vm = vm;
         BindingContext = _vm;
+
+#if DEBUG
+        SettingsContent.Children.Add(new DeveloperSettingsPanel
+        {
+            BindingContext = _vm
+        });
+#endif
     }
 
     private static Page? GetCurrentPage()
@@ -28,7 +39,9 @@ public partial class SettingsPage : ContentPage
     {
         base.OnAppearing();
 
+#if DEBUG
         _ = _vm.InitializeSchemaInfoAsync();
+#endif
 
         if (_messengerRegistered) return;
         _messengerRegistered = true;
@@ -56,11 +69,13 @@ public partial class SettingsPage : ContentPage
 
             Action? onClicked = action switch
             {
+#if DEBUG
                 UiSnackbarAction.ShowDbHealth => () =>
                 {
                     if (_vm.ShowDbHealthCommand.CanExecute(null))
                         _ = _vm.ShowDbHealthCommand.ExecuteAsync(null);
                 },
+#endif
                 _ => null
             };
 
@@ -99,7 +114,9 @@ public partial class SettingsPage : ContentPage
         WeakReferenceMessenger.Default.Unregister<UiConfirmMessage>(this);
 
         _messengerRegistered = false;
+#if DEBUG
         _versionTapCount = 0;
+#endif
     }
 
     private async void OnDoneClicked(object sender, EventArgs e)
@@ -134,6 +151,7 @@ public partial class SettingsPage : ContentPage
 
     private async void OnVersionTapped(object sender, TappedEventArgs e)
     {
+#if DEBUG
         if (_vm.IsDeveloperMode)
             return;
 
@@ -152,5 +170,8 @@ public partial class SettingsPage : ContentPage
         {
             await Toast.Make($"{remaining} taps away from developer tools.").Show();
         }
+#else
+        await Task.CompletedTask;
+#endif
     }
 }

@@ -44,7 +44,9 @@ namespace MinistryTracker.ViewModels
         private readonly DataService _data;
         private readonly SettingsService _settingsService;
 
+#if DEBUG
         private CancellationTokenSource? _activeCts;
+#endif
 
         // =====================================================================
         // SETTINGS BINDABLES
@@ -58,6 +60,7 @@ namespace MinistryTracker.ViewModels
         [ObservableProperty]
         private bool isBusy;
 
+#if DEBUG
         [ObservableProperty]
         private string dbHealthText = string.Empty;
 
@@ -66,6 +69,7 @@ namespace MinistryTracker.ViewModels
 
         [ObservableProperty]
         private bool isDeveloperMode;
+#endif
 
         [ObservableProperty]
         private bool betaTesterAgreementAccepted;
@@ -83,6 +87,7 @@ namespace MinistryTracker.ViewModels
         // SCHEMA VERSION DISPLAY
         // =====================================================================
 
+#if DEBUG
         [ObservableProperty]
         private int currentSchemaVersion;
 
@@ -100,6 +105,7 @@ namespace MinistryTracker.ViewModels
 
         [ObservableProperty]
         private double resetSchemaOnlySliderValue;
+#endif
 
         // =====================================================================
         // CONSTRUCTOR
@@ -110,7 +116,9 @@ namespace MinistryTracker.ViewModels
             _data = data ?? throw new ArgumentNullException(nameof(data));
             _settingsService = settingsService ?? throw new ArgumentNullException(nameof(settingsService));
 
+#if DEBUG
             IsDeveloperMode = false;
+#endif
 
             LoadServiceDaySettings();
             LoadBetaFeedbackSettings();
@@ -120,6 +128,7 @@ namespace MinistryTracker.ViewModels
         // INITIALIZATION
         // =====================================================================
 
+#if DEBUG
         public async Task InitializeSchemaInfoAsync()
         {
             try
@@ -133,6 +142,7 @@ namespace MinistryTracker.ViewModels
                 Debug.WriteLine("Schema info load failed: " + ex);
             }
         }
+#endif
 
         // =====================================================================
         // PICKER SOURCES
@@ -337,6 +347,7 @@ namespace MinistryTracker.ViewModels
         // SIMPLE UI HELPERS
         // =====================================================================
 
+#if DEBUG
         [RelayCommand]
         private void HideHealth() => HealthExpanded = false;
 
@@ -345,6 +356,7 @@ namespace MinistryTracker.ViewModels
             if (!value)
                 HealthExpanded = false;
         }
+#endif
 
         partial void OnBetaTesterAgreementAcceptedChanged(bool value)
         {
@@ -374,9 +386,12 @@ namespace MinistryTracker.ViewModels
 
         public void DisableDeveloperMode()
         {
+#if DEBUG
             IsDeveloperMode = false;
+#endif
         }
 
+#if DEBUG
         partial void OnDeleteAndReseedSliderValueChanged(double value)
         {
             if (value < 100 || IsBusy) return;
@@ -662,6 +677,14 @@ namespace MinistryTracker.ViewModels
 
             await Task.CompletedTask;
         }
+#endif
+
+#if !DEBUG
+        public void CancelActiveOperation()
+        {
+            IsBusy = false;
+        }
+#endif
 
         [RelayCommand(AllowConcurrentExecutions = false)]
         private async Task SendFeedback()
@@ -748,6 +771,7 @@ namespace MinistryTracker.ViewModels
         // MESSAGES
         // =====================================================================
 
+#if DEBUG
         public sealed class DatabaseResetMessage
             : CommunityToolkit.Mvvm.Messaging.Messages.ValueChangedMessage<DateTime>
         {
@@ -759,5 +783,6 @@ namespace MinistryTracker.ViewModels
         {
             public DataSeededMessage(DateTime whenUtc) : base(whenUtc) { }
         }
+#endif
     }
 }
