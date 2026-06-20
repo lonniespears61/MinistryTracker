@@ -1,5 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+	<Import Project="Directory.Build.local.props" Condition="Exists('Directory.Build.local.props')" />
+
 	<PropertyGroup>
 		<TargetFrameworks>net9.0-android;net9.0-ios</TargetFrameworks>
 		<OutputType>Exe</OutputType>
@@ -22,6 +24,7 @@
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
+		<AndroidManifestPlaceholders Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">GOOGLE_MAPS_API_KEY=$(GoogleMapsApiKey)</AndroidManifestPlaceholders>
 	</PropertyGroup>
 	<PropertyGroup>
 		<LangVersion>preview</LangVersion>

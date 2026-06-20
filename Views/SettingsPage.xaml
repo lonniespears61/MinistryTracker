@@ -239,6 +239,17 @@
                                FontSize="12"
                                TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
 
+                        <Grid ColumnDefinitions="*,*"
+                              ColumnSpacing="8">
+                            <Button Text="Website"
+                                    Clicked="OnWebsiteClicked"
+                                    CornerRadius="12" />
+                            <Button Grid.Column="1"
+                                    Text="Privacy Policy"
+                                    Clicked="OnPrivacyPolicyClicked"
+                                    CornerRadius="12" />
+                        </Grid>
+
                         <toolkit:Expander>
                             <toolkit:Expander.Header>
                                 <Grid ColumnDefinitions="*,Auto" VerticalOptions="Center">

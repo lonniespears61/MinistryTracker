@@ -363,3 +363,6 @@ MigrationBackup/
 FodyWeavers.xsd
 # Test results
 Tests/**/TestResults/
+
+# Local build secrets
+Directory.Build.local.props

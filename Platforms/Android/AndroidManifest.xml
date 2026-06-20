@@ -3,7 +3,9 @@
           package="com.ministrytoolworks.tracker">
 
 	<application
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:fullBackupContent="@xml/backup_rules"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:enableOnBackInvokedCallback="true"
         android:supportsRtl="true"
         android:label="Ministry Tracker"
@@ -12,15 +14,13 @@
 		<!-- Google Maps API Key -->
 		<meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyBTGdseJXqFxgBZkSZfHAUYs13iSbkkXeE" />
+            android:value="${GOOGLE_MAPS_API_KEY}" />
 
 	</application>
 
 	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 	<uses-permission android:name="android.permission.INTERNET" />
-	<uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 	<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 	<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-	<uses-permission android:name="android.permission.ACCESS_LOCATION_EXTRA_COMMANDS" />
 
 </manifest>

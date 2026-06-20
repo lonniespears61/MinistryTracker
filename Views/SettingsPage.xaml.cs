@@ -113,6 +113,16 @@ public partial class SettingsPage : ContentPage
         await Navigation.PushAsync(feedbackPage);
     }
 
+    private async void OnWebsiteClicked(object sender, EventArgs e)
+        => await Browser.Default.OpenAsync(
+                new Uri("https://ministrytoolworks.com"),
+                BrowserLaunchMode.SystemPreferred);
+
+    private async void OnPrivacyPolicyClicked(object sender, EventArgs e)
+        => await Browser.Default.OpenAsync(
+                new Uri("https://ministrytoolworks.com/privacy.html"),
+                BrowserLaunchMode.SystemPreferred);
+
     private void OnRemoveServiceDayClicked(object sender, EventArgs e)
     {
         if (sender is Button { BindingContext: ServiceDaySettingRowViewModel row } &&
