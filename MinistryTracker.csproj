@@ -57,6 +57,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
+	  <Compile Remove="Tests\**\*.cs" />
 	  <Folder Include="Views\Controls\" />
 	</ItemGroup>
 

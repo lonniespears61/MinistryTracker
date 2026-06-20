@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <DefaultItemExcludes>$(DefaultItemExcludes);bin\**;obj\**</DefaultItemExcludes>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="sqlite-net-pcl" Version="1.9.172" />
+    <PackageReference Include="SQLitePCLRaw.bundle_green" Version="2.1.11" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\..\Data\DataService.cs" Link="App\Data\DataService.cs" />
+    <Compile Include="..\..\Data\DataService.Students.cs" Link="App\Data\DataService.Students.cs" />
+    <Compile Include="..\..\Data\DataService.Visits.cs" Link="App\Data\DataService.Visits.cs" />
+    <Compile Include="..\..\Data\Projections.cs" Link="App\Data\Projections.cs" />
+    <Compile Include="..\..\Data\Repositories\IStudentRepository.cs" Link="App\Data\Repositories\IStudentRepository.cs" />
+    <Compile Include="..\..\Data\Repositories\IVisitRepository.cs" Link="App\Data\Repositories\IVisitRepository.cs" />
+    <Compile Include="..\..\Models\Student.cs" Link="App\Models\Student.cs" />
+    <Compile Include="..\..\Models\Visit.cs" Link="App\Models\Visit.cs" />
+    <Compile Include="..\..\Models\DTOs\*.cs" Link="App\Models\DTOs\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Models\Enums\*.cs" Link="App\Models\Enums\%(Filename)%(Extension)" />
+    <Compile Include="..\..\Services\WorkflowPolicy.cs" Link="App\Services\WorkflowPolicy.cs" />
+    <Compile Include="..\..\Services\WorkflowRoutes.cs" Link="App\Services\WorkflowRoutes.cs" />
+    <Compile Include="..\..\Utilities\DateRanges.cs" Link="App\Utilities\DateRanges.cs" />
+  </ItemGroup>
+</Project>

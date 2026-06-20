@@ -37,7 +37,21 @@ namespace MinistryTracker.Data
 
         private SQLiteAsyncConnection? _database;
         private readonly SemaphoreSlim _gate = new(1, 1);
+        private readonly string _databasePath;
         private bool _initialized;
+
+        public DataService()
+            : this(Path.Combine(FileSystem.AppDataDirectory, DbFileName))
+        {
+        }
+
+        public DataService(string databasePath)
+        {
+            if (string.IsNullOrWhiteSpace(databasePath))
+                throw new ArgumentException("Database path is required.", nameof(databasePath));
+
+            _databasePath = databasePath;
+        }
 
         // -----------------------------------------------------------------------------------------------------------------
         // SCHEMA VERSION (SOURCE OF TRUTH FOR THIS BUILD)
@@ -67,10 +81,8 @@ namespace MinistryTracker.Data
             {
                 if (_initialized) return;
 
-                var path = Path.Combine(FileSystem.AppDataDirectory, DbFileName);
-
                 _database = new SQLiteAsyncConnection(
-                    path,
+                    _databasePath,
                     SQLiteOpenFlags.ReadWrite |
                     SQLiteOpenFlags.Create |
                     SQLiteOpenFlags.SharedCache);
@@ -190,7 +202,7 @@ namespace MinistryTracker.Data
         /// Fully-qualified database path (useful for diagnostics).
         /// </summary>
         public string GetDatabasePath() =>
-            Path.Combine(FileSystem.AppDataDirectory, DbFileName);
+            _databasePath;
 
         // -------------------------------------------------------------------------------------------------------------
         // EnsureInitThen helpers

@@ -1,0 +1,7 @@
+<Project>
+  <PropertyGroup>
+    <BaseOutputPath>$(TEMP)\MinistryTracker.Tests\bin\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(TEMP)\MinistryTracker.Tests\obj\</BaseIntermediateOutputPath>
+    <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
+  </PropertyGroup>
+</Project>

@@ -6,8 +6,8 @@ namespace MinistryTracker.Services;
 
 public sealed class VisitWorkflowCoordinator
 {
-    public const string CancelToCalendar = "calendar";
-    public const string CancelToDashboard = "dashboard";
+    public const string CancelToCalendar = WorkflowRoutes.CancelToCalendar;
+    public const string CancelToDashboard = WorkflowRoutes.CancelToDashboard;
 
     private readonly IStudentRepository _students;
     private readonly IVisitRepository _visits;
@@ -59,7 +59,7 @@ public sealed class VisitWorkflowCoordinator
             if (choice == "Edit existing")
             {
                 await Shell.Current.GoToAsync(
-                    $"{nameof(UpdateVisitPage)}?visitId={existing.Id}");
+                    WorkflowRoutes.UpdateVisit(existing.Id));
                 return;
             }
 
@@ -79,13 +79,8 @@ public sealed class VisitWorkflowCoordinator
             return;
         }
 
-        var route =
-            $"{nameof(MyCalendarPage)}?mode=schedule&studentId={studentId}";
-
-        if (replaceVisitId is int existingVisitId)
-            route += $"&replaceVisitId={existingVisitId}";
-
-        await Shell.Current.GoToAsync(route);
+        await Shell.Current.GoToAsync(
+            WorkflowRoutes.ScheduleCalendar(studentId, replaceVisitId));
     }
 
     public Task ContinueSchedulingAsync(
@@ -94,20 +89,13 @@ public sealed class VisitWorkflowCoordinator
         int? replaceVisitId = null,
         string cancelTo = CancelToCalendar)
     {
-        var route =
-            $"{nameof(AddVisitPage)}?studentId={studentId}" +
-            $"&date={date:yyyy-MM-dd}" +
-            $"&cancelTo={cancelTo}";
-
-        if (replaceVisitId is int existingVisitId)
-            route += $"&replaceVisitId={existingVisitId}";
-
-        return Shell.Current.GoToAsync(route);
+        return Shell.Current.GoToAsync(
+            WorkflowRoutes.AddVisit(studentId, date, cancelTo, replaceVisitId));
     }
 
     public Task SelectStudentForDateAsync(DateTime date) =>
         Shell.Current.GoToAsync(
-            $"{nameof(SelectStudentForVisitPage)}?date={date:yyyy-MM-dd}");
+            WorkflowRoutes.SelectStudent(date));
 
     public async Task CompleteNewVisitAsync()
     {
@@ -137,7 +125,7 @@ public sealed class VisitWorkflowCoordinator
     {
         await Shell.Current.Navigation.PopToRootAsync(false);
         await Shell.Current.GoToAsync(
-            $"{nameof(StudentProfilePage)}?studentId={studentId}");
+            WorkflowRoutes.StudentProfile(studentId));
     }
 
     public async Task GoToDashboardAsync()
