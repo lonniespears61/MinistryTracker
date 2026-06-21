@@ -37,6 +37,23 @@
 		<AndroidSigningStorePass>$(MINISTRYTOOLWORKS_KEYSTORE_PASSWORD)</AndroidSigningStorePass>
 		<AndroidSigningKeyPass>$(MINISTRYTOOLWORKS_KEY_PASSWORD)</AndroidSigningKeyPass>
 	</PropertyGroup>
+
+	<Target Name="ValidateAndroidReleaseConfiguration"
+	        BeforeTargets="PrepareForBuild"
+	        Condition="'$(Configuration)' == 'Release' And $([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">
+		<Error Condition="'$(GoogleMapsApiKey)' == ''"
+		       Text="Android Release requires GoogleMapsApiKey. Set it in the ignored Directory.Build.local.props file or provide it as an MSBuild property." />
+		<Error Condition="'$(MINISTRYTOOLWORKS_KEYSTORE_PATH)' == ''"
+		       Text="Android Release requires MINISTRYTOOLWORKS_KEYSTORE_PATH." />
+		<Error Condition="!Exists('$(MINISTRYTOOLWORKS_KEYSTORE_PATH)')"
+		       Text="Android Release keystore was not found at '$(MINISTRYTOOLWORKS_KEYSTORE_PATH)'." />
+		<Error Condition="'$(MINISTRYTOOLWORKS_KEY_ALIAS)' == ''"
+		       Text="Android Release requires MINISTRYTOOLWORKS_KEY_ALIAS." />
+		<Error Condition="'$(MINISTRYTOOLWORKS_KEYSTORE_PASSWORD)' == ''"
+		       Text="Android Release requires MINISTRYTOOLWORKS_KEYSTORE_PASSWORD." />
+		<Error Condition="'$(MINISTRYTOOLWORKS_KEY_PASSWORD)' == ''"
+		       Text="Android Release requires MINISTRYTOOLWORKS_KEY_PASSWORD." />
+	</Target>
 	<ItemGroup>
 		<!-- App Icon -->
 		<MauiIcon Include="Resources\AppIcon\appicon.svg" />
