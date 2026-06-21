@@ -33,8 +33,6 @@ public sealed class DatabasePreservationTests
     [Fact]
     public async Task Baseline_upgrade_from_version_zero_preserves_existing_rows()
     {
-        SQLitePCL.Batteries_V2.Init();
-
         var directory = Path.Combine(
             Path.GetTempPath(),
             "MinistryTracker.Tests",

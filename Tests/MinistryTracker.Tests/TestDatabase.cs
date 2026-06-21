@@ -20,8 +20,6 @@ internal sealed class TestDatabase : IAsyncDisposable
 
     public static async Task<TestDatabase> CreateAsync()
     {
-        SQLitePCL.Batteries_V2.Init();
-
         var directory = System.IO.Path.Combine(
             System.IO.Path.GetTempPath(),
             "MinistryTracker.Tests",
