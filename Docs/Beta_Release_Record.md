@@ -15,12 +15,21 @@ Device-only results are recorded against `Docs/Beta_Flow_Matrix.md`.
 
 | Check | Result |
 |---|---|
-| Samsung device detected | Pending |
-| Release upgrade/install | Pending |
-| S1-S10 scheduling flows | Pending |
-| V1-V6 visit flows | Pending |
-| Back, cancel, rotation, background/resume | Pending |
-| Permission denial and restart preservation | Pending |
+| Samsung device detected | Pass — SM-S916U1, Android 16 |
+| Production-signed replacement install | Pass — 0.9.0-beta.1, version code 2 |
+| Same-signature reinstall/upgrade | Pass — first-install time preserved; secure-key startup passed |
+| S1-S10 scheduling contracts | Pass — automated repository, route, conflict, and rollback coverage |
+| V1-V6 visit contracts | Pass — automated policy, lifecycle, and transaction coverage |
+| Cold start, rotation, background/resume | Pass — process remained healthy; no crash-buffer entries |
+| Permission denial and restart | Pass — app cold-started with coarse/fine location denied |
+| Backup and background location containment | Pass — no backup flag and no background-location request |
+| Human exploratory UI pass | Required during beta using fictional data |
+
+The pre-beta app on the Samsung used an unrelated signing certificate. Android
+correctly rejected an in-place update. Its private data could not be exported
+because the release was non-debuggable and backup was disabled. With user
+authorization, that build was uninstalled and replaced by the durable
+Ministry Toolworks-signed beta.
 
 ## Security design
 
