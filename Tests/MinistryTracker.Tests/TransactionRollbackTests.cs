@@ -19,7 +19,7 @@ public sealed class TransactionRollbackTests
             """
             CREATE TRIGGER ForceReplacementFailure
             BEFORE INSERT ON Visits
-            WHEN NEW.Notes = 'FORCE_REPLACEMENT_FAILURE'
+            WHEN NEW.ProtectionVersion = 1
             BEGIN
                 SELECT RAISE(ABORT, 'forced replacement failure');
             END;
@@ -76,7 +76,7 @@ public sealed class TransactionRollbackTests
         var student = await db.AddStudentAsync();
         var visit = TestDatabase.NewVisit(student.StudentId, DateTime.Now.AddDays(-1));
         visit.Notes = "Original";
-        await db.OpenRaw().InsertAsync(visit);
+        await db.Service.AddVisitAsync(visit);
 
         var raw = db.OpenRaw();
         await raw.ExecuteAsync(

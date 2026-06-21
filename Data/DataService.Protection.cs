@@ -129,7 +129,7 @@ public partial class DataService
                        PrimaryLatitude, PrimaryLongitude, PreferredLanguage,
                        Gender, Age, Notes
                 FROM Students
-                WHERE ProtectionVersion < 1
+                WHERE COALESCE(ProtectionVersion, 0) < 1
                 """).ConfigureAwait(false);
 
             foreach (var legacy in students)
@@ -184,7 +184,7 @@ public partial class DataService
                 """
                 SELECT Id, MeetingAddress, MeetingLatitude, MeetingLongitude, Notes
                 FROM Visits
-                WHERE ProtectionVersion < 1
+                WHERE COALESCE(ProtectionVersion, 0) < 1
                 """).ConfigureAwait(false);
 
             foreach (var legacy in visits)

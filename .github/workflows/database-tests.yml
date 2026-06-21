@@ -22,3 +22,8 @@ jobs:
 
       - name: Run tests
         run: dotnet test Tests/MinistryTracker.Tests/MinistryTracker.Tests.csproj --configuration Release
+
+      - name: Check vulnerable dependencies
+        run: |
+          dotnet list MinistryTracker.csproj package --vulnerable --include-transitive | tee vulnerable-packages.txt
+          ! grep -q "has the following vulnerable packages" vulnerable-packages.txt
