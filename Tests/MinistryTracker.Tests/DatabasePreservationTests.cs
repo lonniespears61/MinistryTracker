@@ -19,7 +19,7 @@ public sealed class DatabasePreservationTests
 
         SQLiteAsyncConnection.ResetPool();
 
-        var reopened = new DataService(path);
+        var reopened = db.Reopen();
         await reopened.InitializeAsync();
 
         var loadedStudent = await reopened.GetStudentByIdAsync(student.StudentId);
@@ -43,30 +43,68 @@ public sealed class DatabasePreservationTests
         try
         {
             var raw = new SQLiteAsyncConnection(path);
-            await raw.CreateTableAsync<MinistryTracker.Models.Student>();
-            await raw.CreateTableAsync<MinistryTracker.Models.Visit>();
-
-            var student = new MinistryTracker.Models.Student
-            {
-                Name = "Legacy",
-                Status = StudentStatus.Active,
-                FirstContactDate = DateTime.Today
-            };
-            await raw.InsertAsync(student);
-
-            var visit = TestDatabase.NewVisit(
-                student.StudentId,
-                DateTime.Now.AddDays(1).Date.AddHours(11));
-            await raw.InsertAsync(visit);
+            await raw.ExecuteAsync(
+                """
+                CREATE TABLE Students (
+                    StudentId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    Name TEXT, PhoneNumber TEXT, Email TEXT, PrimaryAddress TEXT,
+                    PrimaryLatitude REAL, PrimaryLongitude REAL, PreferredLanguage TEXT,
+                    Gender INTEGER, Age INTEGER, Notes TEXT
+                );
+                """);
+            await raw.ExecuteAsync(
+                """
+                CREATE TABLE Visits (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    MeetingAddress TEXT, MeetingLatitude REAL, MeetingLongitude REAL, Notes TEXT
+                );
+                """);
+            await raw.ExecuteAsync(
+                """
+                INSERT INTO Students
+                    (Name, PhoneNumber, Email, PrimaryAddress, PrimaryLatitude,
+                     PrimaryLongitude, PreferredLanguage, Gender, Age, Notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                "Legacy", "555-0100", "legacy@example.com", "100 Main St",
+                40.1, -88.2, "English", 0, 42, "Private student note");
+            await raw.ExecuteAsync(
+                """
+                INSERT INTO Visits
+                    (MeetingAddress, MeetingLatitude, MeetingLongitude, Notes)
+                VALUES (?, ?, ?, ?)
+                """,
+                "200 Oak St", 40.2, -88.3, "Private visit note");
             await raw.ExecuteAsync("PRAGMA user_version = 0;");
             SQLiteAsyncConnection.ResetPool();
 
-            var upgraded = new DataService(path);
+            var key = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+            var upgraded = TestDatabase.CreateService(path, key);
             await upgraded.InitializeAsync();
 
-            Assert.Equal(1, await upgraded.GetDatabaseSchemaVersionAsync());
-            Assert.Equal("Legacy", (await upgraded.GetStudentByIdAsync(student.StudentId))?.Name);
-            Assert.Equal(VisitStatus.Scheduled, (await upgraded.GetVisitByIdAsync(visit.Id))?.Status);
+            Assert.Equal(2, await upgraded.GetDatabaseSchemaVersionAsync());
+
+            var student = await upgraded.GetStudentByIdAsync(1);
+            var visit = await upgraded.GetVisitByIdAsync(1);
+            Assert.Equal("Legacy", student?.Name);
+            Assert.Equal("555-0100", student?.PhoneNumber);
+            Assert.Equal("Private student note", student?.Notes);
+            Assert.Equal("200 Oak St", visit?.MeetingAddress);
+            Assert.Equal("Private visit note", visit?.Notes);
+
+            var plaintextName = await raw.ExecuteScalarAsync<string>(
+                "SELECT Name FROM Students WHERE StudentId = 1");
+            var plaintextVisitNotes = await raw.ExecuteScalarAsync<string?>(
+                "SELECT Notes FROM Visits WHERE Id = 1");
+            Assert.Equal(string.Empty, plaintextName);
+            Assert.Null(plaintextVisitNotes);
+
+            SQLiteAsyncConnection.ResetPool();
+            var databaseBytes = await File.ReadAllBytesAsync(path);
+            var databaseText = System.Text.Encoding.UTF8.GetString(databaseBytes);
+            Assert.DoesNotContain("Legacy", databaseText);
+            Assert.DoesNotContain("Private student note", databaseText);
+            Assert.DoesNotContain("Private visit note", databaseText);
         }
         finally
         {

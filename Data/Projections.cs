@@ -45,6 +45,7 @@ namespace MinistryTracker.Data
                 }
 
                 var visits = await visitsQuery.ToListAsync().ConfigureAwait(false);
+                UnprotectVisits(visits);
                 if (visits.Count == 0)
                     return new List<VisitWithStudent>();
 
@@ -54,6 +55,7 @@ namespace MinistryTracker.Data
                                        .Where(s => studentIds.Contains(s.StudentId) && !s.IsDeleted)
                                        .ToListAsync()
                                        .ConfigureAwait(false);
+                UnprotectStudents(students);
 
                 var byId = students.ToDictionary(s => s.StudentId);
 
@@ -98,6 +100,7 @@ namespace MinistryTracker.Data
                 }
 
                 var visits = await visitsQuery.ToListAsync().ConfigureAwait(false);
+                UnprotectVisits(visits);
                 if (visits.Count == 0)
                     return new List<VisitWithStudent>();
 
@@ -107,6 +110,7 @@ namespace MinistryTracker.Data
                                        .Where(s => studentIds.Contains(s.StudentId) && !s.IsDeleted)
                                        .ToListAsync()
                                        .ConfigureAwait(false);
+                UnprotectStudents(students);
 
                 var byId = students.ToDictionary(s => s.StudentId);
 
@@ -151,6 +155,7 @@ namespace MinistryTracker.Data
                                      .OrderBy(v => v.ScheduledDateTime)
                                      .ToListAsync()
                                      .ConfigureAwait(false);
+                UnprotectVisits(visits);
 
                 if (visits.Count == 0)
                     return new List<VisitWithStudent>();
@@ -161,6 +166,7 @@ namespace MinistryTracker.Data
                                        .Where(s => studentIds.Contains(s.StudentId) && !s.IsDeleted)
                                        .ToListAsync()
                                        .ConfigureAwait(false);
+                UnprotectStudents(students);
 
                 var byId = students.ToDictionary(s => s.StudentId);
 
@@ -211,6 +217,7 @@ namespace MinistryTracker.Data
                     .Where(s => !s.IsDeleted && s.Status == StudentStatus.Active)
                     .ToListAsync()
                     .ConfigureAwait(false);
+                UnprotectStudents(students);
 
                 if (students.Count == 0)
                     return new List<CheckOnStudentSuggestion>();
@@ -218,6 +225,7 @@ namespace MinistryTracker.Data
                 var visits = await Db.Table<Visit>()
                     .ToListAsync()
                     .ConfigureAwait(false);
+                UnprotectVisits(visits);
 
                 var futureScheduledStudentIds = visits
                     .Where(v => v.Status == VisitStatus.Scheduled && v.ScheduledDateTime >= now)

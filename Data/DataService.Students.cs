@@ -28,13 +28,21 @@ namespace MinistryTracker.Data
         /// Add a new student.
         /// </summary>
         public Task<int> AddStudentAsync(Student student, CancellationToken ct = default)
-            => EnsureInitThen(() => Db.InsertAsync(student), ct);
+            => EnsureInitThen(() =>
+            {
+                ProtectForWrite(student);
+                return Db.InsertAsync(student);
+            }, ct);
 
         /// <summary>
         /// Update an existing student.
         /// </summary>
         public Task<int> UpdateStudentAsync(Student student, CancellationToken ct = default)
-            => EnsureInitThen(() => Db.UpdateAsync(student), ct);
+            => EnsureInitThen(() =>
+            {
+                ProtectForWrite(student);
+                return Db.UpdateAsync(student);
+            }, ct);
 
         /// <summary>
         /// Soft-delete a student by marking IsDeleted = true.
@@ -59,6 +67,8 @@ namespace MinistryTracker.Data
      => EnsureInitThen<Student?>(async () =>
      {
          var student = await Db.FindAsync<Student>(studentId).ConfigureAwait(false);
+         if (student is not null)
+             UnprotectAfterRead(student);
          return student;
      }, ct);
 
@@ -67,14 +77,17 @@ namespace MinistryTracker.Data
         /// Results are ordered by Name.
         /// </summary>
         public Task<List<Student>> GetStudentsAsync(bool includeDeleted = false, CancellationToken ct = default)
-            => EnsureInitThen(() =>
+            => EnsureInitThen(async () =>
             {
                 var query = Db.Table<Student>();
 
                 if (!includeDeleted)
                     query = query.Where(s => !s.IsDeleted);
 
-                return query.OrderBy(s => s.Name).ToListAsync();
+                var students = await query.ToListAsync().ConfigureAwait(false);
+                return UnprotectStudents(students)
+                    .OrderBy(s => s.Name)
+                    .ToList();
             }, ct);
 
         /// <summary>
@@ -83,14 +96,20 @@ namespace MinistryTracker.Data
         /// Paused stays in scope because it can resurface later.
         /// </summary>
         public Task<List<Student>> GetWorkingScopeStudentsAsync(CancellationToken ct = default)
-            => EnsureInitThen(() =>
-                Db.Table<Student>()
+            => EnsureInitThen(async () =>
+            {
+                var students = await Db.Table<Student>()
                   .Where(s =>
                       !s.IsDeleted &&
                       s.Status != StudentStatus.Completed &&
                       s.Status != StudentStatus.Discontinued)
-                  .OrderBy(s => s.Name)
-                  .ToListAsync(), ct);
+                  .ToListAsync()
+                  .ConfigureAwait(false);
+
+                return UnprotectStudents(students)
+                    .OrderBy(s => s.Name)
+                    .ToList();
+            }, ct);
 
         /// <summary>
         /// Count students still in normal working scope.
@@ -109,35 +128,51 @@ namespace MinistryTracker.Data
         /// Map scope is limited to in-person-capable students with a usable primary location.
         /// </summary>
         public Task<List<Student>> GetMappableStudentsAsync(CancellationToken ct = default)
-            => EnsureInitThen(() =>
-                Db.Table<Student>()
+            => EnsureInitThen(async () =>
+            {
+                var students = await Db.Table<Student>()
                   .Where(s =>
                       !s.IsDeleted &&
                       s.Status != StudentStatus.Completed &&
                       s.Status != StudentStatus.Discontinued &&
-                      s.PrimaryLatitude != null &&
-                      s.PrimaryLongitude != null &&
-                      !string.IsNullOrWhiteSpace(s.PrimaryAddress) &&
                       (
                           s.PreferredContactMethod == null ||
                           s.PreferredContactMethod == ContactMethod.InPerson
                       ))
-                  .OrderBy(s => s.Name)
-                  .ToListAsync(), ct);
+                  .ToListAsync()
+                  .ConfigureAwait(false);
+
+                return UnprotectStudents(students)
+                    .Where(s =>
+                        s.PrimaryLatitude is not null &&
+                        s.PrimaryLongitude is not null &&
+                        !string.IsNullOrWhiteSpace(s.PrimaryAddress))
+                    .OrderBy(s => s.Name)
+                    .ToList();
+            }, ct);
 
         /// <summary>
         /// Returns students sharing the same home address.
         /// Only addresses explicitly marked as home are eligible.
         /// </summary>
         public Task<List<Student>> GetStudentsByHomeAddressAsync(string primaryAddress, CancellationToken ct = default)
-            => EnsureInitThen(() =>
-                Db.Table<Student>()
+            => EnsureInitThen(async () =>
+            {
+                var students = await Db.Table<Student>()
                   .Where(s =>
                       !s.IsDeleted &&
-                      s.IsHomeAddress &&
-                      s.PrimaryAddress == primaryAddress)
-                  .OrderBy(s => s.Name)
-                  .ToListAsync(), ct);
+                      s.IsHomeAddress)
+                  .ToListAsync()
+                  .ConfigureAwait(false);
+
+                return UnprotectStudents(students)
+                    .Where(s => string.Equals(
+                        s.PrimaryAddress,
+                        primaryAddress,
+                        StringComparison.OrdinalIgnoreCase))
+                    .OrderBy(s => s.Name)
+                    .ToList();
+            }, ct);
 
         /// <summary>
         /// Updates only the student's primary location fields.
@@ -158,12 +193,14 @@ namespace MinistryTracker.Data
                 if (student is null)
                     return 0;
 
+                UnprotectAfterRead(student);
                 student.PrimaryAddress = primaryAddress;
                 student.IsHomeAddress = isHomeAddress;
                 student.LocationContext = locationContext;
                 student.PrimaryLatitude = primaryLatitude;
                 student.PrimaryLongitude = primaryLongitude;
                 student.PrimaryGeocodeStatus = geocodeStatus;
+                ProtectForWrite(student);
 
                 return await Db.UpdateAsync(student).ConfigureAwait(false);
             }, ct);

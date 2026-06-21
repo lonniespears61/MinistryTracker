@@ -7,6 +7,8 @@ using MinistryTracker.Views;
 using Microsoft.Maui.Controls.Maps;
 using MinistryTracker.Services;
 using MinistryTracker.Data.Repositories;
+using MinistryTracker.Data.Security;
+using Microsoft.Maui.Storage;
 
 
 
@@ -37,7 +39,9 @@ public static class MauiProgram
 #endif
 
         // ===== Services =====
-        builder.Services.AddSingleton<DataService>(); // SQLite wrapper / repo
+        builder.Services.AddSingleton(_ => new DataService(
+            Path.Combine(FileSystem.AppDataDirectory, "ministrytracker.db3"),
+            SecureStorageDataProtection.Create())); // encrypted SQLite wrapper / repo
         builder.Services.AddSingleton<IStudentRepository>(sp => sp.GetRequiredService<DataService>());
         builder.Services.AddSingleton<IVisitRepository>(sp => sp.GetRequiredService<DataService>());
         // Android can recreate its activity while the application remains alive.

@@ -68,17 +68,26 @@ namespace MinistryTracker.Models
         /// Optional visit-specific meeting address or description.
         /// This may differ from the student's PrimaryAddress.
         /// </summary>
+        [Ignore]
         public string? MeetingAddress { get; set; }
+
+        public string? ProtectedMeetingAddress { get; set; }
 
         /// <summary>
         /// Optional latitude for the meeting location.
         /// </summary>
+        [Ignore]
         public double? MeetingLatitude { get; set; }
+
+        public string? ProtectedMeetingLatitude { get; set; }
 
         /// <summary>
         /// Optional longitude for the meeting location.
         /// </summary>
+        [Ignore]
         public double? MeetingLongitude { get; set; }
+
+        public string? ProtectedMeetingLongitude { get; set; }
 
         /// <summary>
         /// Links this visit to the prior visit when this one was created by rescheduling.
@@ -91,7 +100,12 @@ namespace MinistryTracker.Models
         /// The UI may visually separate "What happened" and "Next Time",
         /// but storage stays unified to avoid duplicate writing and duplicate reading.
         /// </summary>
+        [Ignore]
         public string? Notes { get; set; } = string.Empty;
+
+        public string? ProtectedNotes { get; set; }
+
+        public int ProtectionVersion { get; set; }
 
         /// <summary>
         /// When the note content for this visit was last entered or updated.

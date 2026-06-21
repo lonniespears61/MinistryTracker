@@ -44,6 +44,7 @@ namespace MinistryTracker.Data
                 foreach (var definition in BuildSeedStudents())
                 {
                     ct.ThrowIfCancellationRequested();
+                    ProtectForWrite(definition.Student);
                     await Db.InsertAsync(definition.Student).ConfigureAwait(false);
                     studentsByKey.Add(definition.Key, definition.Student);
                 }
@@ -63,6 +64,7 @@ namespace MinistryTracker.Data
                             visitsByKey[definition.RescheduledFromKey].Id;
                     }
 
+                    ProtectForWrite(visit);
                     await Db.InsertAsync(visit).ConfigureAwait(false);
                     visitsByKey.Add(definition.Key, visit);
                 }

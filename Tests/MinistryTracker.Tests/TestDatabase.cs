@@ -8,10 +8,12 @@ namespace MinistryTracker.Tests;
 internal sealed class TestDatabase : IAsyncDisposable
 {
     private readonly string _directory;
+    private readonly byte[] _key;
 
-    private TestDatabase(string directory, DataService service)
+    private TestDatabase(string directory, byte[] key, DataService service)
     {
         _directory = directory;
+        _key = key;
         Service = service;
     }
 
@@ -27,12 +29,22 @@ internal sealed class TestDatabase : IAsyncDisposable
 
         Directory.CreateDirectory(directory);
 
-        var service = new DataService(
-            System.IO.Path.Combine(directory, "ministrytracker.db3"));
+        var key = System.Security.Cryptography.RandomNumberGenerator.GetBytes(32);
+        var service = CreateService(
+            System.IO.Path.Combine(directory, "ministrytracker.db3"),
+            key);
 
         await service.InitializeAsync();
-        return new TestDatabase(directory, service);
+        return new TestDatabase(directory, key, service);
     }
+
+    public DataService Reopen() => CreateService(Path, _key);
+
+    public static DataService CreateService(string path, byte[] key) =>
+        new(
+            path,
+            new MinistryTracker.Data.Security.AesGcmDataProtectionService(
+                () => Task.FromResult(key)));
 
     public async Task<Student> AddStudentAsync(
         StudentStatus status = StudentStatus.Active,

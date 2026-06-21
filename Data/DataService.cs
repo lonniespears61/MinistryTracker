@@ -24,33 +24,28 @@ using System;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Maui.Storage;
 using SQLite;
 using MinistryTracker.Models;
 using MinistryTracker.Data.Repositories;
+using MinistryTracker.Data.Security;
 
 namespace MinistryTracker.Data
 {
     public partial class DataService : IStudentRepository, IVisitRepository
     {
-        private const string DbFileName = "ministrytracker.db3";
-
         private SQLiteAsyncConnection? _database;
         private readonly SemaphoreSlim _gate = new(1, 1);
         private readonly string _databasePath;
+        private readonly IDataProtectionService _dataProtection;
         private bool _initialized;
 
-        public DataService()
-            : this(Path.Combine(FileSystem.AppDataDirectory, DbFileName))
-        {
-        }
-
-        public DataService(string databasePath)
+        public DataService(string databasePath, IDataProtectionService dataProtection)
         {
             if (string.IsNullOrWhiteSpace(databasePath))
                 throw new ArgumentException("Database path is required.", nameof(databasePath));
 
             _databasePath = databasePath;
+            _dataProtection = dataProtection ?? throw new ArgumentNullException(nameof(dataProtection));
         }
 
         // -----------------------------------------------------------------------------------------------------------------
@@ -60,7 +55,7 @@ namespace MinistryTracker.Data
         // - This represents what the app expects the DB structure to be
         // - We compare this against PRAGMA user_version to detect drift
         // - For now, this is our baseline (fresh DB = version 1)
-        private const int CurrentSchemaVersion = 1;
+        private const int CurrentSchemaVersion = 2;
 
         /// <summary>
         /// Other partial classes should use Db, not _database directly.
@@ -80,6 +75,8 @@ namespace MinistryTracker.Data
             try
             {
                 if (_initialized) return;
+
+                await _dataProtection.InitializeAsync().ConfigureAwait(false);
 
                 _database = new SQLiteAsyncConnection(
                     _databasePath,
@@ -106,6 +103,7 @@ namespace MinistryTracker.Data
                 // -----------------------------------------------------------------
                 await Db.CreateTableAsync<Student>().ConfigureAwait(false);
                 await Db.CreateTableAsync<Visit>().ConfigureAwait(false);
+                await Db.CreateTableAsync<DataProtectionMetadata>().ConfigureAwait(false);
 
                 await Db.ExecuteAsync(
                     "CREATE INDEX IF NOT EXISTS IX_Visits_StudentDate ON Visits(StudentId, ScheduledDateTime)"
@@ -118,6 +116,7 @@ namespace MinistryTracker.Data
                 // - Ensures DB structure matches what this build expects
                 // - Right now this just sets baseline version (no migrations yet)
                 await ApplyMigrationsAsync(_database).ConfigureAwait(false);
+                await VerifyDataProtectionKeyAsync(_database).ConfigureAwait(false);
 
                 _initialized = true;
             }
@@ -162,7 +161,7 @@ namespace MinistryTracker.Data
         // - Prevents silent schema drift between versions
         // - Allows future upgrades without forcing resets
 
-        private static async Task ApplyMigrationsAsync(SQLiteAsyncConnection db)
+        private async Task ApplyMigrationsAsync(SQLiteAsyncConnection db)
         {
             var version = await db.ExecuteScalarAsync<int>("PRAGMA user_version;").ConfigureAwait(false);
 
@@ -174,8 +173,16 @@ namespace MinistryTracker.Data
             // - We explicitly set version so future migrations have a reference point
             if (version == 0)
             {
+                await MigrateLegacyPlaintextAsync(db).ConfigureAwait(false);
                 await db.ExecuteAsync($"PRAGMA user_version = {CurrentSchemaVersion};").ConfigureAwait(false);
                 return;
+            }
+
+            if (version < 2)
+            {
+                await MigrateLegacyPlaintextAsync(db).ConfigureAwait(false);
+                await db.ExecuteAsync("PRAGMA user_version = 2;").ConfigureAwait(false);
+                version = 2;
             }
 
             // -----------------------------------------------------------------
@@ -196,6 +203,14 @@ namespace MinistryTracker.Data
             //     await db.ExecuteAsync("PRAGMA user_version = 3;").ConfigureAwait(false);
             //     version = 3;
             // }
+        }
+
+        private sealed class DataProtectionMetadata
+        {
+            [PrimaryKey]
+            public int Id { get; set; }
+
+            public string ProtectedVerificationValue { get; set; } = string.Empty;
         }
 
         /// <summary>

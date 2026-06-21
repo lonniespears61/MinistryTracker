@@ -20,11 +20,14 @@
 
   <ItemGroup>
     <Compile Include="..\..\Data\DataService.cs" Link="App\Data\DataService.cs" />
+    <Compile Include="..\..\Data\DataService.Protection.cs" Link="App\Data\DataService.Protection.cs" />
     <Compile Include="..\..\Data\DataService.Students.cs" Link="App\Data\DataService.Students.cs" />
     <Compile Include="..\..\Data\DataService.Visits.cs" Link="App\Data\DataService.Visits.cs" />
     <Compile Include="..\..\Data\Projections.cs" Link="App\Data\Projections.cs" />
     <Compile Include="..\..\Data\Repositories\IStudentRepository.cs" Link="App\Data\Repositories\IStudentRepository.cs" />
     <Compile Include="..\..\Data\Repositories\IVisitRepository.cs" Link="App\Data\Repositories\IVisitRepository.cs" />
+    <Compile Include="..\..\Data\Security\IDataProtectionService.cs" Link="App\Data\Security\IDataProtectionService.cs" />
+    <Compile Include="..\..\Data\Security\AesGcmDataProtectionService.cs" Link="App\Data\Security\AesGcmDataProtectionService.cs" />
     <Compile Include="..\..\Models\Student.cs" Link="App\Models\Student.cs" />
     <Compile Include="..\..\Models\Visit.cs" Link="App\Models\Visit.cs" />
     <Compile Include="..\..\Models\DTOs\*.cs" Link="App\Models\DTOs\%(Filename)%(Extension)" />

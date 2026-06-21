@@ -38,7 +38,7 @@ namespace MinistryTracker.Data
             DateTime endExclusive,
             bool includeCanceled = false,
             CancellationToken ct = default)
-            => EnsureInitThen(() =>
+            => EnsureInitThen(async () =>
             {
                 var query = Db.Table<Visit>()
                               .Where(v => v.ScheduledDateTime >= startInclusive &&
@@ -51,7 +51,10 @@ namespace MinistryTracker.Data
                         v.Status != VisitStatus.CanceledByThem);
                 }
 
-                return query.OrderBy(v => v.ScheduledDateTime).ToListAsync();
+                var visits = await query.OrderBy(v => v.ScheduledDateTime)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+                return UnprotectVisits(visits);
             }, ct);
 
         // =====================================================================
@@ -85,6 +88,7 @@ namespace MinistryTracker.Data
                             excludeVisitId: null));
                     }
 
+                    ProtectForWrite(visit);
                     inserted = connection.Insert(visit);
                 }).ConfigureAwait(false);
 
@@ -117,6 +121,7 @@ namespace MinistryTracker.Data
                 {
                     var existing = connection.Find<Visit>(existingVisitId)
                         ?? throw new InvalidOperationException("Existing visit not found.");
+                    UnprotectAfterRead(existing);
 
                     if (existing.Status != VisitStatus.Scheduled ||
                         existing.ScheduledDateTime < DateTime.Now)
@@ -142,6 +147,8 @@ namespace MinistryTracker.Data
                         : $"{existing.Notes}\n\n{reason}";
                     existing.NotesCreatedDateTime = DateTime.Now;
 
+                    ProtectForWrite(existing);
+                    ProtectForWrite(replacement);
                     connection.Update(existing);
                     inserted = connection.Insert(replacement);
                 }).ConfigureAwait(false);
@@ -157,6 +164,8 @@ namespace MinistryTracker.Data
             => EnsureInitThen<Visit?>(async () =>
             {
                 var visit = await Db.FindAsync<Visit>(visitId).ConfigureAwait(false);
+                if (visit is not null)
+                    UnprotectAfterRead(visit);
                 return visit;
             }, ct);
 
@@ -167,11 +176,15 @@ namespace MinistryTracker.Data
         public Task<List<Visit>> GetVisitsForStudentAsync(
             int studentId,
             CancellationToken ct = default)
-            => EnsureInitThen(() =>
-                Db.Table<Visit>()
+            => EnsureInitThen(async () =>
+            {
+                var visits = await Db.Table<Visit>()
                   .Where(v => v.StudentId == studentId)
                   .OrderByDescending(v => v.ScheduledDateTime)
-                  .ToListAsync(), ct);
+                  .ToListAsync()
+                  .ConfigureAwait(false);
+                return UnprotectVisits(visits);
+            }, ct);
 
         /// <summary>
         /// Delete a visit record.
@@ -197,34 +210,38 @@ namespace MinistryTracker.Data
         /// Returns visits scheduled for today.
         /// </summary>
         public Task<List<Visit>> GetVisitsTodayAsync(CancellationToken ct = default)
-            => EnsureInitThen(() =>
+            => EnsureInitThen(async () =>
             {
                 var start = DateTime.Today;
                 var end = start.AddDays(1);
 
-                return Db.Table<Visit>()
+                var visits = await Db.Table<Visit>()
                          .Where(v => v.ScheduledDateTime >= start &&
                                      v.ScheduledDateTime < end)
                          .OrderBy(v => v.ScheduledDateTime)
-                         .ToListAsync();
+                         .ToListAsync()
+                         .ConfigureAwait(false);
+                return UnprotectVisits(visits);
             }, ct);
 
         /// <summary>
         /// Returns upcoming scheduled visits in the next N days.
         /// </summary>
         public Task<List<Visit>> GetUpcomingVisitsAsync(int days = 7, CancellationToken ct = default)
-            => EnsureInitThen(() =>
+            => EnsureInitThen(async () =>
             {
                 var start = DateTime.Now;
                 var end = start.AddDays(days);
 
-                return Db.Table<Visit>()
+                var visits = await Db.Table<Visit>()
                          .Where(v =>
                              v.Status == VisitStatus.Scheduled &&
                              v.ScheduledDateTime >= start &&
                              v.ScheduledDateTime <= end)
                          .OrderBy(v => v.ScheduledDateTime)
-                         .ToListAsync();
+                         .ToListAsync()
+                         .ConfigureAwait(false);
+                return UnprotectVisits(visits);
             }, ct);
 
         /// <summary>
@@ -232,7 +249,7 @@ namespace MinistryTracker.Data
         /// Optionally includes canceled visits.
         /// </summary>
         public Task<List<Visit>> GetVisitsThisWeekAsync(bool includeCanceled = true, CancellationToken ct = default)
-            => EnsureInitThen(() =>
+            => EnsureInitThen(async () =>
             {
                 var (start, end) = DateRanges.GetThisWeekRange();
 
@@ -247,7 +264,10 @@ namespace MinistryTracker.Data
                         v.Status != VisitStatus.CanceledByThem);
                 }
 
-                return query.OrderBy(v => v.ScheduledDateTime).ToListAsync();
+                var visits = await query.OrderBy(v => v.ScheduledDateTime)
+                    .ToListAsync()
+                    .ConfigureAwait(false);
+                return UnprotectVisits(visits);
             }, ct);
 
         /// <summary>
@@ -258,7 +278,7 @@ namespace MinistryTracker.Data
             {
                 var now = DateTime.Now;
 
-                return await Db.Table<Visit>()
+                var visit = await Db.Table<Visit>()
                                .Where(v =>
                                    v.StudentId == studentId &&
                                    v.Status == VisitStatus.Scheduled &&
@@ -266,6 +286,9 @@ namespace MinistryTracker.Data
                                .OrderBy(v => v.ScheduledDateTime)
                                .FirstOrDefaultAsync()
                                .ConfigureAwait(false);
+                if (visit is not null)
+                    UnprotectAfterRead(visit);
+                return visit;
             }, ct);
 
         /// <summary>
@@ -301,6 +324,7 @@ namespace MinistryTracker.Data
                                            .OrderByDescending(v => v.ScheduledDateTime)
                                            .ToListAsync()
                                            .ConfigureAwait(false);
+                UnprotectVisits(missedVisits);
 
                 if (missedVisits.Count == 0)
                     return missedVisits;
@@ -351,6 +375,7 @@ namespace MinistryTracker.Data
                 var visit = await Db.FindAsync<Visit>(visitId).ConfigureAwait(false);
                 if (visit is null)
                     return 0;
+                UnprotectAfterRead(visit);
 
                 if (visit.Status == VisitStatus.Rescheduled)
                     throw new InvalidOperationException("A rescheduled history record cannot be edited.");
@@ -388,6 +413,7 @@ namespace MinistryTracker.Data
                 var visit = await Db.FindAsync<Visit>(visitId).ConfigureAwait(false);
                 if (visit is null)
                     return 0;
+                UnprotectAfterRead(visit);
 
                 if (visit.ScheduledDateTime > DateTime.Now)
                     throw new InvalidOperationException("A future visit cannot be marked successful.");
@@ -427,6 +453,7 @@ namespace MinistryTracker.Data
                 var visit = await Db.FindAsync<Visit>(visitId).ConfigureAwait(false);
                 if (visit is null)
                     return 0;
+                UnprotectAfterRead(visit);
 
                 if (visit.ScheduledDateTime > DateTime.Now)
                     throw new InvalidOperationException("A future visit cannot be marked missed.");
@@ -448,6 +475,9 @@ namespace MinistryTracker.Data
                     visit.NotesCreatedDateTime = DateTime.Now;
                 }
 
+                ProtectForWrite(visit);
+                ProtectForWrite(visit);
+                ProtectForWrite(visit);
                 return await Db.UpdateAsync(visit).ConfigureAwait(false);
             }, ct);
 
@@ -476,6 +506,7 @@ namespace MinistryTracker.Data
                     var visit = connection.Find<Visit>(visitId);
                     if (visit is null)
                         return;
+                    UnprotectAfterRead(visit);
 
                     if (visit.ScheduledDateTime > DateTime.Now)
                         throw new InvalidOperationException("A future visit cannot have an outcome.");
@@ -503,6 +534,7 @@ namespace MinistryTracker.Data
                         ? completedDateTime ?? visit.CompletedDateTime ?? visit.ScheduledDateTime
                         : null;
 
+                    ProtectForWrite(visit);
                     updated = connection.Update(visit);
                 }).ConfigureAwait(false);
 
@@ -534,6 +566,7 @@ namespace MinistryTracker.Data
                 var visit = await Db.FindAsync<Visit>(visitId).ConfigureAwait(false);
                 if (visit is null)
                     return 0;
+                UnprotectAfterRead(visit);
 
                 if (visit.Status != VisitStatus.Scheduled)
                     throw new InvalidOperationException("Only a scheduled visit can be canceled.");
@@ -581,6 +614,7 @@ namespace MinistryTracker.Data
                 {
                     var current = connection.Find<Visit>(visitId)
                         ?? throw new InvalidOperationException("Visit not found.");
+                    UnprotectAfterRead(current);
 
                     var canReschedule =
                         current.Status == VisitStatus.Missed ||
@@ -611,6 +645,7 @@ namespace MinistryTracker.Data
                         current.NotesCreatedDateTime = DateTime.Now;
                     }
 
+                    ProtectForWrite(current);
                     connection.Update(current);
 
                     replacement = new Visit
@@ -627,6 +662,7 @@ namespace MinistryTracker.Data
                         NotesCreatedDateTime = string.IsNullOrWhiteSpace(note) ? null : DateTime.Now
                     };
 
+                    ProtectForWrite(replacement);
                     connection.Insert(replacement);
                 }).ConfigureAwait(false);
 
@@ -644,6 +680,7 @@ namespace MinistryTracker.Data
                 var visit = await Db.FindAsync<Visit>(visitId).ConfigureAwait(false);
                 if (visit is null)
                     return 0;
+                UnprotectAfterRead(visit);
 
                 if (visit.Status == VisitStatus.Rescheduled)
                     throw new InvalidOperationException("A rescheduled history record cannot be edited.");
@@ -651,6 +688,8 @@ namespace MinistryTracker.Data
                 visit.Notes = notes;
                 visit.NotesCreatedDateTime = string.IsNullOrWhiteSpace(notes) ? null : DateTime.Now;
 
+                ProtectForWrite(visit);
+                ProtectForWrite(visit);
                 return await Db.UpdateAsync(visit).ConfigureAwait(false);
             }, ct);
 
@@ -674,6 +713,7 @@ namespace MinistryTracker.Data
 
             if (existingFutureVisit is not null)
             {
+                UnprotectAfterRead(existingFutureVisit);
                 return new VisitScheduleConflict(
                     VisitScheduleConflictType.ExistingFutureVisit,
                     existingFutureVisit);
@@ -696,6 +736,9 @@ namespace MinistryTracker.Data
 
             var nearbyVisit = nearbyVisits.FirstOrDefault(
                 v => excludeVisitId is null || v.Id != excludeVisitId.Value);
+
+            if (nearbyVisit is not null)
+                UnprotectAfterRead(nearbyVisit);
 
             return nearbyVisit is null
                 ? null
