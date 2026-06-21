@@ -1,7 +1,9 @@
 <Project>
   <PropertyGroup>
-    <BaseOutputPath>$(TEMP)\MinistryTracker.Tests\bin\</BaseOutputPath>
-    <BaseIntermediateOutputPath>$(TEMP)\MinistryTracker.Tests\obj\</BaseIntermediateOutputPath>
+    <TestTempPath Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(TEMP)\MinistryTracker.Tests</TestTempPath>
+    <TestTempPath Condition="!$([MSBuild]::IsOSPlatform('Windows'))">/tmp/MinistryTracker.Tests</TestTempPath>
+    <BaseOutputPath>$(TestTempPath)\bin\</BaseOutputPath>
+    <BaseIntermediateOutputPath>$(TestTempPath)\obj\</BaseIntermediateOutputPath>
     <MSBuildProjectExtensionsPath>$(BaseIntermediateOutputPath)</MSBuildProjectExtensionsPath>
   </PropertyGroup>
 </Project>
