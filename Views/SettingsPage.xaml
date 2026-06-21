@@ -64,7 +64,7 @@
                             <Label Text="Beta tester"
                                    FontAttributes="Bold"
                                    TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
-                            <Label Text="Accept agreement and send feedback"
+                            <Label Text="Accept real-world beta terms and send feedback"
                                    FontSize="12"
                                    TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
                         </VerticalStackLayout>

@@ -34,7 +34,16 @@ In no event shall the developer be liable for any claim, damages, or other liabi
 
     public string BetaTesterAgreementText { get; } =
 @"BETA TESTING
-You understand this is a beta version. Features may be incomplete, change, or fail. Please keep your own backup of any important information.
+You understand this is a beta version intended to be tested during normal, real-life ministry use. Features may be incomplete, change, or fail.
+
+REAL-WORLD DATA
+You may enter real return-visit information when it is appropriate for your personal ministry. Record only what is reasonably necessary. Avoid unnecessary sensitive details, congregation records, confidential health or financial information, or information unrelated to arranging and remembering your own return visits.
+
+LOCAL ENCRYPTED STORAGE
+Identifying, contact, location, demographic, and note fields are encrypted on this device. The developer does not receive this data automatically.
+
+NO CLOUD BACKUP
+Android backup is disabled. Uninstalling the app, clearing its storage, losing the device, or losing the device encryption key can permanently destroy all app data. Keep any essential information through an appropriate separate method.
 
 FEEDBACK
 You may choose to send feedback to the developer from your email app. You can review and edit the message before sending.
@@ -46,7 +55,7 @@ NO AUTOMATIC ERROR REPORTING
 The app does not automatically send crash reports, errors, or personal data. Feedback is sent only when you tap Send Feedback and complete sending from your email app.
 
 PERSONAL DATA
-Do not include sensitive student details in feedback unless you intentionally choose to share them.";
+Do not send names, addresses, phone numbers, email addresses, private notes, database files, or identifiable screenshots in feedback. Describe the problem using redacted or invented examples.";
 
     public string DataSharingAgreementText { get; } =
 @"ON-DEMAND SHARING

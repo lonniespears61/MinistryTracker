@@ -23,7 +23,7 @@ Device-only results are recorded against `Docs/Beta_Flow_Matrix.md`.
 | Cold start, rotation, background/resume | Pass — process remained healthy; no crash-buffer entries |
 | Permission denial and restart | Pass — app cold-started with coarse/fine location denied |
 | Backup and background location containment | Pass — no backup flag and no background-location request |
-| Human exploratory UI pass | Required during beta using fictional data |
+| Human exploratory UI pass | Required during normal real-world beta use with minimum necessary data |
 
 The pre-beta app on the Samsung used an unrelated signing certificate. Android
 correctly rejected an in-place update. Its private data could not be exported

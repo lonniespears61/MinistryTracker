@@ -82,6 +82,11 @@
                                Text="Includes app/device version and database schema/counts, not student or visit details."
                                FontSize="12"
                                TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+
+                    <Label Text="Use the app normally with appropriate real ministry data, but redact all personal details from feedback and screenshots."
+                           FontSize="12"
+                           FontAttributes="Bold"
+                           TextColor="{AppThemeBinding Light=#9F1239, Dark=#FDA4AF}" />
                     </Grid>
 
                     <Editor Text="{Binding FeedbackText}"

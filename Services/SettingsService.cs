@@ -11,6 +11,8 @@ namespace MinistryTracker.Services
         private const string ServiceDaySettingsKey = "service_day_settings";
         private const string BetaTesterAgreementAcceptedKey = "beta_tester_agreement_accepted";
         private const string BetaTesterAgreementAcceptedOnKey = "beta_tester_agreement_accepted_on_utc";
+        private const string BetaTesterAgreementVersionKey = "beta_tester_agreement_version";
+        private const int CurrentBetaTesterAgreementVersion = 2;
         private const string IncludeDiagnosticsInFeedbackKey = "include_diagnostics_in_feedback";
         private const string DataSharingAgreementAcceptedKey = "data_sharing_agreement_accepted";
         private const string DataSharingAgreementAcceptedOnKey = "data_sharing_agreement_accepted_on_utc";
@@ -37,7 +39,9 @@ namespace MinistryTracker.Services
 
         public bool GetBetaTesterAgreementAccepted()
         {
-            return Preferences.Get(BetaTesterAgreementAcceptedKey, false);
+            return Preferences.Get(BetaTesterAgreementAcceptedKey, false) &&
+                   Preferences.Get(BetaTesterAgreementVersionKey, 0) ==
+                   CurrentBetaTesterAgreementVersion;
         }
 
         public void SaveBetaTesterAgreementAccepted(bool accepted)
@@ -45,9 +49,15 @@ namespace MinistryTracker.Services
             Preferences.Set(BetaTesterAgreementAcceptedKey, accepted);
 
             if (accepted)
+            {
                 Preferences.Set(BetaTesterAgreementAcceptedOnKey, DateTime.UtcNow.ToString("O"));
+                Preferences.Set(BetaTesterAgreementVersionKey, CurrentBetaTesterAgreementVersion);
+            }
             else
+            {
                 Preferences.Remove(BetaTesterAgreementAcceptedOnKey);
+                Preferences.Remove(BetaTesterAgreementVersionKey);
+            }
         }
 
         public DateTime? GetBetaTesterAgreementAcceptedOnUtc()
