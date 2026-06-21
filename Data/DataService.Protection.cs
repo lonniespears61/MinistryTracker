@@ -118,9 +118,11 @@ public partial class DataService
 
     private async Task MigrateLegacyPlaintextAsync(SQLiteAsyncConnection db)
     {
+        var legacySchemaFound = false;
         var studentColumns = await db.GetTableInfoAsync("Students").ConfigureAwait(false);
         if (studentColumns.Any(column => column.Name == "Name"))
         {
+            legacySchemaFound = true;
             var students = await db.QueryAsync<LegacyStudent>(
                 """
                 SELECT StudentId, Name, PhoneNumber, Email, PrimaryAddress,
@@ -177,6 +179,7 @@ public partial class DataService
         var visitColumns = await db.GetTableInfoAsync("Visits").ConfigureAwait(false);
         if (visitColumns.Any(column => column.Name == "MeetingAddress"))
         {
+            legacySchemaFound = true;
             var visits = await db.QueryAsync<LegacyVisit>(
                 """
                 SELECT Id, MeetingAddress, MeetingLatitude, MeetingLongitude, Notes
@@ -213,8 +216,12 @@ public partial class DataService
             }
         }
 
-        await db.ExecuteAsync("PRAGMA wal_checkpoint(TRUNCATE);").ConfigureAwait(false);
-        await db.ExecuteAsync("VACUUM;").ConfigureAwait(false);
+        if (legacySchemaFound)
+        {
+            _ = await db.ExecuteScalarAsync<int>("PRAGMA wal_checkpoint(TRUNCATE);")
+                .ConfigureAwait(false);
+            await db.ExecuteAsync("VACUUM;").ConfigureAwait(false);
+        }
     }
 
     private sealed class LegacyStudent
