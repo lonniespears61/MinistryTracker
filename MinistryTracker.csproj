@@ -19,8 +19,8 @@
 		<ApplicationId>com.ministrytoolworks.tracker</ApplicationId>
 
 		<!-- Versions -->
-		<ApplicationDisplayVersion>0.9.0-beta.2</ApplicationDisplayVersion>
-		<ApplicationVersion>3</ApplicationVersion>
+		<ApplicationDisplayVersion>0.9.0-beta.3</ApplicationDisplayVersion>
+		<ApplicationVersion>4</ApplicationVersion>
 
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'ios'">15.0</SupportedOSPlatformVersion>
 		<SupportedOSPlatformVersion Condition="$([MSBuild]::GetTargetPlatformIdentifier('$(TargetFramework)')) == 'android'">21.0</SupportedOSPlatformVersion>
@@ -36,6 +36,11 @@
 		<AndroidSigningKeyAlias>$(MINISTRYTOOLWORKS_KEY_ALIAS)</AndroidSigningKeyAlias>
 		<AndroidSigningStorePass>$(MINISTRYTOOLWORKS_KEYSTORE_PASSWORD)</AndroidSigningStorePass>
 		<AndroidSigningKeyPass>$(MINISTRYTOOLWORKS_KEY_PASSWORD)</AndroidSigningKeyPass>
+		<EmbedAssembliesIntoApk>true</EmbedAssembliesIntoApk>
+		<AndroidEnableProfiledAot>false</AndroidEnableProfiledAot>
+		<RunAOTCompilation>false</RunAOTCompilation>
+		<PublishTrimmed>false</PublishTrimmed>
+		<AndroidLinkMode>None</AndroidLinkMode>
 	</PropertyGroup>
 
 	<Target Name="ValidateAndroidReleaseConfiguration"
@@ -61,8 +66,11 @@
 		<!-- Splash Screen -->
 		<MauiSplashScreen Include="Resources\Splash\splash.png" Color="#6FB3D9" BaseSize="256,256" />
 		<!-- Images -->
-		<MauiImage Include="Resources\Images\*" />
-		<MauiImage Update="Resources\Images\dotnet_bot.png" Resize="True" BaseSize="300,185" />
+		<MauiImage Include="Resources\Images\icon_calendar.png" />
+		<MauiImage Include="Resources\Images\icon_home.png" />
+		<MauiImage Include="Resources\Images\icon_map.png" />
+		<MauiImage Include="Resources\Images\icon_settings.png" />
+		<MauiImage Include="Resources\Images\icon_students.png" />
 
 		<!-- Custom Fonts -->
 		<MauiFont Include="Resources\Fonts\*" />
