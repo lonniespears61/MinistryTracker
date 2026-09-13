@@ -34,6 +34,9 @@
     <Compile Include="..\..\Models\Enums\*.cs" Link="App\Models\Enums\%(Filename)%(Extension)" />
     <Compile Include="..\..\Services\WorkflowPolicy.cs" Link="App\Services\WorkflowPolicy.cs" />
     <Compile Include="..\..\Services\WorkflowRoutes.cs" Link="App\Services\WorkflowRoutes.cs" />
+    <Compile Include="..\..\Services\DataBackup\BackupPin.cs" Link="App\Services\DataBackup\BackupPin.cs" />
+    <Compile Include="..\..\Services\DataBackup\BackupDtos.cs" Link="App\Services\DataBackup\BackupDtos.cs" />
+    <Compile Include="..\..\Services\DataBackup\BackupEncryptionService.cs" Link="App\Services\DataBackup\BackupEncryptionService.cs" />
     <Compile Include="..\..\Utilities\DateRanges.cs" Link="App\Utilities\DateRanges.cs" />
   </ItemGroup>
 </Project>

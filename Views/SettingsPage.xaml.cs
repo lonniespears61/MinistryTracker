@@ -130,6 +130,12 @@ public partial class SettingsPage : ContentPage
         await Navigation.PushAsync(feedbackPage);
     }
 
+    private async void OnEncryptedBackupClicked(object sender, EventArgs e)
+    {
+        var backupPage = MauiProgram.Services.GetRequiredService<BackupExportPage>();
+        await Navigation.PushAsync(backupPage);
+    }
+
     private async void OnWebsiteClicked(object sender, EventArgs e)
         => await Browser.Default.OpenAsync(
                 new Uri("https://ministrytoolworks.com"),

@@ -6,6 +6,7 @@ using MinistryTracker.ViewModels;
 using MinistryTracker.Views;
 using Microsoft.Maui.Controls.Maps;
 using MinistryTracker.Services;
+using MinistryTracker.Services.Backup;
 using MinistryTracker.Data.Repositories;
 using MinistryTracker.Data.Security;
 using Microsoft.Maui.Storage;
@@ -49,6 +50,8 @@ public static class MauiProgram
         builder.Services.AddTransient<AppShell>();
         builder.Services.AddSingleton<SettingsService>(); // User preferences (Normal Service Days, etc.)   
         builder.Services.AddSingleton<VisitWorkflowCoordinator>();
+        builder.Services.AddSingleton<BackupEncryptionService>();
+        builder.Services.AddSingleton<BackupExportService>();
 
         // ===== ViewModels =====
         builder.Services.AddTransient<DashboardViewModel>();
@@ -75,6 +78,7 @@ public static class MauiProgram
         builder.Services.AddTransient<StudentProfilePage>();
         builder.Services.AddTransient<StudentVisitHistoryPage>();
         builder.Services.AddTransient<SettingsPage>();
+        builder.Services.AddTransient<BackupExportPage>();
         builder.Services.AddTransient<FeedbackPage>();
         builder.Services.AddTransient<MyCalendarPage>();
         builder.Services.AddTransient<SelectStudentForVisitPage>();

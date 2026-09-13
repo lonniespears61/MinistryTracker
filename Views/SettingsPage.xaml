@@ -137,6 +137,34 @@
                     </VerticalStackLayout>
                 </Border>
 
+                <!-- ENCRYPTED BACKUP -->
+                <Border BackgroundColor="{DynamicResource Settings.CardTint}"
+                        Stroke="{DynamicResource Settings.BorderTint}"
+                        StrokeThickness="1"
+                        Padding="14">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16" />
+                    </Border.StrokeShape>
+
+                    <Grid ColumnDefinitions="*,Auto"
+                          ColumnSpacing="10"
+                          VerticalOptions="Center">
+                        <VerticalStackLayout Spacing="2">
+                            <Label Text="Encrypted Backup"
+                                   FontAttributes="Bold"
+                                   TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                            <Label Text="Create a protected copy and save it off-device"
+                                   FontSize="12"
+                                   TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+                        </VerticalStackLayout>
+
+                        <Button Grid.Column="1"
+                                Text="Open"
+                                Padding="12,6"
+                                Clicked="OnEncryptedBackupClicked" />
+                    </Grid>
+                </Border>
+
                 <!-- NORMAL SERVICE DAYS -->
                 <Border BackgroundColor="{DynamicResource Settings.CardTint}"
                         Stroke="{DynamicResource Settings.BorderTint}"

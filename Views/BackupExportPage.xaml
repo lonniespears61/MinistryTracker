@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage
+    x:Class="MinistryTracker.Views.BackupExportPage"
+    xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+    xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+    BackgroundColor="{DynamicResource Settings.BgTint}"
+    Title="Encrypted Backup">
+
+    <Grid>
+        <ScrollView>
+            <VerticalStackLayout Padding="16" Spacing="16">
+                <Border BackgroundColor="{DynamicResource Settings.CardTint}"
+                        Stroke="{DynamicResource Settings.BorderTint}"
+                        StrokeThickness="1"
+                        Padding="14">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16" />
+                    </Border.StrokeShape>
+
+                    <VerticalStackLayout Spacing="12">
+                        <Label Text="Create Backup"
+                               FontSize="20"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+
+                        <Label Text="Choose one 6-digit Backup PIN. You will use it to restore this backup on any device."
+                               FontSize="13"
+                               TextColor="{AppThemeBinding Light=#475569, Dark=#9CA3AF}" />
+
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border BackgroundColor="{DynamicResource Settings.CardTint}"
+                        Stroke="{DynamicResource Settings.BorderTint}"
+                        StrokeThickness="1"
+                        Padding="14">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16" />
+                    </Border.StrokeShape>
+
+                    <VerticalStackLayout Spacing="10">
+                        <Label Text="Backup PIN"
+                               FontAttributes="Bold"
+                               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+
+                        <Entry x:Name="BackupPinEntry"
+                               Placeholder="6-digit PIN"
+                               IsPassword="True"
+                               Keyboard="Numeric"
+                               MaxLength="6" />
+
+                        <Entry x:Name="ConfirmBackupPinEntry"
+                               Placeholder="Confirm PIN"
+                               IsPassword="True"
+                               Keyboard="Numeric"
+                               MaxLength="6" />
+
+                        <HorizontalStackLayout Spacing="8">
+                            <CheckBox CheckedChanged="OnShowPinChanged" />
+                            <Label Text="Show PIN"
+                                   VerticalOptions="Center"
+                                   TextColor="{AppThemeBinding Light=#475569, Dark=#D1D5DB}" />
+                        </HorizontalStackLayout>
+                    </VerticalStackLayout>
+                </Border>
+
+                <Border BackgroundColor="{DynamicResource Settings.CardTint}"
+                        Stroke="{DynamicResource Settings.BorderTint}"
+                        StrokeThickness="1"
+                        Padding="14">
+                    <Border.StrokeShape>
+                        <RoundRectangle CornerRadius="16" />
+                    </Border.StrokeShape>
+
+                    <VerticalStackLayout Spacing="8">
+                        <Label Text="Keep your Backup PIN. MinistryTracker does not store it and cannot recover it for you."
+                               FontSize="13"
+                               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                        <Label Text="Save this backup somewhere outside this device. A backup stored only on this phone may be lost if the phone is lost, damaged, reset, or the app is removed."
+                               FontSize="13"
+                               TextColor="{AppThemeBinding Light=#0F172A, Dark=#E5E7EB}" />
+                    </VerticalStackLayout>
+                </Border>
+
+                <Button Text="Create Encrypted Backup"
+                        Clicked="OnCreateBackupClicked"
+                        BackgroundColor="{DynamicResource Settings.Base}"
+                        TextColor="White"
+                        CornerRadius="12" />
+            </VerticalStackLayout>
+        </ScrollView>
+
+        <Grid x:Name="BusyOverlay"
+              IsVisible="False"
+              BackgroundColor="#80000000">
+            <ActivityIndicator IsRunning="True"
+                               WidthRequest="44"
+                               HeightRequest="44"
+                               HorizontalOptions="Center"
+                               VerticalOptions="Center" />
+        </Grid>
+    </Grid>
+</ContentPage>

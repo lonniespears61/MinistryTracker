@@ -81,6 +81,7 @@ public partial class AppShell : Shell
 
         //Settings Page
         Routing.RegisterRoute(nameof(SettingsPage), typeof(SettingsPage));
+        Routing.RegisterRoute(nameof(BackupExportPage), typeof(BackupExportPage));
         Routing.RegisterRoute(nameof(FeedbackPage), typeof(FeedbackPage));
     }
 }
