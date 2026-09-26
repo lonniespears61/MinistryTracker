@@ -30,6 +30,12 @@ namespace MinistryTracker.Models
         [PrimaryKey, AutoIncrement]
         public int Id { get; set; }
 
+        public string GlobalId { get; set; } = string.Empty;
+
+        public DateTime CreatedUtc { get; set; }
+
+        public DateTime UpdatedUtc { get; set; }
+
         /// <summary>
         /// Foreign key to the Return Visit this attempt belongs to.
         /// </summary>
@@ -58,6 +64,8 @@ namespace MinistryTracker.Models
         /// Outcome / current state of this visit attempt.
         /// </summary>
         public VisitStatus Status { get; set; } = VisitStatus.Scheduled;
+
+        public VisitKind Kind { get; set; } = VisitKind.ReturnVisit;
 
         /// <summary>
         /// When the visit actually happened, if it was completed successfully.
@@ -112,5 +120,9 @@ namespace MinistryTracker.Models
         /// This is separate from the visit date because notes may be written later.
         /// </summary>
         public DateTime? NotesCreatedDateTime { get; set; }
+
+        public bool IsDeleted { get; set; }
+
+        public DateTime? DeletedUtc { get; set; }
     }
 }

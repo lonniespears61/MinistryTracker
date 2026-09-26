@@ -22,6 +22,7 @@
     <Compile Include="..\..\Data\DataService.cs" Link="App\Data\DataService.cs" />
     <Compile Include="..\..\Data\DataService.Protection.cs" Link="App\Data\DataService.Protection.cs" />
     <Compile Include="..\..\Data\DataService.Students.cs" Link="App\Data\DataService.Students.cs" />
+    <Compile Include="..\..\Data\DataService.CallLifecycle.cs" Link="App\Data\DataService.CallLifecycle.cs" />
     <Compile Include="..\..\Data\DataService.Visits.cs" Link="App\Data\DataService.Visits.cs" />
     <Compile Include="..\..\Data\Projections.cs" Link="App\Data\Projections.cs" />
     <Compile Include="..\..\Data\Repositories\IStudentRepository.cs" Link="App\Data\Repositories\IStudentRepository.cs" />

@@ -11,6 +11,13 @@ public partial class DataService
 
     private void ProtectForWrite(Student student)
     {
+        var now = DateTime.UtcNow;
+        if (string.IsNullOrWhiteSpace(student.GlobalId))
+            student.GlobalId = Guid.NewGuid().ToString("D");
+        if (student.CreatedUtc == default)
+            student.CreatedUtc = now;
+        student.UpdatedUtc = now;
+
         student.ProtectedName = _dataProtection.Protect(student.Name);
         student.ProtectedPhoneNumber = _dataProtection.Protect(student.PhoneNumber);
         student.ProtectedEmail = _dataProtection.Protect(student.Email);
@@ -51,6 +58,13 @@ public partial class DataService
 
     private void ProtectForWrite(Visit visit)
     {
+        var now = DateTime.UtcNow;
+        if (string.IsNullOrWhiteSpace(visit.GlobalId))
+            visit.GlobalId = Guid.NewGuid().ToString("D");
+        if (visit.CreatedUtc == default)
+            visit.CreatedUtc = now;
+        visit.UpdatedUtc = now;
+
         visit.ProtectedMeetingAddress = _dataProtection.Protect(visit.MeetingAddress);
         visit.ProtectedMeetingLatitude = ProtectNullable(visit.MeetingLatitude);
         visit.ProtectedMeetingLongitude = ProtectNullable(visit.MeetingLongitude);

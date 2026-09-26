@@ -7,7 +7,7 @@ namespace MinistryTracker.Services.Backup;
 
 public sealed class BackupExportService
 {
-    public const int BackupFormatVersion = 1;
+    public const int BackupFormatVersion = 2;
 
     private readonly DataService _data;
     private readonly BackupEncryptionService _encryption;
@@ -30,6 +30,9 @@ public sealed class BackupExportService
             visits.AddRange(studentVisits.Select(visit => new BackupVisitDto
             {
                 Id = visit.Id,
+                GlobalId = visit.GlobalId,
+                CreatedUtc = visit.CreatedUtc,
+                UpdatedUtc = visit.UpdatedUtc,
                 StudentId = visit.StudentId,
                 Method = visit.Method,
                 ScheduledDateTime = visit.ScheduledDateTime,
@@ -40,7 +43,10 @@ public sealed class BackupExportService
                 MeetingLongitude = visit.MeetingLongitude,
                 RescheduledFromVisitId = visit.RescheduledFromVisitId,
                 Notes = visit.Notes,
-                NotesCreatedDateTime = visit.NotesCreatedDateTime
+                NotesCreatedDateTime = visit.NotesCreatedDateTime,
+                Kind = visit.Kind,
+                IsDeleted = visit.IsDeleted,
+                DeletedUtc = visit.DeletedUtc
             }));
         }
 
@@ -66,6 +72,9 @@ public sealed class BackupExportService
             Students = students.Select(student => new BackupStudentDto
             {
                 StudentId = student.StudentId,
+                GlobalId = student.GlobalId,
+                CreatedUtc = student.CreatedUtc,
+                UpdatedUtc = student.UpdatedUtc,
                 Name = student.Name,
                 InitialContactType = student.InitialContactType,
                 FirstContactDate = student.FirstContactDate,
@@ -83,7 +92,16 @@ public sealed class BackupExportService
                 Gender = student.Gender,
                 Age = student.Age,
                 Notes = student.Notes,
-                IsDeleted = student.IsDeleted
+                IsDeleted = student.IsDeleted,
+                DeletedUtc = student.DeletedUtc,
+                Stage = student.Stage,
+                StageAuthority = student.StageAuthority,
+                StageChangedUtc = student.StageChangedUtc,
+                IsArchived = student.IsArchived,
+                ArchiveReason = student.ArchiveReason,
+                ArchivedUtc = student.ArchivedUtc,
+                CheckOnIntervalDays = student.CheckOnIntervalDays,
+                CheckOnDeferredUntilUtc = student.CheckOnDeferredUntilUtc
             }).ToList(),
             Visits = visits
         };

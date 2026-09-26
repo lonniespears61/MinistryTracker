@@ -56,6 +56,8 @@ namespace MinistryTracker.Data
                     return 0;
 
                 student.IsDeleted = true;
+                student.DeletedUtc = DateTime.UtcNow;
+                student.UpdatedUtc = student.DeletedUtc.Value;
                 return await Db.UpdateAsync(student).ConfigureAwait(false);
             }, ct);
 
@@ -82,7 +84,7 @@ namespace MinistryTracker.Data
                 var query = Db.Table<Student>();
 
                 if (!includeDeleted)
-                    query = query.Where(s => !s.IsDeleted);
+                    query = query.Where(s => !s.IsDeleted && !s.IsArchived);
 
                 var students = await query.ToListAsync().ConfigureAwait(false);
                 return UnprotectStudents(students)
@@ -100,7 +102,7 @@ namespace MinistryTracker.Data
             {
                 var students = await Db.Table<Student>()
                   .Where(s =>
-                      !s.IsDeleted &&
+                    !s.IsDeleted && !s.IsArchived &&
                       s.Status != StudentStatus.Completed &&
                       s.Status != StudentStatus.Discontinued)
                   .ToListAsync()
@@ -118,7 +120,7 @@ namespace MinistryTracker.Data
             => EnsureInitThen(() =>
                 Db.Table<Student>()
                   .Where(s =>
-                      !s.IsDeleted &&
+                      !s.IsDeleted && !s.IsArchived &&
                       s.Status != StudentStatus.Completed &&
                       s.Status != StudentStatus.Discontinued)
                   .CountAsync(), ct);
@@ -132,7 +134,7 @@ namespace MinistryTracker.Data
             {
                 var students = await Db.Table<Student>()
                   .Where(s =>
-                      !s.IsDeleted &&
+                      !s.IsDeleted && !s.IsArchived &&
                       s.Status != StudentStatus.Completed &&
                       s.Status != StudentStatus.Discontinued &&
                       (
@@ -160,7 +162,7 @@ namespace MinistryTracker.Data
             {
                 var students = await Db.Table<Student>()
                   .Where(s =>
-                      !s.IsDeleted &&
+                      !s.IsDeleted && !s.IsArchived &&
                       s.IsHomeAddress)
                   .ToListAsync()
                   .ConfigureAwait(false);

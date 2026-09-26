@@ -82,7 +82,7 @@ public sealed class DatabasePreservationTests
             var upgraded = TestDatabase.CreateService(path, key);
             await upgraded.InitializeAsync();
 
-            Assert.Equal(2, await upgraded.GetDatabaseSchemaVersionAsync());
+            Assert.Equal(3, await upgraded.GetDatabaseSchemaVersionAsync());
 
             var student = await upgraded.GetStudentByIdAsync(1);
             var visit = await upgraded.GetVisitByIdAsync(1);
@@ -91,6 +91,15 @@ public sealed class DatabasePreservationTests
             Assert.Equal("Private student note", student?.Notes);
             Assert.Equal("200 Oak St", visit?.MeetingAddress);
             Assert.Equal("Private visit note", visit?.Notes);
+            Assert.True(Guid.TryParse(student?.GlobalId, out _));
+            Assert.True(Guid.TryParse(visit?.GlobalId, out _));
+            Assert.NotEqual(default, student?.CreatedUtc);
+            Assert.NotEqual(default, student?.UpdatedUtc);
+            Assert.NotEqual(default, visit?.CreatedUtc);
+            Assert.NotEqual(default, visit?.UpdatedUtc);
+            Assert.Equal(CallStage.ReturnVisit, student?.Stage);
+            Assert.Equal(30, student?.CheckOnIntervalDays);
+            Assert.Equal(VisitKind.ReturnVisit, visit?.Kind);
 
             var plaintextName = await raw.ExecuteScalarAsync<string>(
                 "SELECT Name FROM Students WHERE StudentId = 1");

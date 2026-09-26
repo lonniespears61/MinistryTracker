@@ -64,7 +64,7 @@ public sealed class BackupEncryptionTests
         {
             Metadata = new BackupMetadata
             {
-                BackupFormatVersion = 1,
+                BackupFormatVersion = 2,
                 CreatedUtc = createdUtc,
                 StudentCount = 1,
                 VisitCount = 1

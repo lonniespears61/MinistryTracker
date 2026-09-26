@@ -52,7 +52,7 @@ namespace MinistryTracker.Data
                 var studentIds = visits.Select(v => v.StudentId).Distinct().ToList();
 
                 var students = await Db.Table<Student>()
-                                       .Where(s => studentIds.Contains(s.StudentId) && !s.IsDeleted)
+                                       .Where(s => studentIds.Contains(s.StudentId) && !s.IsDeleted && !s.IsArchived)
                                        .ToListAsync()
                                        .ConfigureAwait(false);
                 UnprotectStudents(students);
@@ -107,7 +107,7 @@ namespace MinistryTracker.Data
                 var studentIds = visits.Select(v => v.StudentId).Distinct().ToList();
 
                 var students = await Db.Table<Student>()
-                                       .Where(s => studentIds.Contains(s.StudentId) && !s.IsDeleted)
+                                       .Where(s => studentIds.Contains(s.StudentId) && !s.IsDeleted && !s.IsArchived)
                                        .ToListAsync()
                                        .ConfigureAwait(false);
                 UnprotectStudents(students);
@@ -163,7 +163,7 @@ namespace MinistryTracker.Data
                 var studentIds = visits.Select(v => v.StudentId).Distinct().ToList();
 
                 var students = await Db.Table<Student>()
-                                       .Where(s => studentIds.Contains(s.StudentId) && !s.IsDeleted)
+                                       .Where(s => studentIds.Contains(s.StudentId) && !s.IsDeleted && !s.IsArchived)
                                        .ToListAsync()
                                        .ConfigureAwait(false);
                 UnprotectStudents(students);
@@ -214,7 +214,7 @@ namespace MinistryTracker.Data
                 var cutoff = DateTime.Today.AddDays(-minDaysSinceVisit);
 
                 var students = await Db.Table<Student>()
-                    .Where(s => !s.IsDeleted && s.Status == StudentStatus.Active)
+                    .Where(s => !s.IsDeleted && !s.IsArchived && s.Status == StudentStatus.Active)
                     .ToListAsync()
                     .ConfigureAwait(false);
                 UnprotectStudents(students);

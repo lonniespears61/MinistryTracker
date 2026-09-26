@@ -24,6 +24,12 @@ namespace MinistryTracker.Models
         [PrimaryKey, AutoIncrement]
         public int StudentId { get; set; }
 
+        public string GlobalId { get; set; } = string.Empty;
+
+        public DateTime CreatedUtc { get; set; }
+
+        public DateTime UpdatedUtc { get; set; }
+
         /// <summary>
         /// Full name of the individual.
         /// Required for all records.
@@ -125,6 +131,22 @@ namespace MinistryTracker.Models
         /// </summary>
         public StudentStatus Status { get; set; } = StudentStatus.Active;
 
+        public CallStage Stage { get; set; } = CallStage.ReturnVisit;
+
+        public StageAuthority StageAuthority { get; set; } = StageAuthority.Automatic;
+
+        public DateTime? StageChangedUtc { get; set; }
+
+        public bool IsArchived { get; set; }
+
+        public ArchiveReason ArchiveReason { get; set; } = ArchiveReason.None;
+
+        public DateTime? ArchivedUtc { get; set; }
+
+        public int CheckOnIntervalDays { get; set; } = 30;
+
+        public DateTime? CheckOnDeferredUntilUtc { get; set; }
+
         /// <summary>
         /// Optional demographic field.
         /// </summary>
@@ -156,5 +178,7 @@ namespace MinistryTracker.Models
         /// Soft delete flag.
         /// </summary>
         public bool IsDeleted { get; set; } = false;
+
+        public DateTime? DeletedUtc { get; set; }
     }
 }

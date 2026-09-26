@@ -5,7 +5,7 @@ namespace MinistryTracker.Services.Backup;
 
 public sealed class BackupEncryptionService
 {
-    private const int BackupFormatVersion = 1;
+    private const int LatestBackupFormatVersion = 2;
     private const int SaltSize = 16;
     private const int NonceSize = 12;
     private const int TagSize = 16;
@@ -46,7 +46,7 @@ public sealed class BackupEncryptionService
 
         return new BackupEnvelope
         {
-            BackupFormatVersion = BackupFormatVersion,
+            BackupFormatVersion = package.Metadata.BackupFormatVersion,
             Metadata = package.Metadata,
             Kdf = new BackupKdfParameters
             {
@@ -66,8 +66,9 @@ public sealed class BackupEncryptionService
         if (string.IsNullOrWhiteSpace(backupCode))
             throw new ArgumentException("Backup PIN is required.", nameof(backupCode));
 
-        if (envelope.BackupFormatVersion != BackupFormatVersion ||
-            envelope.Metadata.BackupFormatVersion != BackupFormatVersion)
+        if (envelope.BackupFormatVersion < 1 ||
+            envelope.BackupFormatVersion > LatestBackupFormatVersion ||
+            envelope.Metadata.BackupFormatVersion != envelope.BackupFormatVersion)
         {
             throw new NotSupportedException("This backup format is not supported.");
         }

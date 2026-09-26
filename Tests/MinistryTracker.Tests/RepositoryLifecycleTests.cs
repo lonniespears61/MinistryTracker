@@ -5,6 +5,45 @@ namespace MinistryTracker.Tests;
 public sealed class RepositoryLifecycleTests
 {
     [Fact]
+    public async Task New_records_receive_stable_identity_and_timestamps()
+    {
+        await using var db = await TestDatabase.CreateAsync();
+        var student = await db.AddStudentAsync();
+        var visit = TestDatabase.NewVisit(student.StudentId, DateTime.Now.AddDays(1));
+        await db.Service.AddVisitAsync(visit);
+
+        Assert.True(Guid.TryParse(student.GlobalId, out _));
+        Assert.True(Guid.TryParse(visit.GlobalId, out _));
+        Assert.NotEqual(default, student.CreatedUtc);
+        Assert.NotEqual(default, student.UpdatedUtc);
+        Assert.NotEqual(default, visit.CreatedUtc);
+        Assert.NotEqual(default, visit.UpdatedUtc);
+
+        var studentGlobalId = student.GlobalId;
+        var visitGlobalId = visit.GlobalId;
+        SQLite.SQLiteAsyncConnection.ResetPool();
+        var reopened = db.Reopen();
+        await reopened.InitializeAsync();
+
+        Assert.Equal(studentGlobalId, (await reopened.GetStudentByIdAsync(student.StudentId))?.GlobalId);
+        Assert.Equal(visitGlobalId, (await reopened.GetVisitByIdAsync(visit.Id))?.GlobalId);
+    }
+
+    [Fact]
+    public async Task Soft_delete_creates_tombstone_metadata()
+    {
+        await using var db = await TestDatabase.CreateAsync();
+        var student = await db.AddStudentAsync();
+
+        await db.Service.SoftDeleteStudentAsync(student.StudentId);
+        var deleted = await db.Service.GetStudentByIdAsync(student.StudentId);
+
+        Assert.True(deleted?.IsDeleted);
+        Assert.NotNull(deleted?.DeletedUtc);
+        Assert.Equal(deleted?.DeletedUtc, deleted?.UpdatedUtc);
+    }
+
+    [Fact]
     public async Task Replacement_success_closes_original_and_creates_new_visit()
     {
         await using var db = await TestDatabase.CreateAsync();

@@ -26,6 +26,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using SQLite;
 using MinistryTracker.Models;
+using MinistryTracker.Models.Enums;
 using MinistryTracker.Data.Repositories;
 using MinistryTracker.Data.Security;
 
@@ -55,7 +56,7 @@ namespace MinistryTracker.Data
         // - This represents what the app expects the DB structure to be
         // - We compare this against PRAGMA user_version to detect drift
         // - For now, this is our baseline (fresh DB = version 1)
-        private const int CurrentSchemaVersion = 2;
+        private const int CurrentSchemaVersion = 3;
 
         /// <summary>
         /// Other partial classes should use Db, not _database directly.
@@ -174,6 +175,8 @@ namespace MinistryTracker.Data
             if (version == 0)
             {
                 await MigrateLegacyPlaintextAsync(db).ConfigureAwait(false);
+                await PopulateStableRecordMetadataAsync(db).ConfigureAwait(false);
+                await CreateStableRecordIndexesAsync(db).ConfigureAwait(false);
                 await db.ExecuteAsync($"PRAGMA user_version = {CurrentSchemaVersion};").ConfigureAwait(false);
                 return;
             }
@@ -183,6 +186,13 @@ namespace MinistryTracker.Data
                 await MigrateLegacyPlaintextAsync(db).ConfigureAwait(false);
                 await db.ExecuteAsync("PRAGMA user_version = 2;").ConfigureAwait(false);
                 version = 2;
+            }
+
+            if (version < 3)
+            {
+                await PopulateStableRecordMetadataAsync(db).ConfigureAwait(false);
+                await CreateStableRecordIndexesAsync(db).ConfigureAwait(false);
+                await db.ExecuteAsync("PRAGMA user_version = 3;").ConfigureAwait(false);
             }
 
             // -----------------------------------------------------------------
@@ -203,6 +213,49 @@ namespace MinistryTracker.Data
             //     await db.ExecuteAsync("PRAGMA user_version = 3;").ConfigureAwait(false);
             //     version = 3;
             // }
+        }
+
+        private static async Task PopulateStableRecordMetadataAsync(SQLiteAsyncConnection db)
+        {
+            var now = DateTime.UtcNow;
+            var students = await db.Table<Student>().ToListAsync().ConfigureAwait(false);
+            foreach (var student in students)
+            {
+                if (string.IsNullOrWhiteSpace(student.GlobalId))
+                    student.GlobalId = Guid.NewGuid().ToString("D");
+                if (student.CreatedUtc == default)
+                    student.CreatedUtc = now;
+                if (student.UpdatedUtc == default)
+                    student.UpdatedUtc = student.CreatedUtc;
+                if (student.StageChangedUtc is null)
+                    student.StageChangedUtc = student.CreatedUtc;
+                if (student.CheckOnIntervalDays <= 0)
+                    student.CheckOnIntervalDays = 30;
+                if (student.IsDeleted && student.DeletedUtc is null)
+                    student.DeletedUtc = student.UpdatedUtc;
+                await db.UpdateAsync(student).ConfigureAwait(false);
+            }
+
+            var visits = await db.Table<Visit>().ToListAsync().ConfigureAwait(false);
+            foreach (var visit in visits)
+            {
+                if (string.IsNullOrWhiteSpace(visit.GlobalId))
+                    visit.GlobalId = Guid.NewGuid().ToString("D");
+                if (visit.CreatedUtc == default)
+                    visit.CreatedUtc = now;
+                if (visit.UpdatedUtc == default)
+                    visit.UpdatedUtc = visit.CreatedUtc;
+                visit.Kind = VisitKind.ReturnVisit;
+                await db.UpdateAsync(visit).ConfigureAwait(false);
+            }
+        }
+
+        private static async Task CreateStableRecordIndexesAsync(SQLiteAsyncConnection db)
+        {
+            await db.ExecuteAsync(
+                "CREATE UNIQUE INDEX IF NOT EXISTS IX_Students_GlobalId ON Students(GlobalId)").ConfigureAwait(false);
+            await db.ExecuteAsync(
+                "CREATE UNIQUE INDEX IF NOT EXISTS IX_Visits_GlobalId ON Visits(GlobalId)").ConfigureAwait(false);
         }
 
         private sealed class DataProtectionMetadata

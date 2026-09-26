@@ -44,6 +44,9 @@ public sealed class BackupKdfParameters
 public sealed class BackupStudentDto
 {
     public int StudentId { get; set; }
+    public string GlobalId { get; set; } = string.Empty;
+    public DateTime CreatedUtc { get; set; }
+    public DateTime UpdatedUtc { get; set; }
     public string Name { get; set; } = string.Empty;
     public InitialContactType InitialContactType { get; set; }
     public DateTime FirstContactDate { get; set; }
@@ -62,11 +65,23 @@ public sealed class BackupStudentDto
     public int? Age { get; set; }
     public string? Notes { get; set; }
     public bool IsDeleted { get; set; }
+    public DateTime? DeletedUtc { get; set; }
+    public CallStage Stage { get; set; }
+    public StageAuthority StageAuthority { get; set; }
+    public DateTime? StageChangedUtc { get; set; }
+    public bool IsArchived { get; set; }
+    public ArchiveReason ArchiveReason { get; set; }
+    public DateTime? ArchivedUtc { get; set; }
+    public int CheckOnIntervalDays { get; set; }
+    public DateTime? CheckOnDeferredUntilUtc { get; set; }
 }
 
 public sealed class BackupVisitDto
 {
     public int Id { get; set; }
+    public string GlobalId { get; set; } = string.Empty;
+    public DateTime CreatedUtc { get; set; }
+    public DateTime UpdatedUtc { get; set; }
     public int StudentId { get; set; }
     public ContactMethod Method { get; set; }
     public DateTime ScheduledDateTime { get; set; }
@@ -78,6 +93,9 @@ public sealed class BackupVisitDto
     public int? RescheduledFromVisitId { get; set; }
     public string? Notes { get; set; }
     public DateTime? NotesCreatedDateTime { get; set; }
+    public VisitKind Kind { get; set; }
+    public bool IsDeleted { get; set; }
+    public DateTime? DeletedUtc { get; set; }
 }
 
 [JsonSerializable(typeof(BackupPlaintextPackage))]
